@@ -1,0 +1,155 @@
+const examService = require('./exams.service');
+const { apiResponse, errorResponse } = require('../../utils/apiResponse');
+
+/**
+ * Create exam
+ * POST /api/exams
+ */
+const createExam = (req, res) => {
+  try {
+    const {
+      title, description, subject, duration_minutes, total_marks,
+      negative_marks, passing_percentage, scheduled_start, scheduled_end, is_active
+    } = req.body;
+
+    if (!title || !duration_minutes || !total_marks) {
+      return errorResponse(res, 400, 'Title, duration_minutes, and total_marks are required.');
+    }
+
+    const exam = examService.createExam({
+      title, description, subject, duration_minutes, total_marks,
+      negative_marks, passing_percentage, scheduled_start, scheduled_end, is_active
+    }, req.user.id);
+
+    return apiResponse(res, 201, exam, 'Exam created successfully');
+  } catch (error) {
+    return errorResponse(res, 500, 'Failed to create exam.', error.message);
+  }
+};
+
+/**
+ * Get all exams
+ * GET /api/exams
+ */
+const getAllExams = (req, res) => {
+  try {
+    const { is_active, subject, created_by } = req.query;
+    const filters = {};
+
+    if (is_active !== undefined) {
+      filters.is_active = is_active === 'true';
+    }
+    if (subject) {
+      filters.subject = subject;
+    }
+    if (created_by) {
+      filters.created_by = created_by;
+    }
+
+    const exams = examService.getAllExams(filters);
+    return apiResponse(res, 200, exams, 'Exams retrieved successfully');
+  } catch (error) {
+    return errorResponse(res, 500, 'Failed to get exams.', error.message);
+  }
+};
+
+/**
+ * Get active exams
+ * GET /api/exams/active
+ */
+const getActiveExams = (req, res) => {
+  try {
+    const exams = examService.getActiveExams();
+    return apiResponse(res, 200, exams, 'Active exams retrieved successfully');
+  } catch (error) {
+    return errorResponse(res, 500, 'Failed to get active exams.', error.message);
+  }
+};
+
+/**
+ * Get exam by ID
+ * GET /api/exams/:id
+ */
+const getExamById = (req, res) => {
+  try {
+    const exam = examService.getExamById(req.params.id);
+    return apiResponse(res, 200, exam, 'Exam retrieved successfully');
+  } catch (error) {
+    if (error.message === 'Exam not found.') {
+      return errorResponse(res, 404, error.message);
+    }
+    return errorResponse(res, 500, 'Failed to get exam.', error.message);
+  }
+};
+
+/**
+ * Get exam stats
+ * GET /api/exams/:id/stats
+ */
+const getExamStats = (req, res) => {
+  try {
+    const stats = examService.getExamStats(req.params.id);
+    return apiResponse(res, 200, stats, 'Exam stats retrieved successfully');
+  } catch (error) {
+    return errorResponse(res, 500, 'Failed to get exam stats.', error.message);
+  }
+};
+
+/**
+ * Update exam
+ * PUT /api/exams/:id
+ */
+const updateExam = (req, res) => {
+  try {
+    const exam = examService.updateExam(req.params.id, req.body);
+    return apiResponse(res, 200, exam, 'Exam updated successfully');
+  } catch (error) {
+    if (error.message === 'Exam not found.') {
+      return errorResponse(res, 404, error.message);
+    }
+    return errorResponse(res, 500, 'Failed to update exam.', error.message);
+  }
+};
+
+/**
+ * Delete exam
+ * DELETE /api/exams/:id
+ */
+const deleteExam = (req, res) => {
+  try {
+    const result = examService.deleteExam(req.params.id);
+    return apiResponse(res, 200, result, 'Exam deleted successfully');
+  } catch (error) {
+    if (error.message === 'Exam not found.') {
+      return errorResponse(res, 404, error.message);
+    }
+    return errorResponse(res, 500, 'Failed to delete exam.', error.message);
+  }
+};
+
+/**
+ * Check exam availability
+ * GET /api/exams/:id/availability
+ */
+const checkAvailability = (req, res) => {
+  try {
+    const result = examService.isExamAvailable(req.params.id);
+    return apiResponse(res, 200, result, result.available ? 'Exam is available' : result.reason);
+  } catch (error) {
+    if (error.message === 'Exam not found.') {
+      return errorResponse(res, 404, error.message);
+    }
+    return errorResponse(res, 500, 'Failed to check availability.', error.message);
+  }
+};
+
+module.exports = {
+  createExam,
+  getAllExams,
+  getActiveExams,
+  getExamById,
+  getExamStats,
+  updateExam,
+  deleteExam,
+  checkAvailability
+};
