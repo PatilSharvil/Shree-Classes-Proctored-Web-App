@@ -31,8 +31,11 @@ const LoginPage = () => {
     <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">📝 ProctoredExams</h1>
-          <p className="text-gray-600 mt-2">Sign in to your account</p>
+          <h1 className="text-3xl font-bold text-gray-900 flex items-center justify-center gap-2">
+            <i className="fas fa-graduation-cap text-primary-600"></i>
+            <span>Shree Science Academy</span>
+          </h1>
+          <p className="text-gray-600 mt-2 font-medium">MHT CET Exam Portal</p>
         </div>
 
         {error && (

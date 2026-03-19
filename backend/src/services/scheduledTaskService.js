@@ -78,7 +78,7 @@ class ScheduledTaskService {
         FROM exam_sessions es
         JOIN exams e ON es.exam_id = e.id
         WHERE es.status = 'IN_PROGRESS'
-          AND datetime(es.started_at, es.duration_minutes || ' minutes') < datetime('now')
+          AND datetime(es.started_at, e.duration_minutes || ' minutes') < datetime('now')
       `).all();
 
       for (const session of sessions) {

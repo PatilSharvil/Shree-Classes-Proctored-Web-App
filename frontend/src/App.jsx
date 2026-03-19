@@ -15,6 +15,7 @@ const CreateExamPage = lazy(() => import('./pages/admin/CreateExamPage'));
 const ExamManagePage = lazy(() => import('./pages/admin/ExamManagePage'));
 const StudentManagementPage = lazy(() => import('./pages/admin/StudentManagementPage'));
 const AnalyticsPage = lazy(() => import('./pages/admin/AnalyticsPage'));
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 
 // Loading component
 const PageLoader = () => (
@@ -45,16 +46,10 @@ function App() {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           {/* Public routes */}
+          <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
 
           {/* Student routes */}
-          <Route path="/" element={
-            <ProtectedRoute>
-              <MainLayout>
-                <StudentDashboard />
-              </MainLayout>
-            </ProtectedRoute>
-          } />
 
           <Route path="/dashboard" element={
             <ProtectedRoute>

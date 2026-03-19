@@ -14,8 +14,9 @@ const Header = () => {
   return (
     <header className="bg-primary-600 text-white shadow-lg sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-        <Link to="/" className="text-xl font-bold">
-          📝 ProctoredExams
+        <Link to="/" className="text-xl font-bold flex items-center gap-2">
+          <i className="fas fa-graduation-cap text-2xl"></i>
+          <span>Shree Science Academy</span>
         </Link>
 
         <nav className="flex items-center gap-4">

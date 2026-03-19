@@ -41,10 +41,25 @@ const StudentDashboard = () => {
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-1">Welcome to your exam dashboard</p>
+    <div className="space-y-8 pb-12">
+      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-8 text-white shadow-xl shadow-blue-100">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <h1 className="text-3xl font-extrabold tracking-tight">Welcome, Scholar!</h1>
+            <p className="text-blue-100 mt-2 text-lg">Shree Science Academy - MHT CET Portal</p>
+          </div>
+          <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20">
+            <div className="text-right">
+              <div className="text-xs text-blue-200 uppercase font-bold tracking-wider">Your Points</div>
+              <div className="text-xl font-bold">1,250</div>
+            </div>
+            <div className="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center text-yellow-900 text-xl font-bold border-2 border-white/50 shadow-sm">
+              <i className="fas fa-star"></i>
+            </div>
+          </div>
+        </div>
+        {/* Abstract shape decoration */}
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
       </div>
 
       {error && (
@@ -55,35 +70,51 @@ const StudentDashboard = () => {
 
       {/* Active Exams */}
       <section>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Available Exams</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <span className="w-1.5 h-6 bg-blue-600 rounded-full"></span>
+          Available MHT CET Exams
+        </h2>
         {activeExams.length === 0 ? (
-          <Card>
-            <p className="text-gray-600 text-center py-8">No active exams at the moment</p>
+          <Card className="border-dashed border-2">
+            <p className="text-gray-500 text-center py-12 italic">No active exams at the moment. Check back soon!</p>
           </Card>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {activeExams.map((exam) => (
-              <Card key={exam.id} className="hover:shadow-lg transition-shadow">
-                <div className="space-y-3">
-                  <div>
-                    <h3 className="font-semibold text-lg text-gray-900">{exam.title}</h3>
+              <Card key={exam.id} className="group hover:-translate-y-2 transition-all duration-300 border-none shadow-lg shadow-blue-50">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 text-xl group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                      <i className="fas fa-file-invoice"></i>
+                    </div>
                     {exam.subject && (
-                      <span className="text-sm text-primary-600 bg-primary-50 px-2 py-1 rounded inline-block mt-1">
+                      <span className="text-[10px] font-bold text-blue-700 bg-blue-100/50 px-2 py-1 rounded-full uppercase tracking-widest">
                         {exam.subject}
                       </span>
                     )}
                   </div>
                   
-                  <p className="text-sm text-gray-600 line-clamp-2">{exam.description}</p>
+                  <div>
+                    <h3 className="font-bold text-xl text-gray-900 group-hover:text-blue-600 transition-colors">{exam.title}</h3>
+                    <p className="text-sm text-gray-500 mt-1 line-clamp-2">{exam.description || 'Practice test for MHT CET preparation.'}</p>
+                  </div>
                   
-                  <div className="flex flex-wrap gap-2 text-sm text-gray-500">
-                    <span>⏱️ {exam.duration_minutes} min</span>
-                    <span>📊 {exam.total_marks} marks</span>
-                    <span>❓ {exam.question_count} questions</span>
+                  <div className="flex items-center gap-4 py-2 border-y border-gray-50">
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
+                      <i className="far fa-clock text-blue-400"></i> {exam.duration_minutes}m
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
+                      <i className="far fa-star text-blue-400"></i> {exam.total_marks} pts
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs font-semibold text-gray-500">
+                      <i className="fas fa-tasks text-blue-400"></i> {exam.question_count} Qs
+                    </div>
                   </div>
 
-                  <Link to={`/exam/${exam.id}`}>
-                    <Button fullWidth>Start Exam</Button>
+                  <Link to={`/exam/${exam.id}`} className="block">
+                    <Button fullWidth className="!rounded-xl py-3 font-bold shadow-md hover:shadow-blue-200 transition-all">
+                      Start Test <i className="fas fa-arrow-right ml-2 text-xs"></i>
+                    </Button>
                   </Link>
                 </div>
               </Card>
@@ -94,40 +125,55 @@ const StudentDashboard = () => {
 
       {/* Attempt History */}
       <section>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Attempt History</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <span className="w-1.5 h-6 bg-purple-600 rounded-full"></span>
+          Your Performance History
+        </h2>
         {attemptHistory.length === 0 ? (
-          <Card>
-            <p className="text-gray-600 text-center py-8">You haven't attempted any exams yet</p>
+          <Card className="border-dashed border-2">
+            <p className="text-gray-500 text-center py-12 italic">You haven't attempted any exams yet. Time to start practicing!</p>
           </Card>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {attemptHistory.map((attempt) => (
-              <Card key={attempt.id}>
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">{attempt.exam_title}</h3>
-                    <p className="text-sm text-gray-500">
-                      {new Date(attempt.submitted_at).toLocaleDateString()} at{' '}
-                      {new Date(attempt.submitted_at).toLocaleTimeString()}
-                    </p>
+              <Card key={attempt.id} className="group hover:border-purple-200 transition-colors">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-600 text-xl">
+                      <i className="fas fa-history"></i>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-gray-900 text-lg group-hover:text-purple-600 transition-colors">{attempt.exam_title}</h3>
+                      <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mt-1">
+                        <i className="far fa-calendar-alt mr-1"></i> {new Date(attempt.submitted_at).toLocaleDateString()}
+                        <span className="mx-2 font-light">|</span>
+                        <i className="far fa-clock mr-1"></i> {new Date(attempt.submitted_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </p>
+                    </div>
                   </div>
                   
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-8 bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
                     <div className="text-center">
-                      <div className={`text-2xl font-bold ${
+                      <div className={`text-3xl font-black ${
                         attempt.percentage >= 70 ? 'text-green-600' :
                         attempt.percentage >= 40 ? 'text-yellow-600' : 'text-red-600'
                       }`}>
-                        {attempt.percentage?.toFixed(1)}%
+                        {attempt.percentage?.toFixed(1)}<span className="text-sm font-bold ml-0.5">%</span>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {attempt.correct_count}/{attempt.correct_count + attempt.incorrect_count} correct
-                      </div>
+                      <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Accuracy</div>
                     </div>
                     
-                    <div className="text-right text-sm text-gray-600">
-                      <div>Score: {attempt.score}/{attempt.total_marks}</div>
-                      <div>Time: {formatTime(attempt.duration_taken)}</div>
+                    <div className="h-10 w-px bg-gray-200"></div>
+
+                    <div className="space-y-1">
+                      <div className="text-sm font-bold text-gray-700 flex justify-between gap-4">
+                        <span className="text-gray-400 font-medium uppercase text-[10px] tracking-widest">Score</span>
+                        <span>{attempt.score}/{attempt.total_marks}</span>
+                      </div>
+                      <div className="text-sm font-bold text-gray-700 flex justify-between gap-4">
+                        <span className="text-gray-400 font-medium uppercase text-[10px] tracking-widest">Time</span>
+                        <span>{formatTime(attempt.duration_taken)}</span>
+                      </div>
                     </div>
                   </div>
                 </div>

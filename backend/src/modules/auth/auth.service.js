@@ -79,9 +79,9 @@ class AuthService {
     const hashedPassword = bcrypt.hashSync(userData.password, 10);
 
     db.prepare(`
-      INSERT INTO users (id, email, password, name, role, created_by)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(userId, userData.email, hashedPassword, userData.name, userData.role, createdBy);
+      INSERT INTO users (id, email, password, name, role)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(userId, userData.email, hashedPassword, userData.name, userData.role);
 
     return {
       id: userId,
