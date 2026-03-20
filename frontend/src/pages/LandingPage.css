@@ -34,9 +34,9 @@
 }
 
 /* Typography */
-.landing-page h1, 
-.landing-page h2, 
-.landing-page h3, 
+.landing-page h1,
+.landing-page h2,
+.landing-page h3,
 .landing-page h4 {
     font-weight: 600;
     color: #1a1a1a;
@@ -371,6 +371,15 @@
 
 .section-title p {
     color: var(--text-light);
+}
+
+/* Why Choose Us Grid - 5 cards */
+#courses .category-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 25px;
+    max-width: 1400px;
+    margin: 0 auto;
 }
 
 .category-grid {
@@ -723,6 +732,9 @@
     .category-grid {
         grid-template-columns: repeat(3, 1fr);
     }
+    #courses .category-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
     .hero-text h1 {
         font-size: 36px;
     }
@@ -748,6 +760,9 @@
     .category-grid {
         grid-template-columns: repeat(2, 1fr);
     }
+    #courses .category-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
     .stats-grid {
         grid-template-columns: 1fr;
     }
@@ -768,6 +783,9 @@
 
 @media (max-width: 480px) {
     .category-grid {
+        grid-template-columns: 1fr;
+    }
+    #courses .category-grid {
         grid-template-columns: 1fr;
     }
     .footer-content {

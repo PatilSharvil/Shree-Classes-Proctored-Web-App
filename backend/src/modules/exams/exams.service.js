@@ -149,11 +149,17 @@ class ExamService {
    */
   isExamAvailable(examId) {
     const exam = this.getExamById(examId);
-    const now = new Date().toISOString();
 
     if (!exam.is_active) {
       return { available: false, reason: 'Exam is not active.' };
     }
+
+    // If no scheduled times are set, exam is always available
+    if (!exam.scheduled_start && !exam.scheduled_end) {
+      return { available: true };
+    }
+
+    const now = new Date().toISOString();
 
     if (exam.scheduled_start && exam.scheduled_start > now) {
       return { available: false, reason: 'Exam has not started yet.' };

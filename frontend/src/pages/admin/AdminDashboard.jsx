@@ -6,7 +6,6 @@ import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 
 const AdminDashboard = () => {
-  const [exams, setExams] = useState([]);
   const [students, setStudents] = useState([]);
   const [stats, setStats] = useState({ totalExams: 0, totalStudents: 0, activeExams: 0 });
   const [loading, setLoading] = useState(true);
@@ -22,11 +21,10 @@ const AdminDashboard = () => {
         examsAPI.getAll(),
         usersAPI.getAll()
       ]);
-      
+
       const examsData = examsRes.data.data || [];
       const usersData = usersRes.data.data || [];
-      
-      setExams(examsData);
+
       setStudents(usersData.filter(u => u.role === 'STUDENT'));
       setStats({
         totalExams: examsData.length,
@@ -91,69 +89,7 @@ const AdminDashboard = () => {
         </Card>
       </div>
 
-      {/* Recent Exams */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Recent Exams</h2>
-          <Link to="/admin/exams">
-            <Button variant="outline" size="sm">View All</Button>
-          </Link>
-        </div>
-        
-        {exams.length === 0 ? (
-          <Card className="border-dashed border-2">
-            <p className="text-gray-500 text-center py-12 italic">No exams created yet. Start by creating a new MHT CET test.</p>
-          </Card>
-        ) : (
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50/50 border-b border-gray-100">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Exam Title</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Subject</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Duration</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Questions</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {exams.slice(0, 5).map((exam) => (
-                    <tr key={exam.id} className="hover:bg-blue-50/30 transition-colors group">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 group-hover:text-primary-600">{exam.title}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        <span className="bg-gray-100 px-3 py-1 rounded-full text-xs font-medium">{exam.subject || 'N/A'}</span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        <i className="far fa-clock mr-2 text-gray-400"></i> {exam.duration_minutes} min
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        <i className="fas fa-list-ol mr-2 text-gray-400"></i> {exam.question_count || 0}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                          exam.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                          {exam.is_active ? '● Active' : '○ Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                        <Link to={`/admin/exams/${exam.id}`}>
-                          <Button variant="outline" size="sm" className="!rounded-xl group-hover:bg-primary-600 group-hover:text-white transition-all">
-                            Manage <i className="fas fa-arrow-right ml-1 text-xs"></i>
-                          </Button>
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </section>
-
+      {/* Quick Navigation */}
       <section>
         <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
           <span className="w-1.5 h-6 bg-primary-600 rounded-full"></span>

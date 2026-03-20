@@ -15,6 +15,9 @@ const CreateExamPage = lazy(() => import('./pages/admin/CreateExamPage'));
 const ExamManagePage = lazy(() => import('./pages/admin/ExamManagePage'));
 const StudentManagementPage = lazy(() => import('./pages/admin/StudentManagementPage'));
 const AnalyticsPage = lazy(() => import('./pages/admin/AnalyticsPage'));
+const AddQuestionPage = lazy(() => import('./pages/admin/AddQuestionPage'));
+const EditQuestionPage = lazy(() => import('./pages/admin/EditQuestionPage'));
+const EditExamPage = lazy(() => import('./pages/admin/EditExamPage'));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 
 // Loading component
@@ -104,6 +107,30 @@ function App() {
             <ProtectedRoute adminOnly>
               <MainLayout>
                 <ExamManagePage />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/admin/exams/:examId/edit" element={
+            <ProtectedRoute adminOnly>
+              <MainLayout>
+                <EditExamPage />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/admin/exams/:examId/questions/new" element={
+            <ProtectedRoute adminOnly>
+              <MainLayout>
+                <AddQuestionPage />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/admin/questions/:questionId/edit" element={
+            <ProtectedRoute adminOnly>
+              <MainLayout>
+                <EditQuestionPage />
               </MainLayout>
             </ProtectedRoute>
           } />

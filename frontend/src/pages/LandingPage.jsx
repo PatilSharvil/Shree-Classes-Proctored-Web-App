@@ -101,7 +101,13 @@ const LandingPage = () => {
             <i className="fas fa-graduation-cap"></i>
             <span>Shree Science Academy</span>
           </div>
-          <ul className="nav-links"></ul>
+          <ul className="nav-links">
+            <li><a href="#home">Home</a></li>
+            <li><a href="#courses">Courses</a></li>
+            <li><a href="#exams">Online Tests</a></li>
+            <li><a href="#results">Results</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
           <div className="nav-auth">
             <Link to="/login">
               <button className="btn btn-outline">Login</button>
@@ -114,17 +120,14 @@ const LandingPage = () => {
       </nav>
 
       {/* Hero Section */}
-      <header className="hero">
+      <header className="hero" id="home">
         <div className="container hero-content">
           <div className="hero-text">
             <h1>Best Coaching for <span>MHT CET</span> Success</h1>
-            <p>Expert guidance, quality materials, and proctored test series designed specifically for MHT CET aspirants.</p>
+            <p>Expert guidance for Class 12th students preparing for MHT CET PCM & PCB. Comprehensive study material, mock tests, and personalized mentorship for engineering & medical aspirants.</p>
             <div className="search-box">
-              <input type="text" placeholder="Search MHT CET courses and materials" />
+              <input type="text" placeholder="Search for PCM/PCB courses, mock tests..." />
               <button className="btn btn-primary">Search</button>
-            </div>
-            <div className="hero-stats">
-              <strong>500+</strong> Top Ranked Students
             </div>
           </div>
           <div className="hero-image">
@@ -133,7 +136,7 @@ const LandingPage = () => {
         </div>
       </header>
 
-      {/* Latest News Section */}
+      {/* Latest News Section - CET Updates */}
       <section className="latest-news">
         <div className="news-strip">
           <div className="container">
@@ -144,24 +147,24 @@ const LandingPage = () => {
                 <div className="news-card">
                   <img src="/assets/news1.png" alt="News 1" />
                   <div className="news-card-content">
-                    <h3>Nearly half of 60, IIT teaching positions vacant</h3>
-                    <p>Education Ministry reports significant vacancies in central institutions.</p>
+                    <h3>MHT CET 2026 Registration Opens</h3>
+                    <p>State Common Entrance Test Cell announces registration dates for PCM/PCB groups. Apply before deadline.</p>
                     <a href="#" className="read-more">Read More <i className="fas fa-arrow-right"></i></a>
                   </div>
                 </div>
                 <div className="news-card">
                   <img src="/assets/news2.png" alt="News 2" />
                   <div className="news-card-content">
-                    <h3>CBSE Class 12 Accountancy Analysis</h3>
-                    <p>Instructions unclear, exam pattern changed last minute for students.</p>
+                    <h3>MHT CET Syllabus 2026 Released</h3>
+                    <p>Complete syllabus for Physics, Chemistry, Mathematics & Biology now available. Download from official website.</p>
                     <a href="#" className="read-more">Read More <i className="fas fa-arrow-right"></i></a>
                   </div>
                 </div>
                 <div className="news-card">
                   <img src="/assets/news1.png" alt="News 3" />
                   <div className="news-card-content">
-                    <h3>JEE Advanced 2026: New Syllabus Out</h3>
-                    <p>Check the latest updates on the examination pattern and syllabus.</p>
+                    <h3>New Batch Starting for Class 12th CET</h3>
+                    <p>Join our upcoming batch for MHT CET preparation. Limited seats available. Register now!</p>
                     <a href="#" className="read-more">Read More <i className="fas fa-arrow-right"></i></a>
                   </div>
                 </div>
@@ -172,22 +175,19 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Course Category Section */}
-      <section className="categories container">
+      {/* Course Category Section - CET PCM/PCB Focus */}
+      <section className="categories container" id="courses">
         <div className="section-title">
-          <h2>Choose a Domain or Course</h2>
-          <p>Explore 2200+ Colleges, 22+ Courses & more</p>
+          <h2>Why Choose Us?</h2>
+          <p>We provide the best preparation for MHT CET PCM & PCB</p>
         </div>
         <div className="grid category-grid">
           {[
-            { icon: 'fas fa-microchip', title: 'Engineering', desc: 'B.E, B.Tech, M.Tech & more specialized fields.' },
-            { icon: 'fas fa-user-graduate', title: 'Education', desc: 'B.Ed, M.Ed and professional teaching courses.' },
-            { icon: 'fas fa-palette', title: 'Arts', desc: 'B.A, M.A, Design and Creative Arts courses.' },
-            { icon: 'fas fa-flask', title: 'Science', desc: 'B.Sc, M.Sc and intensive research domains.' },
-            { icon: 'fas fa-briefcase', title: 'Management', desc: 'MBA, BBA and business leadership programs.' },
-            { icon: 'fas fa-stethoscope', title: 'Medical', desc: 'MBBS, BDS, Nurse and healthcare courses.' },
-            { icon: 'fas fa-balance-scale', title: 'Law', desc: 'LLB, LLM and legal consultancy paths.' },
-            { icon: 'fas fa-coins', title: 'Commerce', desc: 'B.Com, M.Com, CA and financial analytics.' }
+            { icon: 'fas fa-atom', title: 'MHT CET PCM', desc: 'Physics, Chemistry, Mathematics for Engineering aspirants. Complete syllabus coverage.' },
+            { icon: 'fas fa-dna', title: 'MHT CET PCB', desc: 'Physics, Chemistry, Biology for Medical aspirants. NEET preparation included.' },
+            { icon: 'fas fa-laptop', title: 'Online Mock Tests', desc: 'Full syllabus mock tests with detailed analysis & All India ranking.' },
+            { icon: 'fas fa-book-open', title: 'Study Material', desc: 'Chapter-wise notes, formula sheets & practice questions for all subjects.' },
+            { icon: 'fas fa-chart-line', title: 'Performance Analysis', desc: 'Track your progress with detailed reports & improvement suggestions.' }
           ].map((cat, idx) => (
             <div key={idx} className="category-card">
               <div className="icon-box"><i className={cat.icon}></i></div>
@@ -199,67 +199,60 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Education Loan Section */}
-      <section className="loan-section">
-        <div className="container">
-          <h2>Student Education Loan</h2>
-          <div className="process-steps">
-            {[
-              { icon: 'fas fa-file-signature', title: 'Apply' },
-              { icon: 'fas fa-check-circle', title: 'Verification' },
-              { icon: 'fas fa-thumbs-up', title: 'Approval' },
-              { icon: 'fas fa-money-check-alt', title: 'Disbursement' }
-            ].map((step, idx) => (
-              <React.Fragment key={idx}>
-                <div className="step">
-                  <div className="step-icon"><i className={step.icon}></i></div>
-                  <h4>{step.title}</h4>
-                </div>
-                {idx < 3 && <div className="step-divider"></div>}
-              </React.Fragment>
-            ))}
-          </div>
-          <button className="btn btn-primary btn-large">Apply for Education Loan</button>
-        </div>
-      </section>
-
-      {/* upcoming Exams section */}
-      <section className="upcoming-exams container">
-        <h2>Upcoming Exam & Events</h2>
+      {/* Upcoming Exams Section - CET Focus */}
+      <section className="upcoming-exams container" id="exams">
+        <h2>Online CET Mock Tests</h2>
         <div className="exams-list">
           <div className="exam-card">
             <div className="exam-img">
-              <img src="https://img.icons8.com/color/144/000000/test.png" alt="Exam" />
+              <img src="https://img.icons8.com/color/144/000000/test.png" alt="MHT CET PCM" />
             </div>
             <div className="exam-info">
-              <h3>JEE Main 2026 Season 1</h3>
-              <p>Registration ends soon. Prepare with top mocks.</p>
-              <span className="date">Dec 15, 2025</span>
+              <h3>MHT CET PCM Mock Test</h3>
+              <p>Full syllabus mock test for Engineering aspirants. Physics, Chemistry, Mathematics.</p>
+              <span className="date">Available 24/7 | 180 Minutes</span>
             </div>
-            <button className="btn btn-outline">Apply Now</button>
+            <Link to="/dashboard">
+              <button className="btn btn-outline">Take Test</button>
+            </Link>
           </div>
           <div className="exam-card">
             <div className="exam-img">
-              <img src="https://img.icons8.com/color/144/000000/test-passed.png" alt="Exam" />
+              <img src="https://img.icons8.com/color/144/000000/test-passed.png" alt="MHT CET PCB" />
             </div>
             <div className="exam-info">
-              <h3>CAT Exam Admittance</h3>
-              <p>Management entrance results are declared.</p>
-              <span className="date">Jan 05, 2026</span>
+              <h3>MHT CET PCB Mock Test</h3>
+              <p>Full syllabus mock test for Medical aspirants. Physics, Chemistry, Biology.</p>
+              <span className="date">Available 24/7 | 180 Minutes</span>
             </div>
-            <button className="btn btn-outline">Apply Now</button>
+            <Link to="/dashboard">
+              <button className="btn btn-outline">Take Test</button>
+            </Link>
+          </div>
+          <div className="exam-card">
+            <div className="exam-img">
+              <img src="https://img.icons8.com/color/144/000000/online-quiz.png" alt="Chapter Test" />
+            </div>
+            <div className="exam-info">
+              <h3>Chapter-wise Tests</h3>
+              <p>Test your knowledge after completing each chapter. Subject-wise tests available.</p>
+              <span className="date">Available 24/7 | 45 Minutes</span>
+            </div>
+            <Link to="/dashboard">
+              <button className="btn btn-outline">Take Test</button>
+            </Link>
           </div>
         </div>
       </section>
 
       {/* Statistics Section */}
-      <section className="statistics container">
-        <h2>Our College Search Portal</h2>
+      <section className="statistics container" id="results">
+        <h2>Our Success Record</h2>
         <div className="grid stats-grid">
           {[
-            { icon: 'fas fa-university', num: '2266+', label: 'Colleges' },
-            { icon: 'fas fa-book-open', num: '2600+', label: 'Courses' },
-            { icon: 'fas fa-map-marked-alt', num: '37+', label: 'States' }
+            { icon: 'fas fa-user-graduate', num: '500+', label: 'Students Trained' },
+            { icon: 'fas fa-university', num: '150+', label: 'Top Colleges' },
+            { icon: 'fas fa-medal', num: '50+', label: 'Top 100 Ranks' }
           ].map((stat, idx) => (
             <div key={idx} className="stats-card">
               <i className={stat.icon}></i>
@@ -270,31 +263,56 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* CTA Section */}
+      <section className="online-courses">
+        <div className="container">
+          <div className="cta-card">
+            <h2>Start Your CET Preparation Today!</h2>
+            <p>Join Shree Science Academy for expert coaching, mock tests, and personalized mentorship.</p>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
-      <footer className="footer">
+      <footer className="footer" id="contact">
         <div className="container footer-content">
           <div className="footer-about">
             <h3>About Shree Science Academy</h3>
-            <p>We help students find the best colleges and courses across the country with detailed analysis and comparisons.</p>
+            <p>We are dedicated to providing quality education to Class 12th students preparing for MHT CET PCM & PCB. Our expert faculty, comprehensive study material, and online mock tests ensure complete preparation for engineering & medical entrance exams.</p>
           </div>
           <div className="footer-links">
             <h4>Quick Links</h4>
             <ul>
               <li><Link to="/">Home</Link></li>
-              <li><a href="#">About Us</a></li>
-              <li><a href="#">Terms of use</a></li>
-              <li><a href="#">Privacy Policy</a></li>
+              <li><Link to="/login">Login</Link></li>
+              <li><Link to="/register">Register</Link></li>
+              <li><Link to="/dashboard">Dashboard</Link></li>
+            </ul>
+          </div>
+          <div className="footer-links">
+            <h4>Our Courses</h4>
+            <ul>
+              <li><a href="#">MHT CET PCM</a></li>
+              <li><a href="#">MHT CET PCB</a></li>
+              <li><a href="#">Mock Test Series</a></li>
+              <li><a href="#">Study Material</a></li>
             </ul>
           </div>
           <div className="footer-contact">
             <h4>Contact Us</h4>
-            <p><i className="fas fa-envelope"></i> info@shreescience.com</p>
-            <p><i className="fas fa-phone"></i> +91 12345 67890</p>
-            <p><i className="fas fa-map-marker-alt"></i> Mumbai, India</p>
+            <p><i className="fas fa-envelope"></i> info@shreescienceacademy.com</p>
+            <p><i className="fas fa-phone"></i> +91 98765 43210</p>
+            <p><i className="fas fa-map-marker-alt"></i> Maharashtra, India</p>
           </div>
         </div>
         <div className="footer-bottom">
           <p>&copy; 2026 Shree Science Academy. All Rights Reserved.</p>
+          <div className="social-icons">
+            <a href="#"><i className="fab fa-facebook-f"></i></a>
+            <a href="#"><i className="fab fa-instagram"></i></a>
+            <a href="#"><i className="fab fa-youtube"></i></a>
+            <a href="#"><i className="fab fa-telegram"></i></a>
+          </div>
         </div>
       </footer>
     </div>

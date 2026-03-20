@@ -11,6 +11,14 @@ const Header = () => {
     navigate('/login');
   };
 
+  const handleDashboardClick = () => {
+    if (user?.role === 'ADMIN') {
+      navigate('/admin');
+    } else {
+      navigate('/dashboard');
+    }
+  };
+
   return (
     <header className="bg-primary-600 text-white shadow-lg sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -22,9 +30,12 @@ const Header = () => {
         <nav className="flex items-center gap-4">
           {user ? (
             <>
-              <Link to="/dashboard" className="hover:text-primary-100 touch-target">
+              <button 
+                onClick={handleDashboardClick}
+                className="hover:text-primary-100 touch-target"
+              >
                 Dashboard
-              </Link>
+              </button>
               {user.role === 'ADMIN' && (
                 <Link to="/admin" className="hover:text-primary-100 touch-target">
                   Admin

@@ -5,8 +5,10 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { formatTime } from '../../hooks/useExamTimer';
+import useAuthStore from '../../store/authStore';
 
 const StudentDashboard = () => {
+  const user = useAuthStore((state) => state.user);
   const [activeExams, setActiveExams] = useState([]);
   const [attemptHistory, setAttemptHistory] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,13 +21,23 @@ const StudentDashboard = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      // Fetch all active exams
       const [examsRes, historyRes] = await Promise.all([
-        examsAPI.getActive(),
+        examsAPI.getAll({ is_active: 'true' }),
         attemptsAPI.getHistory()
       ]);
-      setActiveExams(examsRes.data.data || []);
+      
+      const examsData = examsRes.data.data || [];
+      console.log('Fetched exams:', examsData);
+      
+      // Filter exams that have questions
+      const examsWithQuestions = examsData.filter(exam => exam.question_count > 0);
+      console.log('Exams with questions:', examsWithQuestions);
+      
+      setActiveExams(examsWithQuestions);
       setAttemptHistory(historyRes.data.data || []);
     } catch (err) {
+      console.error('Error loading dashboard data:', err);
       setError('Failed to load dashboard data');
     } finally {
       setLoading(false);
@@ -45,17 +57,8 @@ const StudentDashboard = () => {
       <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-8 text-white shadow-xl shadow-blue-100">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">Welcome, Scholar!</h1>
+            <h1 className="text-3xl font-extrabold tracking-tight">Welcome, {user?.name || 'Student'}!</h1>
             <p className="text-blue-100 mt-2 text-lg">Shree Science Academy - MHT CET Portal</p>
-          </div>
-          <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20">
-            <div className="text-right">
-              <div className="text-xs text-blue-200 uppercase font-bold tracking-wider">Your Points</div>
-              <div className="text-xl font-bold">1,250</div>
-            </div>
-            <div className="w-10 h-10 bg-yellow-400 rounded-full flex items-center justify-center text-yellow-900 text-xl font-bold border-2 border-white/50 shadow-sm">
-              <i className="fas fa-star"></i>
-            </div>
           </div>
         </div>
         {/* Abstract shape decoration */}
@@ -76,7 +79,10 @@ const StudentDashboard = () => {
         </h2>
         {activeExams.length === 0 ? (
           <Card className="border-dashed border-2">
-            <p className="text-gray-500 text-center py-12 italic">No active exams at the moment. Check back soon!</p>
+            <p className="text-gray-500 text-center py-12 italic">
+              No active exams available at the moment. Check back soon!<br/>
+              <span className="text-sm">(Exams will appear here once admin creates them with questions)</span>
+            </p>
           </Card>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -96,7 +102,7 @@ const StudentDashboard = () => {
                   
                   <div>
                     <h3 className="font-bold text-xl text-gray-900 group-hover:text-blue-600 transition-colors">{exam.title}</h3>
-                    <p className="text-sm text-gray-500 mt-1 line-clamp-2">{exam.description || 'Practice test for MHT CET preparation.'}</p>
+                    <p className="text-sm text-gray-500 mt-1 line-clamp-2">{exam.description || 'No description available.'}</p>
                   </div>
                   
                   <div className="flex items-center gap-4 py-2 border-y border-gray-50">

@@ -174,7 +174,7 @@ const ExamManagePage = () => {
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Link to={`/admin/questions/${q.id}/edit`}>
+                      <Link to={`/admin/questions/${q.id}/edit?examId=${examId}`}>
                         <Button variant="outline" size="sm">Edit</Button>
                       </Link>
                     </div>
