@@ -23,11 +23,28 @@ const StudentManagementPage = () => {
   const loadStudents = async () => {
     try {
       setLoading(true);
+      setError('');
       const response = await usersAPI.getAll();
       const allUsers = response.data.data || [];
       setStudents(allUsers.filter(u => u.role === 'STUDENT'));
     } catch (err) {
-      setError('Failed to load students');
+      console.error('Error loading students:', err);
+      
+      // Handle different error cases
+      let errorMessage = 'Failed to load students.';
+      
+      if (err.response) {
+        // Server responded with error
+        errorMessage = err.response.data.message || err.response.data.errors || errorMessage;
+      } else if (err.request) {
+        // Request made but no response
+        errorMessage = 'No response from server. Please check if the backend is running.';
+      } else {
+        // Other errors
+        errorMessage = err.message || errorMessage;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

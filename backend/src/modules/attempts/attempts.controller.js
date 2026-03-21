@@ -39,9 +39,17 @@ const startAttempt = (req, res) => {
 const getActiveSession = (req, res) => {
   try {
     const session = attemptService.getActiveSession(req.user.id, req.params.examId);
-    
+
     if (!session) {
       return errorResponse(res, 404, 'No active session found.');
+    }
+
+    // Check if exam is still available (not ended)
+    const availability = examService.isExamAvailable(session.exam_id);
+    if (!availability.available) {
+      // Auto-submit the stale session
+      attemptService.autoSubmitExam(session.id, 'EXAM_ENDED');
+      return errorResponse(res, 400, availability.reason);
     }
 
     return apiResponse(res, 200, session, 'Active session retrieved');

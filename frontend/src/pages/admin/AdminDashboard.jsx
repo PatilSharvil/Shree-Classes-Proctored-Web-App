@@ -33,6 +33,12 @@ const AdminDashboard = () => {
       });
     } catch (error) {
       console.error('Failed to load admin data:', error);
+      // Redirect to login if unauthorized
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     } finally {
       setLoading(false);
     }

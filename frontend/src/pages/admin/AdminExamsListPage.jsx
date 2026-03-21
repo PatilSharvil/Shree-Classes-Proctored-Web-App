@@ -43,6 +43,18 @@ const AdminExamsListPage = () => {
     return true;
   });
 
+  const getScheduleStatus = (exam) => {
+    const now = new Date();
+    const start = exam.scheduled_start ? new Date(exam.scheduled_start) : null;
+    const end = exam.scheduled_end ? new Date(exam.scheduled_end) : null;
+
+    if (!start && !end) return { label: 'Anytime', color: 'bg-gray-100 text-gray-700' };
+    if (start && end && now < start) return { label: 'Upcoming', color: 'bg-blue-100 text-blue-700' };
+    if (start && end && now >= start && now <= end) return { label: 'Ongoing', color: 'bg-green-100 text-green-700' };
+    if (start && end && now > end) return { label: 'Ended', color: 'bg-red-100 text-red-700' };
+    return { label: 'Anytime', color: 'bg-gray-100 text-gray-700' };
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -120,6 +132,7 @@ const AdminExamsListPage = () => {
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Subject</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Duration</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Questions</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Schedule</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Status</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Actions</th>
               </tr>
@@ -143,6 +156,11 @@ const AdminExamsListPage = () => {
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     {exam.question_count || 0}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <span className={`px-2 py-1 rounded text-xs ${getScheduleStatus(exam).color}`}>
+                      {getScheduleStatus(exam).label}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-sm">
                     <span className={`px-2 py-1 rounded text-xs ${

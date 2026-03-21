@@ -104,8 +104,12 @@ const updateExam = (req, res) => {
     const exam = examService.updateExam(req.params.id, req.body);
     return apiResponse(res, 200, exam, 'Exam updated successfully');
   } catch (error) {
+    console.error('Error updating exam:', error);
     if (error.message === 'Exam not found.') {
       return errorResponse(res, 404, error.message);
+    }
+    if (error.message === 'No fields to update.') {
+      return errorResponse(res, 400, error.message);
     }
     return errorResponse(res, 500, 'Failed to update exam.', error.message);
   }

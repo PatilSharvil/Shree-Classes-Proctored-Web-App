@@ -514,9 +514,9 @@
     box-shadow: var(--shadow-hover);
 }
 
-.exam-img img {
-    width: 60px;
-    height: 60px;
+.exam-img i {
+    font-size: 60px;
+    color: var(--primary-color);
 }
 
 .exam-info {

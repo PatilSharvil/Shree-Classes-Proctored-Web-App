@@ -10,51 +10,54 @@ const useExamStore = create((set, get) => ({
   markedForReview: {},
   timeRemaining: null,
   isSubmitting: false,
-  
+
   // Proctoring state
   violations: [],
   warningCount: 0,
-  
+
   // Set active exam and session
   setActiveExam: (exam, session) => set({ activeExam: exam, session }),
-  
+
   // Set questions
   setQuestions: (questions) => set({ questions }),
-  
-  // Save response
+
+  // Save response - create new object reference to trigger re-render
   saveResponse: (questionId, selectedOption) => {
-    const responses = { ...get().responses, [questionId]: selectedOption };
-    set({ responses });
+    const currentResponses = get().responses;
+    const newResponses = JSON.parse(JSON.stringify(currentResponses));
+    newResponses[questionId] = selectedOption;
+    set({ responses: newResponses });
   },
-  
-  // Toggle review mark
+
+  // Toggle review mark - create new object reference to trigger re-render
   toggleReview: (questionId) => {
-    const marked = { ...get().markedForReview };
-    if (marked[questionId]) {
-      delete marked[questionId];
+    const currentMarked = get().markedForReview;
+    const newMarked = JSON.parse(JSON.stringify(currentMarked));
+    if (newMarked[questionId]) {
+      delete newMarked[questionId];
     } else {
-      marked[questionId] = true;
+      newMarked[questionId] = true;
     }
-    set({ markedForReview: marked });
+    set({ markedForReview: newMarked });
   },
-  
+
   // Check if question is marked for review
   isMarkedForReview: (questionId) => {
     return !!get().markedForReview[questionId];
   },
-  
+
   // Set current question index
   setCurrentQuestionIndex: (index) => set({ currentQuestionIndex: index }),
-  
+
   // Set timer
   setTimeRemaining: (seconds) => set({ timeRemaining: seconds }),
-  
+
   // Add violation
   addViolation: (violation) => {
     const violations = [...get().violations, violation];
     set({ violations, warningCount: violations.length });
   },
-  
+
   // Clear exam state
   clearExamState: () => set({
     activeExam: null,
@@ -68,7 +71,7 @@ const useExamStore = create((set, get) => ({
     violations: [],
     warningCount: 0
   }),
-  
+
   // Set submitting state
   setSubmitting: (isSubmitting) => set({ isSubmitting })
 }));

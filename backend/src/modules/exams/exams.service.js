@@ -88,10 +88,11 @@ class ExamService {
    * Get active exams (currently available)
    */
   getActiveExams() {
-    const now = new Date().toISOString();
-    
+    // Use local time for comparison since scheduled_start/end are stored in local time
+    const now = new Date().toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:MM
+
     return db.prepare(`
-      SELECT e.*, 
+      SELECT e.*,
              (SELECT COUNT(*) FROM questions WHERE exam_id = e.id) as question_count
       FROM exams e
       WHERE e.is_active = 1
@@ -118,7 +119,14 @@ class ExamService {
     for (const field of allowedFields) {
       if (examData[field] !== undefined) {
         updateFields.push(`${field} = ?`);
-        values.push(field === 'is_active' ? (examData[field] ? 1 : 0) : examData[field]);
+        // Handle null/empty values for datetime fields
+        if (field === 'scheduled_start' || field === 'scheduled_end') {
+          values.push(examData[field] || null);
+        } else if (field === 'is_active') {
+          values.push(examData[field] ? 1 : 0);
+        } else {
+          values.push(examData[field]);
+        }
       }
     }
 
@@ -126,7 +134,7 @@ class ExamService {
       throw new Error('No fields to update.');
     }
 
-    updateFields.push('updated_at = datetime("now")');
+    updateFields.push("updated_at = datetime('now')");
     values.push(id);
 
     const query = `UPDATE exams SET ${updateFields.join(', ')} WHERE id = ?`;
@@ -159,7 +167,8 @@ class ExamService {
       return { available: true };
     }
 
-    const now = new Date().toISOString();
+    // Use local time for comparison since scheduled_start/end are stored in local time
+    const now = new Date().toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:MM
 
     if (exam.scheduled_start && exam.scheduled_start > now) {
       return { available: false, reason: 'Exam has not started yet.' };

@@ -58,12 +58,67 @@ const EditExamPage = () => {
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+
+    // Auto-calculate end time when start or duration changes
+    if (name === 'scheduled_start' || name === 'duration_minutes') {
+      const startValue = name === 'scheduled_start' ? value : formData.scheduled_start;
+      const durationValue = name === 'duration_minutes' ? value : formData.duration_minutes;
+      
+      if (startValue && durationValue) {
+        const startDate = new Date(startValue);
+        const duration = parseInt(durationValue) || 0;
+        const endDate = new Date(startDate.getTime() + duration * 60000);
+        const endDateString = endDate.toISOString().slice(0, 16);
+        
+        setFormData(prev => ({
+          ...prev,
+          scheduled_end: endDateString
+        }));
+      }
+    }
+  };
+
+  const setDurationPreset = (minutes) => {
+    setFormData(prev => ({
+      ...prev,
+      duration_minutes: minutes
+    }));
+    
+    // Recalculate end time if start date is set
+    if (formData.scheduled_start) {
+      const startDate = new Date(formData.scheduled_start);
+      const endDate = new Date(startDate.getTime() + minutes * 60000);
+      const endDateString = endDate.toISOString().slice(0, 16);
+      
+      setFormData(prev => ({
+        ...prev,
+        scheduled_end: endDateString
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSubmitting(true);
+
+    // Validation: Check if end time is after start time
+    if (formData.scheduled_start && formData.scheduled_end) {
+      const start = new Date(formData.scheduled_start);
+      const end = new Date(formData.scheduled_end);
+      if (end <= start) {
+        setError('End time must be after start time');
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    // Validation: Check if duration is sufficient for the exam
+    if (formData.duration_minutes < 1) {
+      setError('Duration must be at least 1 minute');
+      setSubmitting(false);
+      return;
+    }
 
     try {
       const payload = {
@@ -74,10 +129,19 @@ const EditExamPage = () => {
         passing_percentage: parseFloat(formData.passing_percentage)
       };
 
+      // Convert empty strings to null for optional datetime fields
+      if (!payload.scheduled_start) payload.scheduled_start = null;
+      if (!payload.scheduled_end) payload.scheduled_end = null;
+
+      console.log('Updating exam with payload:', payload);
       await examsAPI.update(examId, payload);
       navigate(`/admin/exams/${examId}`);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update exam');
+      console.error('Failed to update exam:', err);
+      console.error('Error response:', err.response);
+      console.error('Error data:', err.response?.data);
+      const errorMsg = err.response?.data?.message || err.response?.data?.errors || err.message || 'Failed to update exam';
+      setError(errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -176,6 +240,43 @@ const EditExamPage = () => {
                   min="1"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent touch-target"
                 />
+                <div className="flex gap-2 mt-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setDurationPreset(30)}
+                    className="px-3 py-1 text-xs bg-primary-50 text-primary-700 rounded hover:bg-primary-100 border border-primary-200"
+                  >
+                    30 min
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDurationPreset(60)}
+                    className="px-3 py-1 text-xs bg-primary-50 text-primary-700 rounded hover:bg-primary-100 border border-primary-200"
+                  >
+                    1 hour
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDurationPreset(90)}
+                    className="px-3 py-1 text-xs bg-primary-50 text-primary-700 rounded hover:bg-primary-100 border border-primary-200"
+                  >
+                    90 min
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDurationPreset(120)}
+                    className="px-3 py-1 text-xs bg-primary-50 text-primary-700 rounded hover:bg-primary-100 border border-primary-200"
+                  >
+                    2 hours
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDurationPreset(180)}
+                    className="px-3 py-1 text-xs bg-primary-50 text-primary-700 rounded hover:bg-primary-100 border border-primary-200"
+                  >
+                    3 hours
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -234,6 +335,10 @@ const EditExamPage = () => {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Scheduling</h3>
 
+            <div className="bg-blue-50 border border-blue-200 p-3 rounded text-sm text-blue-800">
+              <strong>💡 Tip:</strong> Set the start time and duration first. The end time will be calculated automatically.
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="scheduled_start" className="block text-sm font-medium text-gray-700 mb-1">
@@ -251,7 +356,7 @@ const EditExamPage = () => {
 
               <div>
                 <label htmlFor="scheduled_end" className="block text-sm font-medium text-gray-700 mb-1">
-                  End Date & Time
+                  End Date & Time <span className="text-gray-500">(Auto-calculated)</span>
                 </label>
                 <input
                   type="datetime-local"

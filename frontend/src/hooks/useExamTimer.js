@@ -32,6 +32,9 @@ export const useExamTimer = (durationMinutes, onTimeUp, isPaused = false) => {
 };
 
 export const formatTime = (seconds) => {
+  if (seconds === null || seconds === undefined || seconds < 0) {
+    return '0:00';
+  }
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;

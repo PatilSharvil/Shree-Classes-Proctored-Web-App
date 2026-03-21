@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { examsAPI, questionsAPI, attemptsAPI } from '../../services/api';
 import useExamStore from '../../store/examStore';
@@ -13,7 +13,7 @@ const ExamPage = () => {
   const { examId } = useParams();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
-  
+
   const [exam, setExam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -21,22 +21,31 @@ const ExamPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
+  const [forceUpdate, setForceUpdate] = useState(0);
 
-  const {
-    session,
-    questions,
-    currentQuestionIndex,
-    responses,
-    markedForReview,
-    timeRemaining,
-    setActiveExam,
-    setQuestions,
-    saveResponse,
-    setCurrentQuestionIndex,
-    setTimeRemaining,
-    toggleReview,
-    clearExamState
-  } = useExamStore();
+  // Get store state and actions
+  const session = useExamStore((state) => state.session);
+  const questions = useExamStore((state) => state.questions);
+  const currentQuestionIndex = useExamStore((state) => state.currentQuestionIndex);
+  const responses = useExamStore((state) => state.responses);
+  const markedForReview = useExamStore((state) => state.markedForReview);
+  const timeRemaining = useExamStore((state) => state.timeRemaining);
+  const setActiveExam = useExamStore((state) => state.setActiveExam);
+  const setQuestions = useExamStore((state) => state.setQuestions);
+  const saveResponse = useExamStore((state) => state.saveResponse);
+  const setCurrentQuestionIndex = useExamStore((state) => state.setCurrentQuestionIndex);
+  const setTimeRemaining = useExamStore((state) => state.setTimeRemaining);
+  const toggleReview = useExamStore((state) => state.toggleReview);
+  const clearExamState = useExamStore((state) => state.clearExamState);
+
+  // Subscribe to store changes to force re-render
+  useEffect(() => {
+    const unsubscribe = useExamStore.subscribe(
+      (state) => ({ responses: state.responses, markedForReview: state.markedForReview }),
+      () => setForceUpdate((n) => n + 1)
+    );
+    return unsubscribe;
+  }, []);
 
   // Handle time up
   const handleTimeUp = async () => {
@@ -87,27 +96,43 @@ const ExamPage = () => {
   const loadExam = async () => {
     try {
       setLoading(true);
-      
+      setError('');
+
       // Check for existing active session
       try {
         const activeRes = await attemptsAPI.getActive(examId);
         const existingSession = activeRes.data.data;
-        
+
         if (existingSession) {
           const questionsRes = await questionsAPI.getByExam(examId, {
             shuffled: 'true',
             shuffledOptions: 'true'
           });
-          
+
           setExam({ ...existingSession });
           setActiveExam(exam, existingSession);
           setQuestions(questionsRes.data.data || []);
           setCurrentQuestionIndex(existingSession.current_question_index);
+          
+          // Initialize timer with remaining duration
+          const examDuration = existingSession.duration_minutes || exam.duration_minutes;
+          const startTime = new Date(existingSession.started_at).getTime();
+          const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+          const remainingSeconds = (examDuration * 60) - elapsedSeconds;
+          setTimeRemaining(Math.max(0, remainingSeconds));
+          
           setExamStarted(true);
           setLoading(false);
           return;
         }
       } catch (err) {
+        // Check if the error is "Exam has ended" or similar
+        const errorMessage = err.response?.data?.message || err.message;
+        if (errorMessage && (errorMessage.includes('ended') || errorMessage.includes('not active'))) {
+          setError(errorMessage);
+          setLoading(false);
+          return;
+        }
         // No active session, continue to start new one
       }
 
@@ -115,7 +140,7 @@ const ExamPage = () => {
       const examRes = await examsAPI.getById(examId);
       setExam(examRes.data.data);
     } catch (err) {
-      setError('Failed to load exam');
+      setError(err.response?.data?.message || 'Failed to load exam');
     } finally {
       setLoading(false);
     }
@@ -124,6 +149,15 @@ const ExamPage = () => {
   const startExam = async () => {
     try {
       setLoading(true);
+      setError('');
+
+      // First check if exam is available
+      const availabilityRes = await examsAPI.checkAvailability(examId);
+      const availability = availabilityRes.data.data;
+      if (!availability.available) {
+        throw new Error(availability.reason || 'Exam is not available');
+      }
+
       const { data } = await attemptsAPI.start(examId);
       const sessionData = data.data;
 
@@ -134,9 +168,14 @@ const ExamPage = () => {
 
       setActiveExam(exam, sessionData);
       setQuestions(questionsRes.data.data || []);
+      
+      // Initialize timer with exam duration (in seconds)
+      const examDuration = sessionData.duration_minutes || exam.duration_minutes;
+      setTimeRemaining(examDuration * 60);
+      
       setExamStarted(true);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to start exam');
+      setError(err.message || 'Failed to start exam');
     } finally {
       setLoading(false);
     }
@@ -146,11 +185,18 @@ const ExamPage = () => {
     if (!session || submitting) return;
 
     const question = questions[currentQuestionIndex];
-    saveResponse(question.id, option);
+    const questionId = question?.id;
+    
+    if (!questionId) {
+      console.error('Question ID is undefined!');
+      return;
+    }
+    
+    saveResponse(questionId, option);
 
     try {
       await attemptsAPI.saveResponse(session.id, {
-        questionId: question.id,
+        questionId,
         selectedOption: option
       });
     } catch (error) {
@@ -186,9 +232,11 @@ const ExamPage = () => {
   const getQuestionStatus = (index) => {
     const question = questions[index];
     if (!question) return 'not-visited';
-    
-    const hasResponse = !!responses[question.id];
-    const isReview = !!markedForReview[question.id];
+
+    // Ensure question.id exists and check response
+    const questionId = question.id;
+    const hasResponse = questionId && responses[questionId];
+    const isReview = questionId && markedForReview[questionId];
     const isCurrent = index === currentQuestionIndex;
 
     if (isCurrent) return 'current';
@@ -220,10 +268,16 @@ const ExamPage = () => {
     }
   };
 
-  const questionStatuses = questions.map((_, idx) => getQuestionStatus(idx));
-  const answeredCount = questionStatuses.filter(s => s === 'answered' || s === 'answered-review').length;
-  const notAnsweredCount = questionStatuses.filter(s => s === 'not-answered').length;
-  const reviewCount = questionStatuses.filter(s => s === 'review' || s === 'answered-review').length;
+  // Calculate question statuses using useMemo to ensure fresh values
+  const { questionStatuses, answeredCount, notAnsweredCount, reviewCount } = useMemo(() => {
+    const statuses = questions.map((_, idx) => getQuestionStatus(idx));
+    return {
+      questionStatuses: statuses,
+      answeredCount: statuses.filter(s => s === 'answered' || s === 'answered-review').length,
+      notAnsweredCount: statuses.filter(s => s === 'not-answered').length,
+      reviewCount: statuses.filter(s => s === 'review' || s === 'answered-review').length
+    };
+  }, [questions, responses, markedForReview, currentQuestionIndex]);
 
   if (loading) {
     return (
@@ -285,8 +339,8 @@ const ExamPage = () => {
             </ul>
           </div>
 
-          <Button onClick={startExam} fullWidth size="lg">
-            Start Exam
+          <Button onClick={startExam} fullWidth size="lg" disabled={loading}>
+            {loading ? 'Starting...' : 'Start Exam'}
           </Button>
         </Card>
       </div>
@@ -392,22 +446,24 @@ const ExamPage = () => {
           </Card>
 
           {/* Navigation Buttons */}
-          <div className="flex items-center justify-between gap-4">
-            <Button
-              variant="secondary"
-              onClick={() => handleNavigate(currentQuestionIndex - 1)}
-              disabled={currentQuestionIndex === 0 || submitting}
-            >
-              Previous
-            </Button>
+          {questions.length > 1 && (
+            <div className="flex items-center justify-between gap-4">
+              <Button
+                variant="secondary"
+                onClick={() => handleNavigate(currentQuestionIndex - 1)}
+                disabled={currentQuestionIndex === 0 || submitting}
+              >
+                Previous
+              </Button>
 
-            <Button
-              onClick={() => handleNavigate(currentQuestionIndex + 1)}
-              disabled={currentQuestionIndex === questions.length - 1 || submitting}
-            >
-              Next
-            </Button>
-          </div>
+              <Button
+                onClick={() => handleNavigate(currentQuestionIndex + 1)}
+                disabled={currentQuestionIndex === questions.length - 1 || submitting}
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Question Palette - Desktop */}

@@ -205,7 +205,7 @@ const LandingPage = () => {
         <div className="exams-list">
           <div className="exam-card">
             <div className="exam-img">
-              <img src="https://img.icons8.com/color/144/000000/test.png" alt="MHT CET PCM" />
+              <i className="fas fa-flask"></i>
             </div>
             <div className="exam-info">
               <h3>MHT CET PCM Mock Test</h3>
@@ -218,7 +218,7 @@ const LandingPage = () => {
           </div>
           <div className="exam-card">
             <div className="exam-img">
-              <img src="https://img.icons8.com/color/144/000000/test-passed.png" alt="MHT CET PCB" />
+              <i className="fas fa-clipboard-check"></i>
             </div>
             <div className="exam-info">
               <h3>MHT CET PCB Mock Test</h3>
@@ -231,7 +231,7 @@ const LandingPage = () => {
           </div>
           <div className="exam-card">
             <div className="exam-img">
-              <img src="https://img.icons8.com/color/144/000000/online-quiz.png" alt="Chapter Test" />
+              <i className="fas fa-book-open"></i>
             </div>
             <div className="exam-info">
               <h3>Chapter-wise Tests</h3>
