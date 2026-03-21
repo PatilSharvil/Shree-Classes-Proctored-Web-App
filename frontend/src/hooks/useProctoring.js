@@ -43,31 +43,42 @@ export const useProctoring = (sessionId, onViolationThreshold) => {
   }, []);
 
   useEffect(() => {
-    // Add event listeners
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    // Handle fullscreen change
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        // Record violation if they exit fullscreen
+        try {
+          proctoringAPI.recordViolation({
+            sessionId,
+            type: 'FULLSCREEN_EXIT',
+            description: 'User exited full-screen mode'
+          });
+        } catch (error) {}
 
-    // Request fullscreen (best effort)
-    const requestFullscreen = async () => {
-      try {
-        if (document.documentElement.requestFullscreen) {
-          await document.documentElement.requestFullscreen();
-        }
-      } catch (error) {
-        console.log('Fullscreen not supported or denied');
+        addViolation({
+          type: 'FULLSCREEN_EXIT',
+          timestamp: new Date().toISOString()
+        });
+        
+        // Re-prompt for fullscreen if possible
+        alert('⚠️ Warning: Full-screen mode is required for this exam. Please stay in full-screen mode.');
       }
     };
-    requestFullscreen();
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
 
     // Cleanup
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      if (document.exitFullscreen) {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      if (document.exitFullscreen && document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
     };
-  }, [handleVisibilityChange, handleBeforeUnload]);
+  }, [handleVisibilityChange, handleBeforeUnload, sessionId, addViolation]);
 
   return {
     warningCount: warningCountRef.current

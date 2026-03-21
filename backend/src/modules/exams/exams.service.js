@@ -96,8 +96,8 @@ class ExamService {
              (SELECT COUNT(*) FROM questions WHERE exam_id = e.id) as question_count
       FROM exams e
       WHERE e.is_active = 1
-        AND (e.scheduled_start IS NULL OR e.scheduled_start <= ?)
-        AND (e.scheduled_end IS NULL OR e.scheduled_end > ?)
+        AND (e.scheduled_start IS NULL OR substr(e.scheduled_start, 1, 16) <= ?)
+        AND (e.scheduled_end IS NULL OR substr(e.scheduled_end, 1, 16) > ?)
       ORDER BY e.created_at DESC
     `).all(now, now);
   }
@@ -169,12 +169,14 @@ class ExamService {
 
     // Use local time for comparison since scheduled_start/end are stored in local time
     const now = new Date().toISOString().slice(0, 16); // Format: YYYY-MM-DDTHH:MM
+    const start = exam.scheduled_start ? exam.scheduled_start.slice(0, 16) : null;
+    const end = exam.scheduled_end ? exam.scheduled_end.slice(0, 16) : null;
 
-    if (exam.scheduled_start && exam.scheduled_start > now) {
+    if (start && start > now) {
       return { available: false, reason: 'Exam has not started yet.' };
     }
 
-    if (exam.scheduled_end && exam.scheduled_end <= now) {
+    if (end && end <= now) {
       return { available: false, reason: 'Exam has ended.' };
     }
 

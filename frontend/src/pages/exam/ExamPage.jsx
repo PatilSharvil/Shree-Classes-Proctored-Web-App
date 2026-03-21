@@ -21,7 +21,6 @@ const ExamPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
-  const [forceUpdate, setForceUpdate] = useState(0);
 
   // Get store state and actions
   const session = useExamStore((state) => state.session);
@@ -37,15 +36,6 @@ const ExamPage = () => {
   const setTimeRemaining = useExamStore((state) => state.setTimeRemaining);
   const toggleReview = useExamStore((state) => state.toggleReview);
   const clearExamState = useExamStore((state) => state.clearExamState);
-
-  // Subscribe to store changes to force re-render
-  useEffect(() => {
-    const unsubscribe = useExamStore.subscribe(
-      (state) => ({ responses: state.responses, markedForReview: state.markedForReview }),
-      () => setForceUpdate((n) => n + 1)
-    );
-    return unsubscribe;
-  }, []);
 
   // Handle time up
   const handleTimeUp = async () => {
@@ -163,17 +153,25 @@ const ExamPage = () => {
 
       const questionsRes = await questionsAPI.getByExam(examId, {
         shuffled: 'true',
-        shuffledOptions: 'true'
+        shuffledOptions: 'false'
       });
 
       setActiveExam(exam, sessionData);
       setQuestions(questionsRes.data.data || []);
       
-      // Initialize timer with exam duration (in seconds)
       const examDuration = sessionData.duration_minutes || exam.duration_minutes;
       setTimeRemaining(examDuration * 60);
       
       setExamStarted(true);
+
+      // Request fullscreen as it's a user gesture
+      try {
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch (err) {
+        console.warn('Fullscreen request denied or not supported', err);
+      }
     } catch (err) {
       setError(err.message || 'Failed to start exam');
     } finally {
@@ -220,11 +218,23 @@ const ExamPage = () => {
     setShowConfirmSubmit(false);
     setSubmitting(true);
     try {
-      await attemptsAPI.submit(session.id);
+      const result = await attemptsAPI.submit(session.id);
+      
+      // Exit fullscreen on successful submission
+      if (document.fullscreenElement && document.exitFullscreen) {
+        try {
+          await document.exitFullscreen();
+        } catch (err) {
+          console.warn('Failed to exit fullscreen:', err);
+        }
+      }
+
       clearExamState();
-      navigate('/dashboard', { state: { message: 'Exam submitted successfully!' } });
+      // Redirect to result page so student can see their answers
+      navigate(`/results/${session.id}`);
     } catch (err) {
-      setError('Failed to submit exam');
+      console.error('Submission failed:', err);
+      setError(err.response?.data?.message || 'Failed to submit exam. Please check your internet connection and try again.');
       setSubmitting(false);
     }
   };
@@ -477,7 +487,7 @@ const ExamPage = () => {
                   <span>Answered</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-red-200 rounded text-red-800 text-xs flex items-center justify-center">1</div>
+                  <div className="w-6 h-6 bg-red-200 rounded text-red-800 text-xs flex items-center justify-center"></div>
                   <span>Not Answered</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -485,11 +495,11 @@ const ExamPage = () => {
                   <span>Answered + Review</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-purple-200 rounded border-2 border-purple-500 text-purple-800 text-xs flex items-center justify-center">1</div>
+                  <div className="w-6 h-6 bg-purple-200 rounded border-2 border-purple-500 text-purple-800 text-xs flex items-center justify-center"></div>
                   <span>Marked for Review</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-primary-600 rounded text-white text-xs flex items-center justify-center ring-2 ring-primary-300">1</div>
+                  <div className="w-6 h-6 bg-primary-600 rounded text-white text-xs flex items-center justify-center ring-2 ring-primary-300"></div>
                   <span>Current</span>
                 </div>
               </div>
@@ -549,7 +559,7 @@ const ExamPage = () => {
                   <span>Answered</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-red-200 rounded text-red-800 text-xs flex items-center justify-center">1</div>
+                  <div className="w-6 h-6 bg-red-200 rounded text-red-800 text-xs flex items-center justify-center"></div>
                   <span>Not Answered</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -557,7 +567,7 @@ const ExamPage = () => {
                   <span>+ Review</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-purple-200 rounded border-2 border-purple-500 text-xs flex items-center justify-center">1</div>
+                  <div className="w-6 h-6 bg-purple-200 rounded border-2 border-purple-500 text-xs flex items-center justify-center"></div>
                   <span>Review</span>
                 </div>
               </div>

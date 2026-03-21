@@ -23,22 +23,25 @@ const useExamStore = create((set, get) => ({
 
   // Save response - create new object reference to trigger re-render
   saveResponse: (questionId, selectedOption) => {
-    const currentResponses = get().responses;
-    const newResponses = JSON.parse(JSON.stringify(currentResponses));
-    newResponses[questionId] = selectedOption;
-    set({ responses: newResponses });
+    set((state) => ({
+      responses: {
+        ...state.responses,
+        [questionId]: selectedOption
+      }
+    }));
   },
 
   // Toggle review mark - create new object reference to trigger re-render
   toggleReview: (questionId) => {
-    const currentMarked = get().markedForReview;
-    const newMarked = JSON.parse(JSON.stringify(currentMarked));
-    if (newMarked[questionId]) {
-      delete newMarked[questionId];
-    } else {
-      newMarked[questionId] = true;
-    }
-    set({ markedForReview: newMarked });
+    set((state) => {
+      const newMarked = { ...state.markedForReview };
+      if (newMarked[questionId]) {
+        delete newMarked[questionId];
+      } else {
+        newMarked[questionId] = true;
+      }
+      return { markedForReview: newMarked };
+    });
   },
 
   // Check if question is marked for review

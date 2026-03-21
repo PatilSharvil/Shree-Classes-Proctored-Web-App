@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { attemptsAPI, examsAPI } from '../../services/api';
+import { attemptsAPI } from '../../services/api';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -20,12 +20,13 @@ const ResultDetailPage = () => {
   const loadResult = async () => {
     try {
       setLoading(true);
-      const [detailsRes, examRes] = await Promise.all([
-        attemptsAPI.getDetails(attemptId),
-        examsAPI.getById(attemptId)
-      ]);
-      setResult(detailsRes.data.data);
-      setExam(examRes.data.data);
+      const detailsRes = await attemptsAPI.getDetails(attemptId);
+      const data = detailsRes.data.data;
+      setResult(data);
+      // exam info lives on the session itself
+      if (data?.session) {
+        setExam({ id: data.session.exam_id, title: data.session.exam_title });
+      }
     } catch (error) {
       console.error('Failed to load result:', error);
     } finally {
@@ -52,9 +53,10 @@ const ResultDetailPage = () => {
   }
 
   const { session, responses } = result;
-  const percentage = session.total_questions > 0 
-    ? (session.score / (session.total_questions * 1)) * 100 
-    : 0;
+  // Use percentage stored in session (from attempt_history) or calculate from score/total_marks
+  const percentage = session.percentage != null
+    ? parseFloat(session.percentage)
+    : (session.score && session.total_marks ? (session.score / session.total_marks) * 100 : 0);
 
   const getGrade = (pct) => {
     if (pct >= 90) return { grade: 'A+', color: 'text-green-600' };

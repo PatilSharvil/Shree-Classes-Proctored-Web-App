@@ -182,6 +182,12 @@ const StudentDashboard = () => {
                       </div>
                     </div>
                   </div>
+                  
+                  <Link to={`/results/${attempt.session_id || attempt.id}`}>
+                    <Button variant="secondary" size="sm">
+                      View Results
+                    </Button>
+                  </Link>
                 </div>
               </Card>
             ))}

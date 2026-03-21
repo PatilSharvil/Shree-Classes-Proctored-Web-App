@@ -17,7 +17,9 @@ const AddQuestionPage = () => {
     option_d: '',
     correct_option: 'A',
     marks: 1,
-    difficulty: 'MEDIUM'
+    negative_marks: 0,
+    difficulty: 'MEDIUM',
+    explanation: ''
   });
 
   const handleChange = (e) => {
@@ -36,7 +38,8 @@ const AddQuestionPage = () => {
     try {
       const payload = {
         ...formData,
-        marks: parseInt(formData.marks)
+        marks: parseInt(formData.marks),
+        negative_marks: parseFloat(formData.negative_marks) || 0
       };
 
       await questionsAPI.add(examId, payload);
@@ -48,11 +51,18 @@ const AddQuestionPage = () => {
     }
   };
 
+  const options = [
+    { key: 'A', field: 'option_a', label: 'Option A' },
+    { key: 'B', field: 'option_b', label: 'Option B' },
+    { key: 'C', field: 'option_c', label: 'Option C' },
+    { key: 'D', field: 'option_d', label: 'Option D' }
+  ];
+
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Add New Question</h1>
-        <p className="text-gray-600 mt-1">Add a multiple choice question to the exam</p>
+        <p className="text-gray-600 mt-1">Add a multiple choice question — click the radio button to mark the correct answer</p>
       </div>
 
       {error && (
@@ -80,97 +90,67 @@ const AddQuestionPage = () => {
             />
           </div>
 
-          {/* Options */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Answer Options</h3>
-
-            <div>
-              <label htmlFor="option_a" className="block text-sm font-medium text-gray-700 mb-1">
-                Option A
-              </label>
-              <input
-                type="text"
-                id="option_a"
-                name="option_a"
-                value={formData.option_a}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent touch-target"
-                placeholder="Enter option A"
-              />
+          {/* Options with inline correct answer radio */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between border-b pb-2">
+              <h3 className="text-lg font-semibold text-gray-900">Answer Options</h3>
+              <span className="text-xs text-gray-500 bg-green-50 border border-green-200 text-green-700 px-2 py-1 rounded">
+                ✓ Click the circle to mark the correct answer
+              </span>
             </div>
 
-            <div>
-              <label htmlFor="option_b" className="block text-sm font-medium text-gray-700 mb-1">
-                Option B
-              </label>
-              <input
-                type="text"
-                id="option_b"
-                name="option_b"
-                value={formData.option_b}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent touch-target"
-                placeholder="Enter option B"
-              />
-            </div>
+            {options.map(({ key, field, label }) => {
+              const isCorrect = formData.correct_option === key;
+              return (
+                <div
+                  key={key}
+                  className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                    isCorrect
+                      ? 'border-green-500 bg-green-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                  onClick={() => setFormData(prev => ({ ...prev, correct_option: key }))}
+                >
+                  {/* Radio indicator */}
+                  <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                    isCorrect
+                      ? 'border-green-500 bg-green-500'
+                      : 'border-gray-400'
+                  }`}>
+                    {isCorrect && (
+                      <span className="text-white text-xs font-bold">✓</span>
+                    )}
+                  </div>
 
-            <div>
-              <label htmlFor="option_c" className="block text-sm font-medium text-gray-700 mb-1">
-                Option C
-              </label>
-              <input
-                type="text"
-                id="option_c"
-                name="option_c"
-                value={formData.option_c}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent touch-target"
-                placeholder="Enter option C"
-              />
-            </div>
+                  {/* Option label badge */}
+                  <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                    isCorrect ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {key}
+                  </span>
 
-            <div>
-              <label htmlFor="option_d" className="block text-sm font-medium text-gray-700 mb-1">
-                Option D
-              </label>
-              <input
-                type="text"
-                id="option_d"
-                name="option_d"
-                value={formData.option_d}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent touch-target"
-                placeholder="Enter option D"
-              />
-            </div>
+                  {/* Text input */}
+                  <input
+                    type="text"
+                    name={field}
+                    value={formData[field]}
+                    onChange={handleChange}
+                    required
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex-1 px-3 py-1.5 border border-gray-200 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+                    placeholder={`Enter ${label}...`}
+                  />
+
+                  {isCorrect && (
+                    <span className="text-xs font-semibold text-green-600 flex-shrink-0">✓ Correct</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
-          {/* Correct Answer */}
-          <div>
-            <label htmlFor="correct_option" className="block text-sm font-medium text-gray-700 mb-1">
-              Correct Answer *
-            </label>
-            <select
-              id="correct_option"
-              name="correct_option"
-              value={formData.correct_option}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent touch-target"
-            >
-              <option value="A">Option A</option>
-              <option value="B">Option B</option>
-              <option value="C">Option C</option>
-              <option value="D">Option D</option>
-            </select>
-          </div>
-
-          {/* Marks and Difficulty */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Marks, Negative Marks and Difficulty */}
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label htmlFor="marks" className="block text-sm font-medium text-gray-700 mb-1">
                 Marks *
@@ -183,6 +163,22 @@ const AddQuestionPage = () => {
                 onChange={handleChange}
                 required
                 min="1"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent touch-target"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="negative_marks" className="block text-sm font-medium text-gray-700 mb-1">
+                Negative Marks
+              </label>
+              <input
+                type="number"
+                id="negative_marks"
+                name="negative_marks"
+                value={formData.negative_marks}
+                onChange={handleChange}
+                min="0"
+                step="0.25"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent touch-target"
               />
             </div>
@@ -206,6 +202,22 @@ const AddQuestionPage = () => {
             </div>
           </div>
 
+          {/* Optional Explanation */}
+          <div>
+            <label htmlFor="explanation" className="block text-sm font-medium text-gray-700 mb-1">
+              Explanation <span className="text-gray-400 font-normal">(optional — shown after exam)</span>
+            </label>
+            <textarea
+              id="explanation"
+              name="explanation"
+              value={formData.explanation}
+              onChange={handleChange}
+              rows={2}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              placeholder="Briefly explain why this answer is correct..."
+            />
+          </div>
+
           {/* Actions */}
           <div className="flex gap-4 pt-4 border-t">
             <Button type="submit" disabled={loading} className="flex-1">
@@ -226,3 +238,5 @@ const AddQuestionPage = () => {
 };
 
 export default AddQuestionPage;
+
+

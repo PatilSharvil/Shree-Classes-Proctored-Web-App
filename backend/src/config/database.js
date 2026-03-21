@@ -151,6 +151,13 @@ const initializeDatabase = () => {
   db.exec(`CREATE INDEX IF NOT EXISTS idx_violations_session ON violations(session_id)`);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_attempt_history_user ON attempt_history(user_id)`);
 
+  // Add session_id column if it doesn't exist (safe migration for existing DBs)
+  try {
+    db.exec(`ALTER TABLE attempt_history ADD COLUMN session_id TEXT`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
   console.log('Database initialized successfully');
 };
 

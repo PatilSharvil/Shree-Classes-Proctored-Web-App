@@ -42,7 +42,8 @@ class AttemptService {
    */
   getSessionById(sessionId) {
     const session = db.prepare(`
-      SELECT es.*, e.title as exam_title, e.duration_minutes
+      SELECT es.*, e.title as exam_title, e.duration_minutes,
+             e.total_marks, e.passing_percentage
       FROM exam_sessions es
       JOIN exams e ON es.exam_id = e.id
       WHERE es.id = ?
@@ -125,8 +126,8 @@ class AttemptService {
     const stats = db.prepare(`
       SELECT 
         COUNT(*) as attempted_count,
-        SUM(is_correct) as correct_count,
-        SUM(marks_awarded) as score
+        COALESCE(SUM(is_correct), 0) as correct_count,
+        COALESCE(SUM(marks_awarded), 0) as score
       FROM responses
       WHERE session_id = ?
     `).get(sessionId);
@@ -179,26 +180,38 @@ class AttemptService {
 
     // Create attempt history record
     const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(session.exam_id);
-    const percentage = (stats.score / exam.total_marks) * 100;
+    const percentage = exam.total_marks > 0 ? (stats.score / exam.total_marks) * 100 : 0;
+
+    // Helper for safe date parsing
+    const parseDate = (d) => {
+      if (!d) return new Date();
+      // SQLite format is "YYYY-MM-DD HH:MM:SS", JS needs "YYYY-MM-DDTHH:MM:SS" or similar
+      return new Date(d.replace(' ', 'T'));
+    };
+
+    const submittedDate = parseDate(stats.submitted_at);
+    const startedDate = parseDate(session.started_at);
+    const durationTaken = Math.floor((submittedDate - startedDate) / 1000);
 
     const historyId = uuidv4();
     db.prepare(`
       INSERT INTO attempt_history (
-        id, user_id, exam_id, score, total_marks, percentage,
+        id, user_id, exam_id, session_id, score, total_marks, percentage,
         correct_count, incorrect_count, unattempted_count,
         duration_taken, started_at, submitted_at, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       historyId,
       session.user_id,
       session.exam_id,
-      stats.score,
+      sessionId,
+      stats.score || 0,
       exam.total_marks,
-      percentage,
-      stats.correct_count,
-      stats.attempted_count - stats.correct_count,
-      session.total_questions - stats.attempted_count,
-      Math.floor((new Date(stats.submitted_at) - new Date(session.started_at)) / 1000),
+      percentage || 0,
+      stats.correct_count || 0,
+      (stats.attempted_count || 0) - (stats.correct_count || 0),
+      Math.max(0, session.total_questions - (stats.attempted_count || 0)),
+      isNaN(durationTaken) ? 0 : durationTaken,
       session.started_at,
       stats.submitted_at,
       'SUBMITTED'
@@ -237,25 +250,36 @@ class AttemptService {
     const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(session.exam_id);
     const percentage = exam.total_marks > 0 ? (stats.score / exam.total_marks) * 100 : 0;
 
+    // Helper for safe date parsing
+    const parseDate = (d) => {
+      if (!d) return new Date();
+      return new Date(d.replace(' ', 'T'));
+    };
+
+    const submittedDate = parseDate(stats.submitted_at);
+    const startedDate = parseDate(session.started_at);
+    const durationTaken = Math.floor((submittedDate - startedDate) / 1000);
+
     // Create attempt history record
     const historyId = uuidv4();
     db.prepare(`
       INSERT INTO attempt_history (
-        id, user_id, exam_id, score, total_marks, percentage,
+        id, user_id, exam_id, session_id, score, total_marks, percentage,
         correct_count, incorrect_count, unattempted_count,
         duration_taken, started_at, submitted_at, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       historyId,
       session.user_id,
       session.exam_id,
-      stats.score,
+      sessionId,
+      stats.score || 0,
       exam.total_marks,
-      percentage,
-      stats.correct_count,
-      stats.attempted_count - stats.correct_count,
-      session.total_questions - stats.attempted_count,
-      Math.floor((new Date() - new Date(session.started_at)) / 1000),
+      percentage || 0,
+      stats.correct_count || 0,
+      (stats.attempted_count || 0) - (stats.correct_count || 0),
+      Math.max(0, session.total_questions - (stats.attempted_count || 0)),
+      isNaN(durationTaken) ? 0 : durationTaken,
       session.started_at,
       stats.submitted_at,
       `AUTO_SUBMITTED_${reason}`

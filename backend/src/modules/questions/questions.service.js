@@ -131,18 +131,25 @@ class QuestionService {
       { key: 'D', value: question.option_d }
     ];
 
+    // Remember which value was the correct answer
+    const correctValue = question[`option_${question.correct_option?.toLowerCase()}`];
+
     // Shuffle options
     for (let i = options.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [options[i], options[j]] = [options[j], options[i]];
     }
 
+    // Find where the correct value ended up after shuffling
+    const newCorrectKey = options.find(o => o.value === correctValue)?.key || question.correct_option;
+
     return {
       ...question,
       option_a: options[0].value,
       option_b: options[1].value,
       option_c: options[2].value,
-      option_d: options[3].value
+      option_d: options[3].value,
+      correct_option: newCorrectKey
     };
   }
 

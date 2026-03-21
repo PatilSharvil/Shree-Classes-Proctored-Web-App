@@ -36,8 +36,16 @@ const CreateExamPage = () => {
       if (startValue && durationValue) {
         const startDate = new Date(startValue);
         const duration = parseInt(durationValue) || 0;
+        // Calculate end date in local time
         const endDate = new Date(startDate.getTime() + duration * 60000);
-        const endDateString = endDate.toISOString().slice(0, 16);
+        
+        // Format as YYYY-MM-DDTHH:mm (local time string for datetime-local)
+        const year = endDate.getFullYear();
+        const month = String(endDate.getMonth() + 1).padStart(2, '0');
+        const day = String(endDate.getDate()).padStart(2, '0');
+        const hour = String(endDate.getHours()).padStart(2, '0');
+        const minute = String(endDate.getMinutes()).padStart(2, '0');
+        const endDateString = `${year}-${month}-${day}T${hour}:${minute}`;
         
         setFormData(prev => ({
           ...prev,
@@ -57,7 +65,13 @@ const CreateExamPage = () => {
     if (formData.scheduled_start) {
       const startDate = new Date(formData.scheduled_start);
       const endDate = new Date(startDate.getTime() + minutes * 60000);
-      const endDateString = endDate.toISOString().slice(0, 16);
+      
+      const year = endDate.getFullYear();
+      const month = String(endDate.getMonth() + 1).padStart(2, '0');
+      const day = String(endDate.getDate()).padStart(2, '0');
+      const hour = String(endDate.getHours()).padStart(2, '0');
+      const minute = String(endDate.getMinutes()).padStart(2, '0');
+      const endDateString = `${year}-${month}-${day}T${hour}:${minute}`;
       
       setFormData(prev => ({
         ...prev,
@@ -94,7 +108,10 @@ const CreateExamPage = () => {
         duration_minutes: parseInt(formData.duration_minutes),
         total_marks: parseInt(formData.total_marks),
         negative_marks: parseFloat(formData.negative_marks),
-        passing_percentage: parseFloat(formData.passing_percentage)
+        passing_percentage: parseFloat(formData.passing_percentage),
+        // Ensure dates are stored in UTC format
+        scheduled_start: formData.scheduled_start ? new Date(formData.scheduled_start).toISOString() : null,
+        scheduled_end: formData.scheduled_end ? new Date(formData.scheduled_end).toISOString() : null
       };
 
       await examsAPI.create(payload);
