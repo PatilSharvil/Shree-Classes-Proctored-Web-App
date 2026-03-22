@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
-import Button from '../../components/ui/Button';
+import './LoginPage.css';
+import classImg from '../../assets/class_studying.png';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -19,7 +20,7 @@ const LoginPage = () => {
 
     try {
       const response = await login(email, password);
-      // Redirect based on user role
+      // Redirect based on user role (logic kept, but UI toggle removed)
       const user = response.data?.user;
       if (user?.role === 'ADMIN') {
         navigate('/admin');
@@ -34,68 +35,84 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center justify-center gap-2">
-            <i className="fas fa-graduation-cap text-primary-600"></i>
-            <span>Shree Science Academy</span>
-          </h1>
-          <p className="text-gray-600 mt-2 font-medium">MHT CET Exam Portal</p>
+    <div className="login-container">
+      <div className="login-card">
+        {/* Left Side - Form */}
+        <div className="login-form-section">
+          <Link to="/" className="back-to-home">
+            <i className="fas fa-arrow-left"></i>
+            Back to Home
+          </Link>
+
+          <div className="login-header">
+            <h1>Welcome Back!</h1>
+            <p>Please login to access your dashboard.</p>
+          </div>
+
+          {error && (
+            <div className="error-msg">
+              <i className="fas fa-exclamation-circle mr-2"></i>
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="email">Email Address</label>
+              <div className="input-wrapper">
+                <i className="fas fa-envelope"></i>
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <div className="input-wrapper">
+                <i className="fas fa-lock"></i>
+                <input
+                  type="password"
+                  id="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="login-button"
+              disabled={loading}
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
         </div>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent touch-target"
-              placeholder="your@email.com"
+        {/* Right Side - Visual Section */}
+        <div className="login-info-section">
+          <div className="student-image-container">
+            <img 
+              src={classImg} 
+              alt="Students Studying in Class" 
+              className="student-image"
             />
           </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              id="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent touch-target"
-              placeholder="••••••••"
-            />
-          </div>
-
-          <Button
-            type="submit"
-            fullWidth
-            disabled={loading}
-          >
-            {loading ? 'Signing in...' : 'Sign In'}
-          </Button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-gray-600">
-          Contact your administrator for login credentials
-        </p>
+        </div>
       </div>
     </div>
   );
 };
 
 export default LoginPage;
+
+
+

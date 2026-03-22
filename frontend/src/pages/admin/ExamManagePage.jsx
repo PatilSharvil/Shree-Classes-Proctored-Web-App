@@ -206,14 +206,22 @@ const ExamManagePage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {attempts.map((attempt) => (
-                    <tr key={attempt.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm">
-                        <div className="font-medium text-gray-900">{attempt.name || attempt.email}</div>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        {attempt.score}/{attempt.total_marks}
-                      </td>
+                 <tbody className="divide-y divide-gray-200">
+                   {attempts
+                     .sort((a, b) => (b.percentage || 0) - (a.percentage || 0))
+                     .map((attempt, idx) => {
+                       const medals = ['🥇', '🥈', '🥉'];
+                       return (
+                         <tr key={attempt.id} className={`hover:bg-gray-50 ${idx < 3 ? 'bg-blue-50/30' : ''}`}>
+                           <td className="px-4 py-3 text-sm">
+                             <div className="flex items-center gap-2 font-medium text-gray-900">
+                               {idx < 3 && <span>{medals[idx]}</span>}
+                               {attempt.name || attempt.email}
+                             </div>
+                           </td>
+                           <td className="px-4 py-3 text-sm text-gray-600">
+                             {attempt.score}/{attempt.total_marks}
+                           </td>
                       <td className="px-4 py-3 text-sm">
                         <span className={`font-medium ${
                           attempt.percentage >= 70 ? 'text-green-600' :

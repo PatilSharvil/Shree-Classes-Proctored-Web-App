@@ -4,6 +4,8 @@ import { examsAPI } from '../../services/api';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import AdminSidebar from '../../components/layout/AdminSidebar';
+import './AdminDashboard.css';
 
 const AdminExamsListPage = () => {
   const [exams, setExams] = useState([]);
@@ -28,7 +30,6 @@ const AdminExamsListPage = () => {
 
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this exam? This cannot be undone.')) return;
-    
     try {
       await examsAPI.delete(id);
       loadExams();
@@ -48,11 +49,11 @@ const AdminExamsListPage = () => {
     const start = exam.scheduled_start ? new Date(exam.scheduled_start) : null;
     const end = exam.scheduled_end ? new Date(exam.scheduled_end) : null;
 
-    if (!start && !end) return { label: 'Anytime', color: 'bg-gray-100 text-gray-700' };
-    if (start && end && now < start) return { label: 'Upcoming', color: 'bg-blue-100 text-blue-700' };
-    if (start && end && now >= start && now <= end) return { label: 'Ongoing', color: 'bg-green-100 text-green-700' };
-    if (start && end && now > end) return { label: 'Ended', color: 'bg-red-100 text-red-700' };
-    return { label: 'Anytime', color: 'bg-gray-100 text-gray-700' };
+    if (!start && !end) return { label: 'Anytime', color: 'bg-gray-100 text-gray-500' };
+    if (start && end && now < start) return { label: 'Upcoming', color: 'bg-blue-100 text-blue-600' };
+    if (start && end && now >= start && now <= end) return { label: 'Ongoing', color: 'bg-green-100 text-green-600' };
+    if (start && end && now > end) return { label: 'Ended', color: 'bg-red-100 text-red-600' };
+    return { label: 'Anytime', color: 'bg-gray-100 text-gray-500' };
   };
 
   if (loading) {
@@ -64,132 +65,154 @@ const AdminExamsListPage = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Exams</h1>
-          <p className="text-gray-600 mt-1">Manage all exams</p>
+    <div className="admin-dashboard-container">
+      <AdminSidebar />
+      <main className="admin-main-content">
+        <header className="dashboard-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-10">
+          <div className="flex items-center gap-4">
+            <Link to="/admin" className="w-10 h-10 bg-white shadow-sm border border-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:text-blue-600 transition-all active:scale-95">
+              <i className="fas fa-arrow-left"></i>
+            </Link>
+            <div>
+              <h1 className="!m-0 text-2xl font-black text-gray-900">Assessments</h1>
+              <p className="!m-0 text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Examination Hub</p>
+            </div>
+          </div>
+          <Link to="/admin/exams/new" className="active:scale-95 transition-transform">
+             <button className="px-6 py-4 bg-blue-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                <i className="fas fa-plus-circle"></i> Create New Exam
+             </button>
+          </Link>
+        </header>
+
+        {/* Dynamic Filters */}
+        <div className="flex flex-wrap gap-3 mb-8 bg-gray-50/50 p-2 rounded-[24px] border border-gray-100/50 w-fit">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${
+              filter === 'all'
+                ? 'bg-white text-blue-600 shadow-md shadow-blue-100 ring-1 ring-blue-50'
+                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            All Tracks <span className="ml-2 opacity-50">({exams.length})</span>
+          </button>
+          <button
+            onClick={() => setFilter('active')}
+            className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${
+              filter === 'active'
+                ? 'bg-white text-green-600 shadow-md shadow-green-100 ring-1 ring-green-50'
+                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            Live Exams <span className="ml-2 opacity-50">({exams.filter(e => e.is_active).length})</span>
+          </button>
+          <button
+            onClick={() => setFilter('inactive')}
+            className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${
+              filter === 'inactive'
+                ? 'bg-white text-slate-600 shadow-md shadow-slate-100 ring-1 ring-slate-50'
+                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            Drafts / Hidden <span className="ml-2 opacity-50">({exams.filter(e => !e.is_active).length})</span>
+          </button>
         </div>
-        <Link to="/admin/exams/new">
-          <Button>+ Create Exam</Button>
-        </Link>
-      </div>
 
-      {/* Filters */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-            filter === 'all'
-              ? 'bg-primary-600 text-white'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          All ({exams.length})
-        </button>
-        <button
-          onClick={() => setFilter('active')}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-            filter === 'active'
-              ? 'bg-green-600 text-white'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          Active ({exams.filter(e => e.is_active).length})
-        </button>
-        <button
-          onClick={() => setFilter('inactive')}
-          className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
-            filter === 'inactive'
-              ? 'bg-gray-600 text-white'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          Inactive ({exams.filter(e => !e.is_active).length})
-        </button>
-      </div>
-
-      {/* Exams List */}
-      {filteredExams.length === 0 ? (
-        <Card>
-          <div className="text-center py-8">
-            <p className="text-gray-600 mb-4">
-              {filter === 'all' ? 'No exams created yet' : `No ${filter} exams`}
+        {/* Modern Exams Table */}
+        {filteredExams.length === 0 ? (
+          <Card className="!rounded-[40px] border-none shadow-xl shadow-slate-200/50 text-center py-24 group">
+            <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center text-4xl text-gray-200 mb-6 mx-auto group-hover:scale-110 transition-transform duration-500">
+               <i className="fas fa-layer-group"></i>
+            </div>
+            <p className="text-gray-400 font-bold uppercase tracking-[0.2em] text-xs">
+              {filter === 'all' ? 'The assessment laboratory is empty' : `No ${filter} exams discovered`}
             </p>
             {filter === 'all' && (
-              <Link to="/admin/exams/new">
-                <Button>Create Your First Exam</Button>
+              <Link to="/admin/exams/new" className="mt-6 inline-block text-blue-600 font-black text-xs uppercase tracking-widest hover:underline decoration-2 underline-offset-8">
+                Initialize first assessment
               </Link>
             )}
-          </div>
-        </Card>
-      ) : (
-        <div className="bg-white rounded-lg shadow overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Title</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Subject</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Duration</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Questions</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Schedule</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Status</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredExams.map((exam) => (
-                <tr key={exam.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm">
-                    <div className="font-medium text-gray-900">{exam.title}</div>
-                    {exam.description && (
-                      <div className="text-gray-500 text-xs line-clamp-1 mt-1">
-                        {exam.description}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {exam.subject || '-'}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {exam.duration_minutes} min
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {exam.question_count || 0}
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    <span className={`px-2 py-1 rounded text-xs ${getScheduleStatus(exam).color}`}>
-                      {getScheduleStatus(exam).label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      exam.is_active
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-700'
-                    }`}>
-                      {exam.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm">
-                    <div className="flex gap-2">
-                      <Link to={`/admin/exams/${exam.id}`}>
-                        <Button variant="outline" size="sm">Manage</Button>
-                      </Link>
-                      <button
-                        onClick={() => handleDelete(exam.id)}
-                        className="text-red-600 hover:text-red-800 font-medium px-3 py-1"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </td>
+          </Card>
+        ) : (
+          <div className="bg-white rounded-[40px] shadow-2xl shadow-slate-200/60 border border-white overflow-hidden w-full">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-100">
+                  <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Exam Blueprint</th>
+                  <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Domain</th>
+                  <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Metrics</th>
+                  <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Timeline</th>
+                  <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Status</th>
+                  <th className="px-8 py-6 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Control</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filteredExams.map((exam) => (
+                  <tr key={exam.id} className="hover:bg-blue-50/20 transition-all group">
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-4">
+                         <div className="w-12 h-12 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl border border-blue-100/50 flex items-center justify-center text-blue-600 shadow-sm transition-transform group-hover:rotate-6">
+                            <i className="fas fa-file-signature text-lg"></i>
+                         </div>
+                         <div>
+                            <div className="font-extrabold text-gray-900 text-sm group-hover:text-blue-600 transition-colors">{exam.title}</div>
+                            <div className="text-[10px] text-gray-400 font-black uppercase tracking-tighter mt-0.5">
+                               ID: #{exam.id.toString().slice(-4)} • Updated {new Date().toLocaleDateString()}
+                            </div>
+                         </div>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                       <span className="px-3 py-1 bg-slate-50 text-slate-500 rounded-lg text-[10px] font-black uppercase tracking-widest border border-slate-100">
+                          {exam.subject || 'General'}
+                       </span>
+                    </td>
+                    <td className="px-8 py-6">
+                       <div className="flex flex-col gap-1">
+                          <div className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                             <i className="far fa-clock text-blue-400 w-3"></i> {exam.duration_minutes}m Duration
+                          </div>
+                          <div className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                             <i className="far fa-list-alt text-blue-400 w-3"></i> {exam.question_count || 0} Questions
+                          </div>
+                       </div>
+                    </td>
+                    <td className="px-8 py-6">
+                       <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${getScheduleStatus(exam).color} border border-current opacity-80`}>
+                          {getScheduleStatus(exam).label}
+                       </span>
+                    </td>
+                    <td className="px-8 py-6">
+                        <div className="flex items-center gap-2">
+                           <div className={`w-2 h-2 rounded-full ${exam.is_active ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
+                           <span className={`text-[10px] font-black uppercase tracking-widest ${exam.is_active ? 'text-green-600' : 'text-gray-400'}`}>
+                             {exam.is_active ? 'Public' : 'Hidden'}
+                           </span>
+                        </div>
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0">
+                        <Link to={`/admin/exams/${exam.id}`}>
+                          <button className="w-10 h-10 bg-white border border-gray-100 rounded-xl text-blue-500 hover:text-white hover:bg-blue-600 hover:border-blue-600 transition-all flex items-center justify-center shadow-sm">
+                             <i className="fas fa-cog"></i>
+                          </button>
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(exam.id)}
+                          className="w-10 h-10 bg-white border border-gray-100 rounded-xl text-red-400 hover:text-white hover:bg-red-500 hover:border-red-500 transition-all flex items-center justify-center shadow-sm"
+                        >
+                          <i className="fas fa-trash-alt"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </main>
     </div>
   );
 };
