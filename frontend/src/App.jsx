@@ -7,6 +7,7 @@ import LoadingSpinner from './components/ui/LoadingSpinner';
 // Lazy load pages
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const StudentDashboard = lazy(() => import('./pages/dashboard/StudentDashboard'));
+const ProfilePage = lazy(() => import('./pages/dashboard/ProfilePage'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const ExamPage = lazy(() => import('./pages/exam/ExamPage'));
 const ResultDetailPage = lazy(() => import('./pages/exam/ResultDetailPage'));
@@ -58,6 +59,14 @@ function App() {
             <ProtectedRoute>
               <MainLayout>
                 <StudentDashboard />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <MainLayout>
+                <ProfilePage />
               </MainLayout>
             </ProtectedRoute>
           } />
