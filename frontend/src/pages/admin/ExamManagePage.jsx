@@ -4,6 +4,8 @@ import { examsAPI, questionsAPI, attemptsAPI } from '../../services/api';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import AdminSidebar from '../../components/layout/AdminSidebar';
+import './AdminDashboard.css';
 
 const ExamManagePage = () => {
   const { examId } = useParams();
@@ -57,24 +59,36 @@ const ExamManagePage = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">{exam.title}</h1>
-          <p className="text-gray-600 mt-1">
-            {exam.subject} • {exam.duration_minutes} minutes • {questions.length} questions
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link to={`/admin/exams/${examId}/edit`}>
-            <Button variant="secondary">Edit Exam</Button>
-          </Link>
-          <Link to={`/admin/exams/${examId}/questions/new`}>
-            <Button>+ Add Question</Button>
-          </Link>
-        </div>
-      </div>
+    <div className="admin-dashboard-container">
+      <AdminSidebar />
+      <main className="admin-main-content">
+        <header className="dashboard-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-10">
+          <div className="flex items-center gap-4">
+            <Link to="/admin/exams" className="w-10 h-10 bg-white shadow-sm border border-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:text-blue-600 transition-all active:scale-95">
+              <i className="fas fa-arrow-left"></i>
+            </Link>
+            <div>
+              <h1 className="!m-0 text-2xl font-black text-gray-900">{exam.title}</h1>
+              <p className="!m-0 text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
+                {exam.subject} • {exam.duration_minutes} minutes • {questions.length} questions
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Link to={`/admin/exams/${examId}/edit`}>
+              <button className="px-4 py-2 bg-white border border-gray-200 text-gray-700 font-bold text-sm rounded-xl hover:bg-gray-50 transition-all shadow-sm">
+                Edit Exam
+              </button>
+            </Link>
+            <Link to={`/admin/exams/${examId}/questions/new`}>
+              <button className="px-4 py-2 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">
+                + Add Question
+              </button>
+            </Link>
+          </div>
+        </header>
+
+        <div className="space-y-6">
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -206,50 +220,52 @@ const ExamManagePage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                 <tbody className="divide-y divide-gray-200">
-                   {attempts
-                     .sort((a, b) => (b.percentage || 0) - (a.percentage || 0))
-                     .map((attempt, idx) => {
-                       const medals = ['🥇', '🥈', '🥉'];
-                       return (
-                         <tr key={attempt.id} className={`hover:bg-gray-50 ${idx < 3 ? 'bg-blue-50/30' : ''}`}>
-                           <td className="px-4 py-3 text-sm">
-                             <div className="flex items-center gap-2 font-medium text-gray-900">
-                               {idx < 3 && <span>{medals[idx]}</span>}
-                               {attempt.name || attempt.email}
-                             </div>
-                           </td>
-                           <td className="px-4 py-3 text-sm text-gray-600">
-                             {attempt.score}/{attempt.total_marks}
-                           </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className={`font-medium ${
-                          attempt.percentage >= 70 ? 'text-green-600' :
-                          attempt.percentage >= 40 ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {attempt.percentage?.toFixed(1)}%
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          attempt.status === 'SUBMITTED' ? 'bg-green-100 text-green-700' :
-                          attempt.status?.includes('AUTO') ? 'bg-red-100 text-red-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
-                          {attempt.status?.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {new Date(attempt.submitted_at).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
+                  {attempts
+                    .sort((a, b) => (b.percentage || 0) - (a.percentage || 0))
+                    .map((attempt, idx) => {
+                      const medals = ['🥇', '🥈', '🥉'];
+                      return (
+                        <tr key={attempt.id} className={`hover:bg-gray-50 ${idx < 3 ? 'bg-blue-50/30' : ''}`}>
+                          <td className="px-4 py-3 text-sm">
+                            <div className="flex items-center gap-2 font-medium text-gray-900">
+                              {idx < 3 && <span>{medals[idx]}</span>}
+                              {attempt.name || attempt.email}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">
+                            {attempt.score}/{attempt.total_marks}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className={`font-medium ${
+                              attempt.percentage >= 70 ? 'text-green-600' :
+                              attempt.percentage >= 40 ? 'text-yellow-600' : 'text-red-600'
+                            }`}>
+                              {attempt.percentage?.toFixed(1)}%
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              attempt.status === 'SUBMITTED' ? 'bg-green-100 text-green-700' :
+                              attempt.status?.includes('AUTO') ? 'bg-red-100 text-red-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {attempt.status?.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-500">
+                            {new Date(attempt.submitted_at).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
           )}
         </div>
       )}
+        </div>
+      </main>
     </div>
   );
 };

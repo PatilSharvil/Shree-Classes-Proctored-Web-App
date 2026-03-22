@@ -36,11 +36,7 @@ const Header = () => {
               >
                 Dashboard
               </button>
-              {user.role === 'ADMIN' && (
-                <Link to="/admin" className="hover:text-primary-100 touch-target">
-                  Admin
-                </Link>
-              )}
+              {/* User Info & Logout */}
               <span className="text-sm text-primary-200 hidden sm:inline">
                 {user.name || user.email}
               </span>

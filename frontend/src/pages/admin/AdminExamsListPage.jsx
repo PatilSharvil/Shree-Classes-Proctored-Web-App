@@ -192,7 +192,7 @@ const AdminExamsListPage = () => {
                         </div>
                     </td>
                     <td className="px-8 py-6 text-right">
-                      <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0">
+                      <div className="flex justify-end gap-2 transition-all">
                         <Link to={`/admin/exams/${exam.id}`}>
                           <button className="w-10 h-10 bg-white border border-gray-100 rounded-xl text-blue-500 hover:text-white hover:bg-blue-600 hover:border-blue-600 transition-all flex items-center justify-center shadow-sm">
                              <i className="fas fa-cog"></i>

@@ -106,30 +106,6 @@ const AdminDashboard = () => {
                 <span className="hours-badge">{(stats.totalMinutes / 60).toFixed(1)} Hr</span>
               </div>
               <p className="text-gray-400 text-sm">Total Available Test Hours</p>
-              
-              <div className="sub-info">
-                <div className="info-item">
-                  <i className="fas fa-clock"></i>
-                  <div>
-                    <div className="font-semibold">Test Reminders</div>
-                    <div className="text-gray-400 text-xs text-wrap">Automated system monitoring for upcoming sessions</div>
-                    <div className="mt-1">
-                      <span className="text-green-500 mr-2">System Active</span>
-                      <span className="info-link">Settings</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="pricing-banner">
-                  <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center text-yellow-500">
-                    <i className="fas fa-coins"></i>
-                  </div>
-                  <div>
-                    <div className="font-semibold text-xs">Exams Configuration</div>
-                    <div className="text-xs">Manage your <span className="info-link">Exam Credits <i className="fas fa-external-link-alt"></i></span></div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -151,11 +127,6 @@ const AdminDashboard = () => {
             
             <div className="chart-content">
               <div className="chart-bars">
-                {[5, 4, 3, 2, 1, 0].map((val) => (
-                   <div key={val} className="absolute left-0 w-full border-t border-dashed border-gray-100" style={{ bottom: `${(val/5)*100}%` }}>
-                     <span className="absolute -left-12 -top-2 text-xs text-gray-400">{val} tests</span>
-                   </div>
-                ))}
                 {durationData.map((h, i) => (
                   <div key={i} className="bar-wrapper" style={{ height: '100%' }}>
                     <div className={`bar ${h > 0 ? 'highlight' : ''}`} style={{ height: `${h}%` }}></div>
@@ -170,7 +141,7 @@ const AdminDashboard = () => {
               </div>
               
               <div className="test-labels">
-                {['General', 'PCM', 'PCB', 'Primary', 'PhD'].map((t) => (
+                {['General', 'PCM', 'PCB'].map((t) => (
                   <button key={t} className={`test-btn ${t === 'General' ? 'active' : ''}`}>
                     {t}
                   </button>
@@ -191,9 +162,9 @@ const AdminDashboard = () => {
 
           <div className="test-grid">
             {exams.map((exam, idx) => {
-              const thumbs = [primaryThumb, phdThumb, intermediateThumb];
-              const labels = ['Primary', 'Ph.D', 'Intermediate'];
-              const colors = ['#ff8a65', '#3b82f6', '#86efac'];
+              const thumbs = [intermediateThumb, primaryThumb, phdThumb];
+              const labels = ['General', 'PCM', 'PCB'];
+              const colors = ['#86efac', '#ff8a65', '#3b82f6'];
               
               return (
                 <Link key={exam.id} to={`/admin/exams/${exam.id}`} className="exam-thumbnail-card">

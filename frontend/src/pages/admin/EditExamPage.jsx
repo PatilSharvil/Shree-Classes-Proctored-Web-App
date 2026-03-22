@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { examsAPI } from '../../services/api';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import AdminSidebar from '../../components/layout/AdminSidebar';
+import './AdminDashboard.css';
 
 const EditExamPage = () => {
   const navigate = useNavigate();
@@ -167,11 +169,20 @@ const EditExamPage = () => {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Edit Exam</h1>
-        <p className="text-gray-600 mt-1">Update the exam details</p>
-      </div>
+    <div className="admin-dashboard-container">
+      <AdminSidebar />
+      <main className="admin-main-content">
+        <header className="dashboard-header flex items-center gap-4 mb-10">
+          <Link to={`/admin/exams/${examId}`} className="w-10 h-10 bg-white shadow-sm border border-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:text-blue-600 transition-all active:scale-95">
+            <i className="fas fa-arrow-left"></i>
+          </Link>
+          <div>
+            <h1 className="!m-0 text-2xl font-black text-gray-900">Edit Exam</h1>
+            <p className="!m-0 text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Blueprint Refinement</p>
+          </div>
+        </header>
+
+        <div className="">
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
@@ -406,6 +417,8 @@ const EditExamPage = () => {
           </div>
         </form>
       </Card>
+        </div>
+      </main>
     </div>
   );
 };
