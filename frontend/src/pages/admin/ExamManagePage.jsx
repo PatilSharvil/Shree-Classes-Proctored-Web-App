@@ -75,6 +75,11 @@ const ExamManagePage = () => {
             </div>
           </div>
           <div className="flex gap-2">
+            <Link to={`/admin/exams/${examId}/proctoring`}>
+              <button className="px-4 py-2 bg-purple-600 text-white font-bold text-sm rounded-xl hover:bg-purple-700 transition-all shadow-lg shadow-purple-100">
+                📊 Proctoring
+              </button>
+            </Link>
             <Link to={`/admin/exams/${examId}/edit`}>
               <button className="px-4 py-2 bg-white border border-gray-200 text-gray-700 font-bold text-sm rounded-xl hover:bg-gray-50 transition-all shadow-sm">
                 Edit Exam

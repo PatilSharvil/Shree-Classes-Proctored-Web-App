@@ -19,6 +19,7 @@ const AnalyticsPage = lazy(() => import('./pages/admin/AnalyticsPage'));
 const AddQuestionPage = lazy(() => import('./pages/admin/AddQuestionPage'));
 const EditQuestionPage = lazy(() => import('./pages/admin/EditQuestionPage'));
 const EditExamPage = lazy(() => import('./pages/admin/EditExamPage'));
+const ProctoringDashboardPage = lazy(() => import('./pages/admin/ProctoringDashboardPage'));
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 
 // Loading component
@@ -156,6 +157,14 @@ function App() {
             <ProtectedRoute adminOnly>
               <MainLayout>
                 <AnalyticsPage />
+              </MainLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/admin/exams/:examId/proctoring" element={
+            <ProtectedRoute adminOnly>
+              <MainLayout>
+                <ProctoringDashboardPage />
               </MainLayout>
             </ProtectedRoute>
           } />

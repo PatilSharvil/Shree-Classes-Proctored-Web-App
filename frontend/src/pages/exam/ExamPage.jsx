@@ -51,12 +51,29 @@ const ExamPage = () => {
     }
   };
 
-  // Proctoring hook
-  useProctoring(session?.id, (violationCount) => {
-    if (violationCount >= 5) {
+  // Proctoring hook with comprehensive monitoring
+  const proctoring = useProctoring(session?.id, {
+    violationThreshold: 5,
+    onViolationThreshold: (count) => {
+      handleTimeUp();
+    },
+    onViolation: (violation) => {
+      console.log('Violation recorded:', violation);
+    },
+    enableFullscreen: true,
+    enableTabSwitch: true,
+    enableNetworkMonitor: true,
+    enableClipboardMonitor: true,
+    enableIdleDetect: true,
+    idleTimeoutMs: 5 * 60 * 1000
+  });
+
+  // Auto-submit when weighted score reaches threshold
+  useEffect(() => {
+    if (proctoring.weightedScore >= 5 && session && !submitting) {
       handleTimeUp();
     }
-  });
+  }, [proctoring.weightedScore]);
 
   // Timer effect
   useEffect(() => {
@@ -218,8 +235,11 @@ const ExamPage = () => {
     setShowConfirmSubmit(false);
     setSubmitting(true);
     try {
-      const result = await attemptsAPI.submit(session.id);
+      // Log exam submission with proctoring
+      proctoring.logExamSubmit();
       
+      const result = await attemptsAPI.submit(session.id);
+
       // Exit fullscreen on successful submission
       if (document.fullscreenElement && document.exitFullscreen) {
         try {
@@ -372,7 +392,35 @@ const ExamPage = () => {
             Question {currentQuestionIndex + 1} of {questions.length}
           </p>
         </div>
-        
+
+        <div className="flex items-center gap-4">
+          {/* Proctoring Status */}
+          <div className="hidden sm:flex items-center gap-3 text-xs">
+            <div className={`flex items-center gap-1 px-2 py-1 rounded ${
+              proctoring.isOnline ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+            }`}>
+              <span className="text-lg">{proctoring.isOnline ? '📶' : '❌'}</span>
+              <span className="font-medium">{proctoring.isOnline ? 'Online' : 'Offline'}</span>
+            </div>
+            <div className={`flex items-center gap-1 px-2 py-1 rounded ${
+              proctoring.isFullscreen ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
+            }`}>
+              <span className="text-lg">{proctoring.isFullscreen ? '🖥️' : '⚠️'}</span>
+              <span className="font-medium">{proctoring.isFullscreen ? 'Fullscreen' : 'Windowed'}</span>
+            </div>
+            {proctoring.weightedScore > 0 && (
+              <div className={`flex items-center gap-1 px-2 py-1 rounded ${
+                proctoring.weightedScore >= 5 ? 'bg-red-100 text-red-700' :
+                proctoring.weightedScore >= 3 ? 'bg-orange-100 text-orange-700' :
+                'bg-yellow-100 text-yellow-700'
+              }`}>
+                <span className="text-lg">⚠️</span>
+                <span className="font-medium">Violations: {proctoring.weightedScore}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className={`text-2xl font-bold ${
           timeRemaining < 60 ? 'text-red-600' :
           timeRemaining < 300 ? 'text-yellow-600' : 'text-green-600'
@@ -399,6 +447,34 @@ const ExamPage = () => {
           </Button>
         </div>
       </div>
+
+      {/* Proctoring Warnings */}
+      {proctoring.warnings.length > 0 && (
+        <div className="fixed bottom-4 right-4 z-50 space-y-2">
+          {proctoring.warnings.map((warning) => (
+            <div
+              key={warning.id}
+              className={`max-w-sm p-4 rounded-lg shadow-lg border-l-4 ${
+                warning.type === 'high' ? 'bg-red-50 border-red-500' :
+                warning.type === 'medium' ? 'bg-yellow-50 border-yellow-500' :
+                'bg-blue-50 border-blue-500'
+              }`}
+            >
+              <div className="text-sm">{warning.message}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Network Offline Warning */}
+      {!proctoring.isOnline && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2">
+            <span>📡</span>
+            <span className="font-medium">You are offline. Answers may not be saved.</span>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Main Question Area */}

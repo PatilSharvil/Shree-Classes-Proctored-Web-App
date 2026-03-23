@@ -94,11 +94,19 @@ export const attemptsAPI = {
 // Proctoring API
 export const proctoringAPI = {
   recordViolation: (data) => api.post('/proctoring/violations', data),
+  logActivity: (data) => api.post('/proctoring/log', data),
   getSessionViolations: (sessionId) => api.get(`/proctoring/violations/${sessionId}`),
+  getSessionActivityLogs: (sessionId, limit) => api.get(`/proctoring/activity/${sessionId}`, { params: { limit } }),
+  getSessionActivityTimeline: (sessionId) => api.get(`/proctoring/timeline/${sessionId}`),
   checkAutoSubmit: (sessionId) => api.get(`/proctoring/check-submit/${sessionId}`),
+  getViolationScore: (sessionId) => api.get(`/proctoring/score/${sessionId}`),
   getExamStats: (examId) => api.get(`/proctoring/stats/${examId}`),
+  getExamActivitySummary: (examId) => api.get(`/proctoring/summary/${examId}`),
+  getLiveActiveSessions: (examId) => api.get(`/proctoring/live/${examId}`),
   getBreakdown: (params) => api.get('/proctoring/breakdown', { params }),
-  clearViolations: (sessionId) => api.delete(`/proctoring/violations/${sessionId}`)
+  getViolationPatterns: () => api.get('/proctoring/patterns'),
+  clearViolations: (sessionId) => api.delete(`/proctoring/violations/${sessionId}`),
+  exportProctoringReport: (examId) => api.get(`/proctoring/export/${examId}`)
 };
 
 export default api;

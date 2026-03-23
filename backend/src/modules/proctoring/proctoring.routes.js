@@ -14,11 +14,32 @@ router.use(authenticate);
 router.post('/violations', proctoringController.recordViolation);
 
 /**
+ * @route   POST /api/proctoring/log
+ * @desc    Log a proctoring activity event
+ * @access  Private
+ */
+router.post('/log', proctoringController.logActivity);
+
+/**
  * @route   GET /api/proctoring/violations/:sessionId
  * @desc    Get violations for a session
  * @access  Private
  */
 router.get('/violations/:sessionId', proctoringController.getSessionViolations);
+
+/**
+ * @route   GET /api/proctoring/activity/:sessionId
+ * @desc    Get activity logs for a session
+ * @access  Private
+ */
+router.get('/activity/:sessionId', proctoringController.getSessionActivityLogs);
+
+/**
+ * @route   GET /api/proctoring/timeline/:sessionId
+ * @desc    Get activity timeline for a session
+ * @access  Private
+ */
+router.get('/timeline/:sessionId', proctoringController.getSessionActivityTimeline);
 
 /**
  * @route   GET /api/proctoring/check-submit/:sessionId
@@ -28,11 +49,32 @@ router.get('/violations/:sessionId', proctoringController.getSessionViolations);
 router.get('/check-submit/:sessionId', proctoringController.checkAutoSubmit);
 
 /**
+ * @route   GET /api/proctoring/score/:sessionId
+ * @desc    Get weighted violation score
+ * @access  Private
+ */
+router.get('/score/:sessionId', proctoringController.getViolationScore);
+
+/**
  * @route   GET /api/proctoring/stats/:examId
  * @desc    Get exam violation stats (Admin only)
  * @access  Private/Admin
  */
 router.get('/stats/:examId', authorize('ADMIN'), proctoringController.getExamViolationStats);
+
+/**
+ * @route   GET /api/proctoring/summary/:examId
+ * @desc    Get exam activity summary (Admin only)
+ * @access  Private/Admin
+ */
+router.get('/summary/:examId', authorize('ADMIN'), proctoringController.getExamActivitySummary);
+
+/**
+ * @route   GET /api/proctoring/live/:examId
+ * @desc    Get live active sessions for an exam (Admin only)
+ * @access  Private/Admin
+ */
+router.get('/live/:examId', authorize('ADMIN'), proctoringController.getLiveActiveSessions);
 
 /**
  * @route   GET /api/proctoring/breakdown
@@ -42,10 +84,24 @@ router.get('/stats/:examId', authorize('ADMIN'), proctoringController.getExamVio
 router.get('/breakdown', authorize('ADMIN'), proctoringController.getViolationTypeBreakdown);
 
 /**
+ * @route   GET /api/proctoring/patterns
+ * @desc    Get violation patterns across all exams (Admin only)
+ * @access  Private/Admin
+ */
+router.get('/patterns', authorize('ADMIN'), proctoringController.getViolationPatterns);
+
+/**
  * @route   DELETE /api/proctoring/violations/:sessionId
  * @desc    Clear violations (Admin only)
  * @access  Private/Admin
  */
 router.delete('/violations/:sessionId', authorize('ADMIN'), proctoringController.clearViolations);
+
+/**
+ * @route   GET /api/proctoring/export/:examId
+ * @desc    Export proctoring report (Admin only)
+ * @access  Private/Admin
+ */
+router.get('/export/:examId', authorize('ADMIN'), proctoringController.exportProctoringReport);
 
 module.exports = router;

@@ -116,9 +116,35 @@ const initializeDatabase = () => {
       type TEXT NOT NULL,
       description TEXT,
       timestamp TEXT DEFAULT (datetime('now')),
+      metadata TEXT
+    )
+  `);
+
+  // Add severity column if it doesn't exist (safe migration)
+  try {
+    db.exec(`ALTER TABLE violations ADD COLUMN severity TEXT DEFAULT 'MEDIUM' CHECK(severity IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL'))`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
+  // Proctoring activity logs table (detailed tracking)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS proctoring_logs (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      event_data TEXT,
+      ip_address TEXT,
+      user_agent TEXT,
+      timestamp TEXT DEFAULT (datetime('now')),
+      is_violation INTEGER DEFAULT 0,
       FOREIGN KEY (session_id) REFERENCES exam_sessions(id) ON DELETE CASCADE
     )
   `);
+
+  // Create index for proctoring logs
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_proctoring_logs_session ON proctoring_logs(session_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_proctoring_logs_timestamp ON proctoring_logs(timestamp)`);
 
   // Attempt history table (for analytics)
   db.exec(`
