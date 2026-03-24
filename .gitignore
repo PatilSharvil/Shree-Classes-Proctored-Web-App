@@ -1,71 +1,165 @@
-# Dependencies
+# =====================
+# DEPENDENCIES
+# =====================
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 package-lock.json
 yarn.lock
+pnpm-lock.yaml
 
-# Environment variables
+# =====================
+# ENVIRONMENT VARIABLES (CRITICAL - NEVER COMMIT)
+# =====================
 .env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
+.env.production
 *.env
+!.env.example
+!.env.setup.md
 
-# Build outputs
+# =====================
+# BUILD OUTPUTS
+# =====================
 dist/
 build/
+.next/
+out/
 *.log
 
-# Database files
+# =====================
+# DATABASE FILES (SQLite - Sensitive)
+# =====================
 *.sqlite
 *.db
 *.sqlite3
 data/*.db
 data/*.sqlite
 backend/data/
+frontend/data/
 
-# Excel files (sensitive data)
+# =====================
+# EXCEL FILES (Sensitive Student Data)
+# =====================
 *.xlsx
 *.xls
 data/*.xlsx
 backend/data/*.xlsx
+uploads/*.xlsx
 
-# OS files
+# =====================
+# OS FILES
+# =====================
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
 desktop.ini
 
-# IDE files
+# =====================
+# IDE FILES
+# =====================
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+*.sublime-project
+*.sublime-workspace
 
-# Temporary files
+# =====================
+# TEMPORARY FILES
+# =====================
 tmp/
 temp/
 *.tmp
+.cache/
 
-# Logs
+# =====================
+# LOGS
+# =====================
 logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Uploads
+# =====================
+# UPLOADS (User Generated Content)
+# =====================
 uploads/
 backend/uploads/
+frontend/uploads/
+public/uploads/
 
-# Test coverage
+# =====================
+# TEST COVERAGE (Generated)
+# =====================
 coverage/
 .nyc_output/
+jest-coverage/
+vitest-coverage/
 
-# Docker
+# =====================
+# DOCKER
+# =====================
 docker-compose.override.yml
+.docker/
 
-# Misc
+# =====================
+# SECURITY FILES
+# =====================
 *.pem
 *.key
+*.crt
+*.cer
+*.pfx
 secrets/
+.private/
+
+# =====================
+# SCREENSHOTS & IMAGES (Generated)
+# =====================
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+!*.svg
+# Keep specific documentation images
+!proctoring-dashboard.png
+!proctoring-button-location.png
+
+# =====================
+# DOCUMENTATION (Keep Essential Only)
+# =====================
+# Keep these essential docs:
+# - README.md
+# - DEPLOYMENT_STRATEGY.md
+# - DEPLOYMENT_CHECKLIST.md
+# - PROCOTORING_SYSTEM.md
+# - SECURITY_AUDIT_REPORT.md
+# - TEST_REPORT_COMPREHENSIVE.md
+# - .env.setup.md
+# - edgeCase.md
+# - FAKE_DATA_REMOVAL_SUMMARY.md
+# - PROCOTORING_SYSTEM.md
+# - TEST_REPORT.md
+
+# =====================
+# MISC
+# =====================
+.vercel/
+.netlify/
+.railway/
+*.bak
+*.orig
