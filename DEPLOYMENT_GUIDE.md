@@ -16,7 +16,7 @@
   - **Visibility:** Public
 
 - [x] Personal Access Token Generated
-  - **Token:** `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`
+  - **Token:** `ghp_your_token_here`
   - **Scopes:** repo, workflow
   - ⚠️ **RECOMMENDATION:** Regenerate this token after deployment for security!
 
