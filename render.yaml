@@ -1,0 +1,39 @@
+services:
+  # Backend Web Service
+  - type: web
+    name: shree-classes-backend
+    env: node
+    region: oregon
+    plan: free
+    branch: main
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_OWNER
+        value: PatilSharvil
+      - key: GITHUB_REPO
+        value: shree-classes-data-backup
+      - key: GITHUB_BRANCH
+        value: master
+      - key: EXCEL_PATH
+        value: data
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRE
+        value: 1h
+      - key: PROCTOR_VIOLATION_THRESHOLD
+        value: 5
+      - key: PROCTOR_AUTO_SUBMIT
+        value: false
+      - key: SQLITE_DB_PATH
+        value: ./data/exam.db
+      - key: ALLOWED_ORIGINS
+        sync: false
