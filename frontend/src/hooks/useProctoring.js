@@ -53,7 +53,7 @@ export const useProctoring = (sessionId, config = {}) => {
     enableNetworkMonitor = true,
     enableClipboardMonitor = true,
     enableIdleDetect = true,
-    idleTimeoutMs = 5 * 60 * 1000, // 5 minutes
+    idleTimeoutMs = 10 * 60 * 1000, // Fix #15 — increased to 10 minutes
     violationThreshold = 5
   } = config;
 
@@ -374,8 +374,14 @@ export const useProctoring = (sessionId, config = {}) => {
       isOnline: navigator.onLine
     });
 
+    // Fix #14 — Prevent right-click / long-press context menu on mobile
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+    };
+
     // Event listeners
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('contextmenu', handleContextMenu);
     window.addEventListener('blur', handleWindowBlur);
     window.addEventListener('focus', resetIdleTimer);
     window.addEventListener('mousemove', resetIdleTimer);
@@ -400,6 +406,7 @@ export const useProctoring = (sessionId, config = {}) => {
     // Cleanup
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('contextmenu', handleContextMenu);
       window.removeEventListener('blur', handleWindowBlur);
       window.removeEventListener('focus', resetIdleTimer);
       window.removeEventListener('mousemove', resetIdleTimer);

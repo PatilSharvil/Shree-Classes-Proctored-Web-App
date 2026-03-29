@@ -1,13 +1,10 @@
-const { Octokit } = require('octokit');
 const XLSX = require('xlsx');
 const env = require('../config/env');
 const logger = require('../utils/logger');
 
 class GitHubService {
   constructor() {
-    this.octokit = new Octokit({
-      auth: env.githubToken
-    });
+    this.octokit = null;
     this.owner = env.githubOwner;
     this.repo = env.githubRepo;
     this.branch = env.githubBranch;
@@ -15,12 +12,33 @@ class GitHubService {
     this.fileCache = new Map();
     this.lastFetchTime = new Map();
     this.CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+    // Only initialize Octokit if real credentials are configured
+    if (this.isConfigured()) {
+      const { Octokit } = require('octokit');
+      this.octokit = new Octokit({ auth: env.githubToken });
+    } else {
+      logger.warn('GitHub sync is DISABLED — GITHUB_TOKEN or GITHUB_OWNER not configured in .env. This is OK for local development.');
+    }
   }
+
+  /**
+   * Check if GitHub credentials are properly configured (not placeholders)
+   */
+  isConfigured() {
+    const token = env.githubToken || '';
+    const owner = env.githubOwner || '';
+    const isPlaceholder = (v) => !v || v.includes('your-') || v.includes('placeholder') || v.trim() === '';
+    return !isPlaceholder(token) && !isPlaceholder(owner);
+  }
+
 
   /**
    * Get file content from GitHub
    */
   async getFile(filePath) {
+    if (!this.isConfigured() || !this.octokit) return null;
+
     const cacheKey = filePath;
     const cached = this.fileCache.get(cacheKey);
     const now = new Date();
@@ -63,6 +81,8 @@ class GitHubService {
    * Update or create file in GitHub
    */
   async updateFile(filePath, content, message, sha = null) {
+    if (!this.isConfigured() || !this.octokit) return null;
+
     try {
       const { data } = await this.octokit.rest.repos.createOrUpdateFileContents({
         owner: this.owner,
@@ -143,6 +163,11 @@ class GitHubService {
    * Batch sync - write multiple Excel files
    */
   async batchSync(sheets) {
+    if (!this.isConfigured()) {
+      logger.debug('GitHub sync skipped — not configured.');
+      return {};
+    }
+
     logger.info(`Batch syncing ${Object.keys(sheets).length} sheets...`);
     
     const results = {};

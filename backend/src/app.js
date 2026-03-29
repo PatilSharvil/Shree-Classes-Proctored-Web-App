@@ -50,10 +50,12 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// Rate limiting
+// Rate limiting - less strict in development to prevent 429 errors while testing
+const isDev = env.nodeEnv === 'development';
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: isDev ? 5000 : 300, // limit each IP to 300 requests in prod, 5000 in dev
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -63,7 +65,7 @@ app.use('/api/', limiter);
 // Stricter rate limiting for authentication endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 login attempts per windowMs
+  max: isDev ? 1000 : 5, // limit each IP to 5 login attempts in prod, 1000 in dev
   message: 'Too many login attempts from this IP, please try again after 15 minutes.',
   standardHeaders: true,
   legacyHeaders: false,

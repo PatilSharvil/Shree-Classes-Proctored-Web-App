@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { examsAPI, questionsAPI, attemptsAPI } from '../../services/api';
 import useExamStore from '../../store/examStore';
@@ -8,6 +8,9 @@ import { useProctoring } from '../../hooks/useProctoring';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+
+// Detect mobile device
+const isMobile = /Mobi|Android/i.test(navigator.userAgent);
 
 const ExamPage = () => {
   const { examId } = useParams();
@@ -21,6 +24,11 @@ const ExamPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
+  const [autoSubmitError, setAutoSubmitError] = useState(false);
+  const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'failed'
+  const [totalDuration, setTotalDuration] = useState(null); // For timer progress bar
+  const isSubmittingRef = useRef(false); // Guard against concurrent submit calls
+  const timerInitialized = useRef(false); // Prevent timer from firing at 0 on stale state
 
   // Get store state and actions
   const session = useExamStore((state) => state.session);
@@ -37,19 +45,33 @@ const ExamPage = () => {
   const toggleReview = useExamStore((state) => state.toggleReview);
   const clearExamState = useExamStore((state) => state.clearExamState);
 
-  // Handle time up
-  const handleTimeUp = async () => {
-    if (session) {
-      setSubmitting(true);
-      try {
-        await attemptsAPI.submit(session.id);
+  // Handle time up — idempotent (safe to call multiple times)
+  const handleTimeUp = useCallback(async () => {
+    // Prevent multiple concurrent submit calls
+    if (isSubmittingRef.current || !session) return;
+    isSubmittingRef.current = true;
+    setSubmitting(true);
+    setAutoSubmitError(false);
+
+    try {
+      await attemptsAPI.submit(session.id);
+      clearExamState();
+      localStorage.removeItem('examOfflineQueue');
+      navigate('/dashboard', { state: { message: 'Exam auto-submitted due to timeout' } });
+    } catch (error) {
+      const msg = error.response?.data?.message || '';
+      // If already submitted, just redirect to dashboard
+      if (msg.includes('not in progress') || msg.includes('already submitted') || msg.includes('Exam is not in progress')) {
         clearExamState();
-        navigate('/dashboard', { state: { message: 'Exam auto-submitted due to timeout' } });
-      } catch (error) {
-        console.error('Auto-submit failed:', error);
+        navigate('/dashboard', { state: { message: 'Your exam has already been submitted.' } });
+        return;
       }
+      console.error('Auto-submit failed:', error);
+      setAutoSubmitError(true);
+      setSubmitting(false);
+      isSubmittingRef.current = false;
     }
-  };
+  }, [session, navigate, clearExamState]);
 
   // Proctoring hook with comprehensive monitoring
   const proctoring = useProctoring(session?.id, {
@@ -60,39 +82,79 @@ const ExamPage = () => {
     onViolation: (violation) => {
       console.log('Violation recorded:', violation);
     },
-    enableFullscreen: true,
+    enableFullscreen: !isMobile, // Fix #19 — skip fullscreen enforcement on mobile
     enableTabSwitch: true,
     enableNetworkMonitor: true,
     enableClipboardMonitor: true,
     enableIdleDetect: true,
-    idleTimeoutMs: 5 * 60 * 1000
+    idleTimeoutMs: 10 * 60 * 1000  // Fix #15 — increased to 10 minutes
   });
 
-  // Auto-submit when weighted score reaches threshold
+  // Fix #18 — Sync offline queue when back online
   useEffect(() => {
-    if (proctoring.weightedScore >= 5 && session && !submitting) {
+    const syncOfflineQueue = async () => {
+      const queue = JSON.parse(localStorage.getItem('examOfflineQueue') || '[]');
+      if (queue.length === 0 || !proctoring.isOnline || !session) return;
+
+      const remaining = [];
+      for (const item of queue) {
+        try {
+          await attemptsAPI.saveResponse(item.sessionId, {
+            questionId: item.questionId,
+            selectedOption: item.selectedOption
+          });
+        } catch {
+          remaining.push(item);
+        }
+      }
+      localStorage.setItem('examOfflineQueue', JSON.stringify(remaining));
+    };
+
+    if (proctoring.isOnline) syncOfflineQueue();
+  }, [proctoring.isOnline, session]);
+
+  // Auto-submit when proctoring violation threshold is hit
+  // Only trigger if exam is actively in progress (not before start)
+  useEffect(() => {
+    if (proctoring.weightedScore >= 5 && session && examStarted && timerInitialized.current && !isSubmittingRef.current) {
       handleTimeUp();
     }
-  }, [proctoring.weightedScore]);
+  }, [proctoring.weightedScore]); // eslint-disable-line
 
-  // Timer effect
+  // Timer effect — only starts if timeRemaining > 0
   useEffect(() => {
-    if (examStarted && exam && !submitting && timeRemaining !== null) {
-      const endTime = Date.now() + (timeRemaining * 1000);
-      
-      const interval = setInterval(() => {
-        const remaining = Math.max(0, endTime - Date.now());
-        const seconds = Math.floor(remaining / 1000);
-        setTimeRemaining(seconds);
-        
-        if (remaining <= 0) {
-          clearInterval(interval);
-          handleTimeUp();
-        }
-      }, 1000);
+    if (!examStarted || !exam || submitting || timeRemaining === null) return;
 
-      return () => clearInterval(interval);
+    // Guard: if time has already expired when exam opens (stale session), handle gracefully
+    if (timeRemaining <= 0) {
+      if (timerInitialized.current) {
+        // Timer ran down naturally — submit
+        handleTimeUp();
+      } else {
+        // timeRemaining was 0 before timer even started (stale store state or expired session)
+        // Reset to a safe value and let the component re-evaluate on next render
+        console.warn('Timer started at 0 — possible stale state or expired session.');
+        // Don't auto-submit; the loadExam function handles expired sessions
+      }
+      return;
     }
+
+    timerInitialized.current = true;
+    const endTime = Date.now() + (timeRemaining * 1000);
+
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, endTime - Date.now());
+      const seconds = Math.floor(remaining / 1000);
+      setTimeRemaining(seconds);
+
+      if (remaining <= 0) {
+        clearInterval(interval);
+        handleTimeUp();
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [examStarted, exam, submitting]);
 
   useEffect(() => {
@@ -104,6 +166,8 @@ const ExamPage = () => {
     try {
       setLoading(true);
       setError('');
+      timerInitialized.current = false; // Reset timer guard on load
+      isSubmittingRef.current = false;  // Reset submit guard on load
 
       // Check for existing active session
       try {
@@ -111,43 +175,63 @@ const ExamPage = () => {
         const existingSession = activeRes.data.data;
 
         if (existingSession) {
+          // duration_minutes comes from the JOIN in getActiveSession (backend)
+          const examDuration = existingSession.duration_minutes;
+
+          // Parse SQLite datetime ("YYYY-MM-DD HH:MM:SS") safely
+          const rawStarted = existingSession.started_at || '';
+          const startTime = new Date(rawStarted.includes('T') ? rawStarted : rawStarted.replace(' ', 'T')).getTime();
+          const elapsedSeconds = isNaN(startTime) ? 0 : Math.floor((Date.now() - startTime) / 1000);
+          const totalSeconds = (Number(examDuration) || 60) * 60;
+          const remainingSeconds = totalSeconds - elapsedSeconds;
+
+          // If the session has already expired, auto-submit silently and redirect
+          if (remainingSeconds <= 0) {
+            try {
+              await attemptsAPI.submit(existingSession.id);
+            } catch { /* Already submitted is OK */ }
+            clearExamState();
+            localStorage.removeItem('examOfflineQueue');
+            navigate('/dashboard', { state: { message: 'Your exam session has expired and was auto-submitted.' } });
+            return;
+          }
+
+          // Session is valid — load questions and resume
           const questionsRes = await questionsAPI.getByExam(examId, {
             shuffled: 'true',
             shuffledOptions: 'true'
           });
 
-          setExam({ ...existingSession });
-          setActiveExam(exam, existingSession);
+          const examData = { ...existingSession };
+          setExam(examData);
+          setActiveExam(examData, existingSession); // Use examData (not stale null exam)
           setQuestions(questionsRes.data.data || []);
-          setCurrentQuestionIndex(existingSession.current_question_index);
-          
-          // Initialize timer with remaining duration
-          const examDuration = existingSession.duration_minutes || exam.duration_minutes;
-          const startTime = new Date(existingSession.started_at).getTime();
-          const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-          const remainingSeconds = (examDuration * 60) - elapsedSeconds;
-          setTimeRemaining(Math.max(0, remainingSeconds));
-          
+          setCurrentQuestionIndex(existingSession.current_question_index || 0);
+          setTimeRemaining(remainingSeconds);
+          setTotalDuration(totalSeconds);
+
           setExamStarted(true);
           setLoading(false);
           return;
         }
       } catch (err) {
-        // Check if the error is "Exam has ended" or similar
-        const errorMessage = err.response?.data?.message || err.message;
-        if (errorMessage && (errorMessage.includes('ended') || errorMessage.includes('not active'))) {
-          setError(errorMessage);
+        const errorMessage = err.response?.data?.message || '';
+        if (
+          errorMessage.includes('ended') ||
+          errorMessage.includes('not active') ||
+          errorMessage.includes('already submitted')
+        ) {
+          setError('This exam session has already ended. Please contact your teacher.');
           setLoading(false);
           return;
         }
-        // No active session, continue to start new one
+        // Any other error → fall through to load fresh exam
       }
 
-      // Load exam details
       const examRes = await examsAPI.getById(examId);
       setExam(examRes.data.data);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load exam');
+      setError(err.response?.data?.message || 'Failed to load exam. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -158,7 +242,6 @@ const ExamPage = () => {
       setLoading(true);
       setError('');
 
-      // First check if exam is available
       const availabilityRes = await examsAPI.checkAvailability(examId);
       const availability = availabilityRes.data.data;
       if (!availability.available) {
@@ -175,19 +258,22 @@ const ExamPage = () => {
 
       setActiveExam(exam, sessionData);
       setQuestions(questionsRes.data.data || []);
-      
+
       const examDuration = sessionData.duration_minutes || exam.duration_minutes;
       setTimeRemaining(examDuration * 60);
-      
+      setTotalDuration(examDuration * 60);
+
       setExamStarted(true);
 
-      // Request fullscreen as it's a user gesture
-      try {
-        if (document.documentElement.requestFullscreen) {
-          await document.documentElement.requestFullscreen();
+      // Fix #19 — only request fullscreen on non-mobile devices
+      if (!isMobile) {
+        try {
+          if (document.documentElement.requestFullscreen) {
+            await document.documentElement.requestFullscreen();
+          }
+        } catch (err) {
+          console.warn('Fullscreen request denied or not supported', err);
         }
-      } catch (err) {
-        console.warn('Fullscreen request denied or not supported', err);
       }
     } catch (err) {
       setError(err.message || 'Failed to start exam');
@@ -196,27 +282,48 @@ const ExamPage = () => {
     }
   };
 
+  // Fix #17 — Save with retry logic
+  const saveWithRetry = async (sessionId, payload, maxRetries = 3) => {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        await attemptsAPI.saveResponse(sessionId, payload);
+        return true;
+      } catch (e) {
+        if (i < maxRetries - 1) {
+          await new Promise(r => setTimeout(r, 1000 * (i + 1)));
+        }
+      }
+    }
+    return false;
+  };
+
   const handleOptionSelect = async (option) => {
     if (!session || submitting) return;
 
     const question = questions[currentQuestionIndex];
     const questionId = question?.id;
-    
+
     if (!questionId) {
       console.error('Question ID is undefined!');
       return;
     }
-    
+
     saveResponse(questionId, option);
 
-    try {
-      await attemptsAPI.saveResponse(session.id, {
-        questionId,
-        selectedOption: option
-      });
-    } catch (error) {
-      console.error('Failed to save response:', error);
+    // Fix #17 — show saving status
+    setSaveStatus('saving');
+
+    if (!proctoring.isOnline) {
+      // Fix #18 — queue offline
+      const queue = JSON.parse(localStorage.getItem('examOfflineQueue') || '[]');
+      queue.push({ sessionId: session.id, questionId, selectedOption: option, ts: Date.now() });
+      localStorage.setItem('examOfflineQueue', JSON.stringify(queue));
+      setSaveStatus('idle');
+      return;
     }
+
+    const ok = await saveWithRetry(session.id, { questionId, selectedOption: option });
+    setSaveStatus(ok ? 'idle' : 'failed');
   };
 
   const handleNavigate = async (index) => {
@@ -233,14 +340,13 @@ const ExamPage = () => {
 
   const handleSubmit = async () => {
     setShowConfirmSubmit(false);
+    setAutoSubmitError(false);
     setSubmitting(true);
     try {
-      // Log exam submission with proctoring
       proctoring.logExamSubmit();
-      
+
       const result = await attemptsAPI.submit(session.id);
 
-      // Exit fullscreen on successful submission
       if (document.fullscreenElement && document.exitFullscreen) {
         try {
           await document.exitFullscreen();
@@ -249,8 +355,10 @@ const ExamPage = () => {
         }
       }
 
+      // Clear offline queue on successful submit
+      localStorage.removeItem('examOfflineQueue');
+
       clearExamState();
-      // Redirect to result page so student can see their answers
       navigate(`/results/${session.id}`);
     } catch (err) {
       console.error('Submission failed:', err);
@@ -263,7 +371,6 @@ const ExamPage = () => {
     const question = questions[index];
     if (!question) return 'not-visited';
 
-    // Ensure question.id exists and check response
     const questionId = question.id;
     const hasResponse = questionId && responses[questionId];
     const isReview = questionId && markedForReview[questionId];
@@ -298,7 +405,6 @@ const ExamPage = () => {
     }
   };
 
-  // Calculate question statuses using useMemo to ensure fresh values
   const { questionStatuses, answeredCount, notAnsweredCount, reviewCount } = useMemo(() => {
     const statuses = questions.map((_, idx) => getQuestionStatus(idx));
     return {
@@ -366,6 +472,7 @@ const ExamPage = () => {
               <li>Exam will auto-submit when time runs out</li>
               <li>Once submitted, you cannot restart the exam</li>
               <li>Use "Mark for Review" to flag questions you want to revisit</li>
+              {isMobile && <li>📱 Stay on this page during the entire exam</li>}
             </ul>
           </div>
 
@@ -382,97 +489,118 @@ const ExamPage = () => {
   const currentResponse = responses[question?.id];
   const isMarked = !!markedForReview[question?.id];
 
+  // Timer progress %
+  const timerPercent = totalDuration ? Math.max(0, (timeRemaining / totalDuration) * 100) : 100;
+
   return (
     <div className="max-w-6xl mx-auto space-y-4">
-      {/* Timer & Header */}
-      <div className="sticky top-16 z-30 bg-white rounded-lg shadow-md p-4 flex items-center justify-between">
-        <div>
-          <h2 className="font-semibold text-gray-900">{exam?.title}</h2>
-          <p className="text-sm text-gray-500">
-            Question {currentQuestionIndex + 1} of {questions.length}
-          </p>
-        </div>
 
-        <div className="flex items-center gap-4">
-          {/* Proctoring Status */}
-          <div className="hidden sm:flex items-center gap-3 text-xs">
-            <div className={`flex items-center gap-1 px-2 py-1 rounded ${
-              proctoring.isOnline ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-            }`}>
-              <span className="text-lg">{proctoring.isOnline ? '📶' : '❌'}</span>
-              <span className="font-medium">{proctoring.isOnline ? 'Online' : 'Offline'}</span>
+      {/* Fix #9 — Network banner: full-width at very top */}
+      {!proctoring.isOnline && (
+        <div className="fixed top-16 left-0 right-0 z-50">
+          <div className="bg-red-600 text-white px-4 py-2 flex items-center justify-center gap-2 shadow-lg animate-pulse">
+            <span>📡</span>
+            <span className="font-medium text-sm">You are offline — answers are being queued and will sync when reconnected.</span>
+          </div>
+        </div>
+      )}
+
+      {/* Timer & Header */}
+      <div className="sticky top-16 z-30 bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="p-3 sm:p-4 flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <h2 className="font-semibold text-gray-900 truncate text-sm sm:text-base">{exam?.title}</h2>
+            <p className="text-xs text-gray-500 flex items-center gap-2">
+              Q {currentQuestionIndex + 1}/{questions.length}
+              {/* Fix #17 — save indicator */}
+              {saveStatus === 'saving' && <span className="text-blue-500 animate-pulse">● Saving...</span>}
+              {saveStatus === 'failed' && <span className="text-red-500">⚠️ Save failed</span>}
+            </p>
+          </div>
+
+          {/* Fix #3 — Proctoring badges always visible, icon-only on mobile */}
+          <div className="flex items-center gap-1 sm:gap-2 text-xs flex-shrink-0">
+            <div
+              className={`flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 rounded ${proctoring.isOnline ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
+              title={proctoring.isOnline ? 'Online' : 'Offline'}
+            >
+              <span className="text-base">{proctoring.isOnline ? '📶' : '❌'}</span>
+              <span className="hidden sm:inline font-medium">{proctoring.isOnline ? 'Online' : 'Offline'}</span>
             </div>
-            <div className={`flex items-center gap-1 px-2 py-1 rounded ${
-              proctoring.isFullscreen ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'
-            }`}>
-              <span className="text-lg">{proctoring.isFullscreen ? '🖥️' : '⚠️'}</span>
-              <span className="font-medium">{proctoring.isFullscreen ? 'Fullscreen' : 'Windowed'}</span>
+            <div
+              className={`flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 rounded ${proctoring.isFullscreen ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}
+              title={proctoring.isFullscreen ? 'Fullscreen' : 'Windowed'}
+            >
+              <span className="text-base">{proctoring.isFullscreen ? '🖥️' : '⚠️'}</span>
+              <span className="hidden sm:inline font-medium">{proctoring.isFullscreen ? 'Fullscreen' : 'Windowed'}</span>
             </div>
             {proctoring.weightedScore > 0 && (
-              <div className={`flex items-center gap-1 px-2 py-1 rounded ${
-                proctoring.weightedScore >= 5 ? 'bg-red-100 text-red-700' :
-                proctoring.weightedScore >= 3 ? 'bg-orange-100 text-orange-700' :
-                'bg-yellow-100 text-yellow-700'
-              }`}>
-                <span className="text-lg">⚠️</span>
-                <span className="font-medium">Violations: {proctoring.weightedScore}</span>
+              <div
+                className={`flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 rounded ${proctoring.weightedScore >= 5 ? 'bg-red-100 text-red-700' : proctoring.weightedScore >= 3 ? 'bg-orange-100 text-orange-700' : 'bg-yellow-100 text-yellow-700'}`}
+                title={`Violations: ${proctoring.weightedScore}`}
+              >
+                <span className="text-base">⚠️</span>
+                <span className="font-medium">{proctoring.weightedScore}</span>
               </div>
             )}
           </div>
+
+          {/* Fix #2 — Timer larger on mobile */}
+          <div className={`text-2xl sm:text-3xl font-bold tabular-nums flex-shrink-0 ${
+            timeRemaining < 60 ? 'text-red-600' :
+            timeRemaining < 300 ? 'text-yellow-600' : 'text-green-600'
+          }`}>
+            {formatTime(timeRemaining)}
+          </div>
+
+          <div className="flex gap-1.5 sm:gap-2 flex-shrink-0">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setShowPalette(!showPalette)}
+              className="lg:hidden text-xs px-2 sm:px-3"
+            >
+              📋
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => setShowConfirmSubmit(true)}
+              disabled={submitting}
+              className="text-xs px-2 sm:px-3"
+            >
+              Submit
+            </Button>
+          </div>
         </div>
 
-        <div className={`text-2xl font-bold ${
-          timeRemaining < 60 ? 'text-red-600' :
-          timeRemaining < 300 ? 'text-yellow-600' : 'text-green-600'
-        }`}>
-          {formatTime(timeRemaining)}
-        </div>
-
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setShowPalette(!showPalette)}
-            className="sm:hidden"
-          >
-            Palette
-          </Button>
-          <Button
-            variant="danger"
-            size="sm"
-            onClick={() => setShowConfirmSubmit(true)}
-            disabled={submitting}
-          >
-            Submit
-          </Button>
+        {/* Fix #2 — Timer progress bar */}
+        <div className="h-1.5 bg-gray-100">
+          <div
+            className={`h-full transition-all duration-1000 ${
+              timeRemaining < 60 ? 'bg-red-500' :
+              timeRemaining < 300 ? 'bg-yellow-400' : 'bg-green-500'
+            }`}
+            style={{ width: `${timerPercent}%` }}
+          />
         </div>
       </div>
 
-      {/* Proctoring Warnings */}
+      {/* Fix #8 — Warnings at top-20 right, not bottom */}
       {proctoring.warnings.length > 0 && (
-        <div className="fixed bottom-4 right-4 z-50 space-y-2">
+        <div className="fixed top-20 right-2 sm:right-4 z-50 space-y-2 max-w-[calc(100vw-1rem)] sm:max-w-sm">
           {proctoring.warnings.map((warning) => (
             <div
               key={warning.id}
-              className={`max-w-sm p-4 rounded-lg shadow-lg border-l-4 ${
+              className={`p-3 sm:p-4 rounded-lg shadow-lg border-l-4 text-sm ${
                 warning.type === 'high' ? 'bg-red-50 border-red-500' :
                 warning.type === 'medium' ? 'bg-yellow-50 border-yellow-500' :
                 'bg-blue-50 border-blue-500'
               }`}
             >
-              <div className="text-sm">{warning.message}</div>
+              {warning.message}
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Network Offline Warning */}
-      {!proctoring.isOnline && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-2">
-            <span>📡</span>
-            <span className="font-medium">You are offline. Answers may not be saved.</span>
-          </div>
         </div>
       )}
 
@@ -481,7 +609,8 @@ const ExamPage = () => {
         <div className="lg:col-span-3 space-y-4">
           {/* Question */}
           <Card className="min-h-[300px]">
-            <div className="space-y-6">
+            {/* Fix #14 — userSelect none on question content */}
+            <div className="space-y-6" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
               <div>
                 <p className="text-lg text-gray-900 font-medium">
                   {currentQuestionIndex + 1}. {question?.question_text}
@@ -491,16 +620,17 @@ const ExamPage = () => {
                 )}
               </div>
 
+              {/* Fix #4 — Touch targets increased to p-5 min-h-[52px] */}
               <div className="space-y-3">
                 {['A', 'B', 'C', 'D'].map((option) => (
                   <button
                     key={option}
                     onClick={() => handleOptionSelect(option)}
                     disabled={submitting}
-                    className={`w-full text-left p-4 rounded-lg border-2 transition-all touch-target ${
+                    className={`w-full text-left p-5 min-h-[52px] rounded-lg border-2 transition-all ${
                       currentResponse === option
                         ? 'border-primary-600 bg-primary-50'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100'
                     }`}
                   >
                     <span className="font-medium mr-3">{option}.</span>
@@ -514,7 +644,7 @@ const ExamPage = () => {
                 <button
                   onClick={() => toggleReview(question?.id)}
                   disabled={submitting}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all ${
+                  className={`flex items-center gap-2 px-4 py-3 min-h-[48px] rounded-lg border-2 transition-all ${
                     isMarked
                       ? 'border-purple-500 bg-purple-50 text-purple-700'
                       : 'border-gray-200 hover:border-gray-300'
@@ -531,22 +661,23 @@ const ExamPage = () => {
             </div>
           </Card>
 
-          {/* Navigation Buttons */}
+          {/* Fix #10 — Navigation buttons full-width on mobile */}
           {questions.length > 1 && (
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
               <Button
                 variant="secondary"
                 onClick={() => handleNavigate(currentQuestionIndex - 1)}
                 disabled={currentQuestionIndex === 0 || submitting}
+                className="flex-1 py-3"
               >
-                Previous
+                ⬅ Previous
               </Button>
-
               <Button
                 onClick={() => handleNavigate(currentQuestionIndex + 1)}
                 disabled={currentQuestionIndex === questions.length - 1 || submitting}
+                className="flex-1 py-3"
               >
-                Next
+                Next ➡
               </Button>
             </div>
           )}
@@ -617,72 +748,107 @@ const ExamPage = () => {
           </Card>
         </div>
 
-        {/* Question Palette - Mobile Modal */}
+        {/* Fix #1 — Question Palette: Mobile Bottom-Sheet Modal */}
         {showPalette && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-end sm:items-center justify-center p-4 lg:hidden">
-            <Card className="w-full max-w-md max-h-[80vh] overflow-auto">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold">Question Palette</h3>
-                <button onClick={() => setShowPalette(false)} className="text-gray-500 hover:text-gray-700">
-                  ✕
-                </button>
-              </div>
-
-              {/* Legend */}
-              <div className="grid grid-cols-2 gap-2 text-xs mb-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-green-500 rounded text-white text-xs flex items-center justify-center">✓</div>
-                  <span>Answered</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-red-200 rounded text-red-800 text-xs flex items-center justify-center"></div>
-                  <span>Not Answered</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-purple-500 rounded text-white text-xs flex items-center justify-center">✓</div>
-                  <span>+ Review</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-purple-200 rounded border-2 border-purple-500 text-xs flex items-center justify-center"></div>
-                  <span>Review</span>
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center lg:hidden"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowPalette(false); }}
+          >
+            <div className="w-full bg-white rounded-t-3xl max-h-[88vh] overflow-auto shadow-2xl animate-slide-up">
+              {/* Drag handle */}
+              <div className="flex flex-col items-center pt-3 pb-1 sticky top-0 bg-white border-b border-gray-100">
+                <div className="w-12 h-1.5 bg-gray-300 rounded-full mb-3" />
+                <div className="w-full flex items-center justify-between px-5 pb-3">
+                  <h3 className="text-lg font-bold text-gray-900">Question Palette</h3>
+                  <button
+                    onClick={() => setShowPalette(false)}
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  >
+                    ✕
+                  </button>
                 </div>
               </div>
 
-              {/* Stats */}
-              <div className="grid grid-cols-3 gap-2 text-xs mb-4">
-                <div className="text-center bg-green-50 p-2 rounded">
-                  <div className="font-bold text-green-600">{answeredCount}</div>
-                  <div className="text-gray-600">Answered</div>
+              <div className="p-5 space-y-5">
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-3 text-sm">
+                  <div className="text-center bg-green-50 p-3 rounded-xl">
+                    <div className="font-bold text-green-600 text-xl">{answeredCount}</div>
+                    <div className="text-gray-500 text-xs">Answered</div>
+                  </div>
+                  <div className="text-center bg-red-50 p-3 rounded-xl">
+                    <div className="font-bold text-red-600 text-xl">{notAnsweredCount}</div>
+                    <div className="text-gray-500 text-xs">Unanswered</div>
+                  </div>
+                  <div className="text-center bg-purple-50 p-3 rounded-xl">
+                    <div className="font-bold text-purple-600 text-xl">{reviewCount}</div>
+                    <div className="text-gray-500 text-xs">Review</div>
+                  </div>
                 </div>
-                <div className="text-center bg-red-50 p-2 rounded">
-                  <div className="font-bold text-red-600">{notAnsweredCount}</div>
-                  <div className="text-gray-600">Unanswered</div>
-                </div>
-                <div className="text-center bg-purple-50 p-2 rounded">
-                  <div className="font-bold text-purple-600">{reviewCount}</div>
-                  <div className="text-gray-600">Review</div>
-                </div>
-              </div>
 
-              {/* Grid */}
-              <div className="grid grid-cols-8 gap-2">
-                {questions.map((_, idx) => {
-                  const status = getQuestionStatus(idx);
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => handleNavigate(idx)}
-                      className={`w-10 h-10 rounded text-sm font-medium ${getStatusColor(status)}`}
-                    >
-                      {idx + 1}
-                    </button>
-                  );
-                })}
+                {/* Legend */}
+                <div className="grid grid-cols-2 gap-2 text-xs bg-gray-50 p-3 rounded-xl">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-green-500 rounded text-white text-xs flex items-center justify-center flex-shrink-0">✓</div>
+                    <span>Answered</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-red-200 rounded flex-shrink-0"></div>
+                    <span>Not Answered</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-purple-500 rounded text-white text-xs flex items-center justify-center flex-shrink-0">✓</div>
+                    <span>Answered + Review</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-purple-200 rounded border-2 border-purple-500 flex-shrink-0"></div>
+                    <span>Marked for Review</span>
+                  </div>
+                </div>
+
+                {/* Question grid — larger buttons for touch */}
+                <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
+                  {questions.map((_, idx) => {
+                    const status = getQuestionStatus(idx);
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => handleNavigate(idx)}
+                        className={`w-12 h-12 rounded-xl text-sm font-bold transition-all active:scale-95 ${getStatusColor(status)}`}
+                        title={`Question ${idx + 1}: ${getStatusLabel(status)}`}
+                      >
+                        {idx + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="pb-safe">
+                  <Button onClick={() => setShowPalette(false)} variant="secondary" fullWidth className="py-3">
+                    Close Palette
+                  </Button>
+                </div>
               </div>
-            </Card>
+            </div>
           </div>
         )}
       </div>
+
+      {/* Fix #16 — Auto-Submit Error Modal */}
+      {autoSubmitError && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+            <div className="text-4xl mb-4 text-center">⏰</div>
+            <h2 className="text-red-600 font-bold text-lg mb-2 text-center">Time's Up — Auto-Submit Failed</h2>
+            <p className="text-gray-600 text-sm mb-5 text-center">
+              Your time has expired but we couldn't submit automatically. Please tap the button below to submit your exam now.
+            </p>
+            <Button variant="danger" onClick={handleSubmit} fullWidth className="py-3">
+              {submitting ? 'Submitting...' : '✅ Submit Exam Now'}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Confirm Submit Modal */}
       {showConfirmSubmit && (
@@ -692,19 +858,19 @@ const ExamPage = () => {
             <div className="space-y-4">
               <div className="bg-yellow-50 border border-yellow-200 p-4 rounded">
                 <p className="text-sm text-yellow-800">
-                  <strong>Answered:</strong> {answeredCount} | 
-                  <strong className="ml-3">Unanswered:</strong> {notAnsweredCount} | 
+                  <strong>Answered:</strong> {answeredCount} |{' '}
+                  <strong className="ml-3">Unanswered:</strong> {notAnsweredCount} |{' '}
                   <strong className="ml-3">Review:</strong> {reviewCount}
                 </p>
               </div>
               <p className="text-gray-700">
                 Are you sure you want to submit? You cannot change your answers after submission.
               </p>
-              <div className="flex gap-3">
-                <Button onClick={handleSubmit} variant="danger" className="flex-1">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button onClick={handleSubmit} variant="danger" className="flex-1 py-3">
                   Yes, Submit
                 </Button>
-                <Button onClick={() => setShowConfirmSubmit(false)} variant="secondary" className="flex-1">
+                <Button onClick={() => setShowConfirmSubmit(false)} variant="secondary" className="flex-1 py-3">
                   Cancel
                 </Button>
               </div>

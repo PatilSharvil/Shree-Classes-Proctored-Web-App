@@ -75,6 +75,23 @@ class AuthService {
       throw new Error('User with this email already exists.');
     }
 
+    // Fix #12 — Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(userData.email)) {
+      throw new Error('Invalid email format. Please enter a valid email address.');
+    }
+
+    // Fix #13 — Password strength validation
+    if (!userData.password || userData.password.length < 8) {
+      throw new Error('Password must be at least 8 characters long.');
+    }
+    if (!/[A-Z]/.test(userData.password)) {
+      throw new Error('Password must contain at least one uppercase letter.');
+    }
+    if (!/[0-9]/.test(userData.password)) {
+      throw new Error('Password must contain at least one number.');
+    }
+
     const userId = uuidv4();
     const hashedPassword = bcrypt.hashSync(userData.password, 10);
 

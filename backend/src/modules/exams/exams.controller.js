@@ -15,6 +15,12 @@ const createExam = (req, res) => {
     if (!title || !duration_minutes || !total_marks) {
       return errorResponse(res, 400, 'Title, duration_minutes, and total_marks are required.');
     }
+    if (Number(duration_minutes) <= 0) {
+      return errorResponse(res, 400, 'Duration must be a positive number (minimum 1 minute).');
+    }
+    if (Number(total_marks) <= 0) {
+      return errorResponse(res, 400, 'Total marks must be a positive number.');
+    }
 
     const exam = examService.createExam({
       title, description, subject, duration_minutes, total_marks,

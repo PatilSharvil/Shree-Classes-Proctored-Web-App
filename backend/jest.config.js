@@ -14,7 +14,7 @@ module.exports = {
       statements: 70
     }
   },
-  testMatch: ['**/__tests__/**/*.test.js'],
+  testMatch: ['**/__tests__/**/*.test.js', '**/tests/**/*.test.js'],
   setupFilesAfterEnv: ['./jest.setup.js'],
   verbose: true,
   forceExit: true,

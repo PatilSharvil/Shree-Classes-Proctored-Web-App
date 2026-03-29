@@ -163,11 +163,15 @@ class ScheduledTaskService {
   }
 
   /**
-   * Sync data to GitHub
+   * Sync data to GitHub (only runs if GitHub credentials are configured)
    */
   async syncToGitHub() {
     try {
       const githubService = require('./githubService');
+
+      // Skip entirely if GitHub is not configured
+      if (!githubService.isConfigured()) return;
+
       const excelService = require('./excelService');
 
       // Export data from SQLite

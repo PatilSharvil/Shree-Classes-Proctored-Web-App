@@ -19,24 +19,38 @@ const StudentDashboard = () => {
   }, []);
 
   const loadData = async () => {
+    setLoading(true);
+    setError('');
+
+    let hasError = false;
+    let errMsg = '';
+
+    // Load exams independently — don't block history if this fails
     try {
-      setLoading(true);
-      const [examsRes, historyRes] = await Promise.all([
-        examsAPI.getAll({ is_active: 'true' }),
-        attemptsAPI.getHistory()
-      ]);
-
-      const examsData = examsRes.data.data || [];
-      const examsWithQuestions = examsData.filter(exam => exam.question_count > 0);
-
-      setActiveExams(examsWithQuestions);
-      setAttemptHistory(historyRes.data.data || []);
+      const examsRes = await examsAPI.getAll({ is_active: 'true' });
+      const examsData = examsRes.data?.data || [];
+      setActiveExams(examsData.filter(exam => exam.question_count > 0));
     } catch (err) {
-      console.error('Error loading dashboard data:', err);
-      setError('Failed to load dashboard data');
-    } finally {
-      setLoading(false);
+      console.error('Error loading exams:', err);
+      hasError = true;
+      errMsg += 'Exams Error: ' + (err.message || String(err)) + '. ';
     }
+
+    // Load attempt history independently
+    try {
+      const historyRes = await attemptsAPI.getHistory();
+      setAttemptHistory(historyRes.data?.data || []);
+    } catch (err) {
+      console.error('Error loading attempt history:', err);
+      hasError = true;
+      errMsg += 'History Error: ' + (err.message || String(err)) + '. ';
+    }
+
+    if (hasError) {
+      setError(`Some data failed to load: ${errMsg}`);
+    }
+
+    setLoading(false);
   };
 
   if (loading) {
@@ -157,20 +171,20 @@ const StudentDashboard = () => {
         </div>
       )}
 
-      {/* STATS GRID */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+      {/* STATS GRID — Fix #6: responsive grid, smaller padding on mobile */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-5">
         {[
           { icon: 'fa-edit', gradient: 'from-blue-500 to-cyan-500', value: attemptHistory.length, label: 'Tests Taken' },
           { icon: 'fa-chart-pie', gradient: 'from-green-500 to-emerald-500', value: `${avgPercentage}%`, label: 'Avg Score' },
           { icon: 'fa-rocket', gradient: 'from-indigo-500 to-purple-500', value: attemptHistory.reduce((sum, h) => sum + (h.score || 0), 0), label: 'Total Points' },
           { icon: 'fa-stopwatch', gradient: 'from-orange-500 to-amber-500', value: Math.round(attemptHistory.reduce((sum, h) => sum + (h.duration_taken || 0), 0) / 60), label: 'Study Minutes' }
         ].map((stat, i) => (
-          <div key={i} className="bg-white rounded-3xl p-6 shadow-lg border border-gray-100 flex flex-col items-center justify-center text-center hover:shadow-xl hover:-translate-y-1 transition-all">
-            <div className={`w-14 h-14 bg-gradient-to-br ${stat.gradient} rounded-2xl flex items-center justify-center mb-4 text-xl text-white shadow-lg`}>
+          <div key={i} className="bg-white rounded-3xl p-4 sm:p-6 shadow-lg border border-gray-100 flex flex-col items-center justify-center text-center hover:shadow-xl hover:-translate-y-1 transition-all">
+            <div className={`w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-br ${stat.gradient} rounded-2xl flex items-center justify-center mb-3 text-base sm:text-xl text-white shadow-lg`}>
               <i className={`fas ${stat.icon}`}></i>
             </div>
-            <div className="text-2xl font-bold text-gray-900 mb-1">{stat.value}</div>
-            <div className="text-sm text-gray-500">{stat.label}</div>
+            <div className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{stat.value}</div>
+            <div className="text-xs sm:text-sm text-gray-500">{stat.label}</div>
           </div>
         ))}
       </div>
@@ -245,7 +259,7 @@ const StudentDashboard = () => {
             )}
           </section>
 
-          {/* PERFORMANCE HISTORY */}
+          {/* PERFORMANCE HISTORY — wrapped in overflow for mobile */}
           <section>
             <div className="flex items-center justify-between mb-6 px-2">
                 <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
@@ -261,20 +275,20 @@ const StudentDashboard = () => {
                  <p className="font-medium text-sm">Take your first exam to see your progress</p>
               </div>
             ) : (
-              <div className="space-y-5">
+              <div className="space-y-4 overflow-x-auto">
                 {attemptHistory.slice(0, 5).map((attempt) => (
-                  <div key={attempt.id} className="group relative overflow-hidden bg-white rounded-3xl p-6 shadow-lg border border-gray-50 hover:border-indigo-100 transition-all">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                      <div className="flex items-center gap-5">
-                        <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-xl ${
+                  <div key={attempt.id} className="group relative overflow-hidden bg-white rounded-3xl p-4 sm:p-6 shadow-lg border border-gray-50 hover:border-indigo-100 transition-all min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl flex-shrink-0 ${
                            attempt.percentage >= 70 ? 'bg-green-50 text-green-500' :
                            attempt.percentage >= 40 ? 'bg-amber-50 text-amber-500' : 'bg-red-50 text-red-500'
                         }`}>
                           <i className={`fas ${attempt.percentage >= 40 ? 'fa-check-double' : 'fa-brain'}`}></i>
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-800 group-hover:text-indigo-600 transition-colors">{attempt.exam_title}</h3>
-                          <div className="flex flex-wrap items-center gap-3 mt-1.5">
+                        <div className="min-w-0">
+                          <h3 className="font-semibold text-gray-800 group-hover:text-indigo-600 transition-colors truncate">{attempt.exam_title}</h3>
+                          <div className="flex flex-wrap items-center gap-3 mt-1">
                              <div className="flex items-center gap-1.5 text-gray-500">
                                 <i className="far fa-calendar-alt text-xs"></i>
                                 <span className="text-xs">{new Date(attempt.submitted_at).toLocaleDateString()}</span>
@@ -287,9 +301,9 @@ const StudentDashboard = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-6 bg-gray-50 p-3 rounded-2xl border border-gray-100 md:w-fit justify-between">
-                        <div className="text-center px-3">
-                          <div className={`text-3xl font-bold ${
+                      <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-2xl border border-gray-100 justify-between sm:justify-end">
+                        <div className="text-center px-2">
+                          <div className={`text-2xl sm:text-3xl font-bold ${
                             attempt.percentage >= 70 ? 'text-green-500' :
                             attempt.percentage >= 40 ? 'text-amber-500' : 'text-red-500'
                           }`}>
@@ -299,7 +313,7 @@ const StudentDashboard = () => {
                         </div>
 
                         <Link to={`/results/${attempt.session_id || attempt.id}`}>
-                           <button className="w-12 h-12 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-500 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all shadow-sm active:scale-90">
+                           <button className="w-11 h-11 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-gray-500 hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all shadow-sm active:scale-90">
                               <i className="fas fa-chevron-right text-xs"></i>
                            </button>
                         </Link>
