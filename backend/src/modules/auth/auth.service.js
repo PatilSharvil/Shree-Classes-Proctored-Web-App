@@ -37,7 +37,8 @@ class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        mustChangePassword: user.must_change_password === 1
       }
     };
   }
@@ -57,12 +58,12 @@ class AuthService {
     const adminId = uuidv4();
 
     db.prepare(`
-      INSERT INTO users (id, email, password, name, role)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(adminId, env.adminEmail, hashedPassword, 'Admin', 'ADMIN');
+      INSERT INTO users (id, email, password, name, role, must_change_password)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(adminId, env.adminEmail, hashedPassword, 'Admin', 'ADMIN', 1);
 
-    console.log('Default admin user created');
-    return { id: adminId, email: env.adminEmail, role: 'ADMIN' };
+    console.log('Default admin user created with password change required');
+    return { id: adminId, email: env.adminEmail, role: 'ADMIN', must_change_password: 1 };
   }
 
   /**

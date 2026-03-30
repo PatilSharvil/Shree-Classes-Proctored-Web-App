@@ -3,38 +3,56 @@ const { v4: uuidv4 } = require('uuid');
 
 class AttemptService {
   /**
-   * Start a new exam attempt
+   * Start a new exam attempt with transaction to prevent race conditions
    */
   startAttempt(userId, examId) {
     const sessionId = uuidv4();
 
-    // Check if user already has an active attempt for this exam
-    const existingAttempt = db.prepare(`
-      SELECT * FROM exam_sessions 
-      WHERE user_id = ? AND exam_id = ? AND status = 'IN_PROGRESS'
-    `).get(userId, examId);
+    try {
+      // Start transaction
+      db.exec('BEGIN TRANSACTION');
 
-    if (existingAttempt) {
-      throw new Error('You already have an active attempt for this exam.');
+      // Check if user already has an active attempt for this exam
+      const existingAttempt = db.prepare(`
+        SELECT * FROM exam_sessions
+        WHERE user_id = ? AND exam_id = ? AND status = 'IN_PROGRESS'
+      `).get(userId, examId);
+
+      if (existingAttempt) {
+        db.exec('ROLLBACK');
+        throw new Error('You already have an active attempt for this exam.');
+      }
+
+      // Get question count
+      const questionCount = db.prepare(
+        'SELECT COUNT(*) as count FROM questions WHERE exam_id = ?'
+      ).get(examId).count;
+
+      if (questionCount === 0) {
+        db.exec('ROLLBACK');
+        throw new Error('This exam has no questions.');
+      }
+
+      // Create session
+      db.prepare(`
+        INSERT INTO exam_sessions (
+          id, user_id, exam_id, total_questions, current_question_index
+        ) VALUES (?, ?, ?, ?, 0)
+      `).run(sessionId, userId, examId, questionCount);
+
+      // Commit transaction
+      db.exec('COMMIT');
+
+      return this.getSessionById(sessionId);
+    } catch (error) {
+      // Rollback on any error
+      try {
+        db.exec('ROLLBACK');
+      } catch (e) {
+        // Ignore rollback errors
+      }
+      throw error;
     }
-
-    // Get question count
-    const questionCount = db.prepare(
-      'SELECT COUNT(*) as count FROM questions WHERE exam_id = ?'
-    ).get(examId).count;
-
-    if (questionCount === 0) {
-      throw new Error('This exam has no questions.');
-    }
-
-    // Create session
-    db.prepare(`
-      INSERT INTO exam_sessions (
-        id, user_id, exam_id, total_questions, current_question_index
-      ) VALUES (?, ?, ?, ?, 0)
-    `).run(sessionId, userId, examId, questionCount);
-
-    return this.getSessionById(sessionId);
   }
 
   /**
@@ -69,7 +87,7 @@ class AttemptService {
   }
 
   /**
-   * Save response for a question
+   * Save response for a question with transaction to prevent race conditions
    */
   saveResponse(sessionId, questionId, selectedOption) {
     const session = this.getSessionById(sessionId);
@@ -78,45 +96,62 @@ class AttemptService {
       throw new Error('Cannot save response. Exam session is not active.');
     }
 
-    // Get question details
-    const question = db.prepare('SELECT * FROM questions WHERE id = ?').get(questionId);
-    if (!question) {
-      throw new Error('Question not found.');
+    try {
+      // Start transaction
+      db.exec('BEGIN TRANSACTION');
+
+      // Get question details
+      const question = db.prepare('SELECT * FROM questions WHERE id = ?').get(questionId);
+      if (!question) {
+        db.exec('ROLLBACK');
+        throw new Error('Question not found.');
+      }
+
+      // Check if response already exists
+      const existingResponse = db.prepare(
+        'SELECT * FROM responses WHERE session_id = ? AND question_id = ?'
+      ).get(sessionId, questionId);
+
+      const responseId = existingResponse ? existingResponse.id : uuidv4();
+      const isCorrect = selectedOption === question.correct_option ? 1 : 0;
+      const marksAwarded = isCorrect ? question.marks : (selectedOption ? -question.negative_marks : 0);
+
+      if (existingResponse) {
+        // Update existing response
+        db.prepare(`
+          UPDATE responses
+          SET selected_option = ?, is_correct = ?, marks_awarded = ?, answered_at = datetime('now')
+          WHERE id = ?
+        `).run(selectedOption, isCorrect, marksAwarded, responseId);
+      } else {
+        // Insert new response
+        db.prepare(`
+          INSERT INTO responses (id, session_id, question_id, selected_option, is_correct, marks_awarded)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(responseId, sessionId, questionId, selectedOption, isCorrect, marksAwarded);
+      }
+
+      // Update session stats
+      this.updateSessionStats(sessionId);
+
+      // Commit transaction
+      db.exec('COMMIT');
+
+      return {
+        questionId,
+        selectedOption,
+        isCorrect: !!isCorrect,
+        marksAwarded
+      };
+    } catch (error) {
+      // Rollback on any error
+      try {
+        db.exec('ROLLBACK');
+      } catch (e) {
+        // Ignore rollback errors
+      }
+      throw error;
     }
-
-    // Check if response already exists
-    const existingResponse = db.prepare(
-      'SELECT * FROM responses WHERE session_id = ? AND question_id = ?'
-    ).get(sessionId, questionId);
-
-    const responseId = existingResponse ? existingResponse.id : uuidv4();
-    const isCorrect = selectedOption === question.correct_option ? 1 : 0;
-    const marksAwarded = isCorrect ? question.marks : (selectedOption ? -question.negative_marks : 0);
-
-    if (existingResponse) {
-      // Update existing response
-      db.prepare(`
-        UPDATE responses 
-        SET selected_option = ?, is_correct = ?, marks_awarded = ?, answered_at = datetime('now')
-        WHERE id = ?
-      `).run(selectedOption, isCorrect, marksAwarded, responseId);
-    } else {
-      // Insert new response
-      db.prepare(`
-        INSERT INTO responses (id, session_id, question_id, selected_option, is_correct, marks_awarded)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(responseId, sessionId, questionId, selectedOption, isCorrect, marksAwarded);
-    }
-
-    // Update session stats
-    this.updateSessionStats(sessionId);
-
-    return {
-      questionId,
-      selectedOption,
-      isCorrect: !!isCorrect,
-      marksAwarded
-    };
   }
 
   /**

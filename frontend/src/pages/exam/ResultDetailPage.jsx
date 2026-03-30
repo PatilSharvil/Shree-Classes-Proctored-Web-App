@@ -5,6 +5,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { formatTime } from '../../hooks/useExamTimer';
+import { sanitizeText } from '../../utils/sanitizer';
 
 const ResultDetailPage = () => {
   const { attemptId } = useParams();
@@ -156,7 +157,7 @@ const ResultDetailPage = () => {
                 </div>
               </div>
 
-              <p className="text-gray-900 font-medium mb-3">{response.question_text}</p>
+              <p className="text-gray-900 font-medium mb-3">{sanitizeText(response.question_text)}</p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {['A', 'B', 'C', 'D'].map((option) => {
@@ -177,7 +178,7 @@ const ResultDetailPage = () => {
                     >
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-gray-700">{option}.</span>
-                        <span className="text-gray-900">{optionValue}</span>
+                        <span className="text-gray-900">{sanitizeText(optionValue)}</span>
                         {isCorrect && (
                           <span className="ml-auto text-green-600">✓</span>
                         )}

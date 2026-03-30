@@ -2,35 +2,82 @@ import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+// CSRF Token management
+const getCSRFToken = () => {
+  // Try to get from cookie first
+  const match = document.cookie.match(/csrf_token=([a-f0-9]+)/);
+  if (match) {
+    return match[1];
+  }
+  // Try localStorage as fallback
+  return localStorage.getItem('csrf_token');
+};
+
+const setCSRFToken = (token) => {
+  // Store in localStorage as backup
+  localStorage.setItem('csrf_token', token);
+};
+
 // Create axios instance
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
-  }
+  },
+  withCredentials: true // Send cookies with requests
 });
 
-// Request interceptor - add token
+// Request interceptor - add token and CSRF
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Add CSRF token for state-changing requests
+    if (['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase())) {
+      const csrfToken = getCSRFToken();
+      if (csrfToken) {
+        config.headers['X-CSRF-Token'] = csrfToken;
+      }
+    }
+    
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// Response interceptor - handle errors
+// Response interceptor - handle errors and CSRF tokens
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Extract and store CSRF token from response headers
+    const csrfToken = response.headers['x-csrf-token'];
+    if (csrfToken) {
+      setCSRFToken(csrfToken);
+    }
+    return response;
+  },
   (error) => {
+    // Extract CSRF token from error response headers too
+    if (error.response?.headers?.['x-csrf-token']) {
+      setCSRFToken(error.response.headers['x-csrf-token']);
+    }
+    
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       window.location.href = '/login';
     }
+    
+    // Handle CSRF token errors
+    if (error.response?.status === 403 && error.response?.data?.message?.includes('CSRF')) {
+      // Clear invalid token and reload to get new one
+      localStorage.removeItem('csrf_token');
+      document.cookie = 'csrf_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+      window.location.reload();
+    }
+    
     return Promise.reject(error);
   }
 );
@@ -38,7 +85,8 @@ api.interceptors.response.use(
 // Auth API
 export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
-  getMe: () => api.get('/auth/me')
+  getMe: () => api.get('/auth/me'),
+  changePassword: (data) => api.post('/auth/change-password', data)
 };
 
 // Users API

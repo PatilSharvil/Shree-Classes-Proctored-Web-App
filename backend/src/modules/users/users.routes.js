@@ -15,7 +15,7 @@ router.get('/', authorize('ADMIN'), usersController.getAllUsers);
 
 /**
  * @route   GET /api/users/:id
- * @desc    Get user by ID
+ * @desc    Get user by ID (Only own profile or admin)
  * @access  Private
  */
 router.get('/:id', usersController.getUserById);
@@ -29,7 +29,7 @@ router.post('/', authorize('ADMIN'), usersController.createUser);
 
 /**
  * @route   PUT /api/users/:id
- * @desc    Update user
+ * @desc    Update user (Only own profile or admin)
  * @access  Private
  */
 router.put('/:id', usersController.updateUser);

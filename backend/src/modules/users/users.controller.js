@@ -1,5 +1,6 @@
 const authService = require('../auth/auth.service');
 const { apiResponse, errorResponse, paginatedResponse } = require('../../utils/apiResponse');
+const db = require('../../config/database');
 
 /**
  * Get all users
@@ -15,13 +16,24 @@ const getAllUsers = (req, res) => {
 };
 
 /**
- * Get user by ID
+ * Get user by ID (Only own profile or admin)
  * GET /api/users/:id
  */
 const getUserById = (req, res) => {
   try {
-    const user = authService.getUserById(req.params.id);
-    return apiResponse(res, 200, user, 'User retrieved successfully');
+    const requestedUserId = req.params.id;
+    const currentUserId = req.user.id;
+    const isAdmin = req.user.role === 'ADMIN';
+
+    // Users can only access their own profile unless they're admin
+    if (!isAdmin && requestedUserId !== currentUserId) {
+      return errorResponse(res, 403, 'Access denied. You can only access your own profile.');
+    }
+
+    const user = authService.getUserById(requestedUserId);
+    // Don't expose sensitive data
+    const { password, ...userWithoutPassword } = user;
+    return apiResponse(res, 200, userWithoutPassword, 'User retrieved successfully');
   } catch (error) {
     if (error.message === 'User not found.') {
       return errorResponse(res, 404, error.message);
@@ -57,15 +69,35 @@ const createUser = (req, res) => {
 };
 
 /**
- * Update user
+ * Update user (Only own profile or admin)
  * PUT /api/users/:id
  */
 const updateUser = (req, res) => {
   try {
+    const targetUserId = req.params.id;
+    const currentUserId = req.user.id;
+    const isAdmin = req.user.role === 'ADMIN';
+
+    // Users can only update their own profile unless they're admin
+    if (!isAdmin && targetUserId !== currentUserId) {
+      return errorResponse(res, 403, 'Access denied. You can only update your own profile.');
+    }
+
     const { email, password, name, role } = req.body;
 
-    const user = authService.updateUser(req.params.id, { email, password, name, role });
-    return apiResponse(res, 200, user, 'User updated successfully');
+    // Non-admin users cannot change their role
+    if (!isAdmin && role) {
+      return errorResponse(res, 403, 'Access denied. You cannot change your role.');
+    }
+
+    // Non-admin users cannot change their email
+    if (!isAdmin && email) {
+      return errorResponse(res, 403, 'Access denied. You cannot change your email.');
+    }
+
+    const user = authService.updateUser(targetUserId, { email, password, name, role });
+    const { password: _, ...userWithoutPassword } = user;
+    return apiResponse(res, 200, userWithoutPassword, 'User updated successfully');
   } catch (error) {
     if (error.message === 'User not found.' || error.message === 'Email already in use.') {
       return errorResponse(res, 400, error.message);
@@ -80,7 +112,15 @@ const updateUser = (req, res) => {
  */
 const deleteUser = (req, res) => {
   try {
-    const result = authService.deleteUser(req.params.id);
+    const targetUserId = req.params.id;
+    const currentUserId = req.user.id;
+
+    // Prevent admin from deleting themselves
+    if (targetUserId === currentUserId) {
+      return errorResponse(res, 400, 'Cannot delete your own account.');
+    }
+
+    const result = authService.deleteUser(targetUserId);
     return apiResponse(res, 200, result, 'User deleted successfully');
   } catch (error) {
     if (error.message === 'User not found.' || error.message === 'Cannot delete admin user.') {

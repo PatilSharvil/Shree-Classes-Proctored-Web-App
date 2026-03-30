@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useAuthStore from './store/authStore';
 import MainLayout from './layouts/MainLayout';
 import LoadingSpinner from './components/ui/LoadingSpinner';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy load pages
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
@@ -47,133 +48,135 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
 
 function App() {
   return (
-    <BrowserRouter>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          {/* Public routes */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
 
-          {/* Student routes */}
+            {/* Student routes */}
 
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <MainLayout>
-                <StudentDashboard />
-              </MainLayout>
-            </ProtectedRoute>
-          } />
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <StudentDashboard />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
 
-          <Route path="/profile" element={
-            <ProtectedRoute>
-              <MainLayout>
-                <ProfilePage />
-              </MainLayout>
-            </ProtectedRoute>
-          } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <ProfilePage />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
 
-          <Route path="/exam/:examId" element={
-            <ProtectedRoute>
-              <MainLayout>
-                <ExamPage />
-              </MainLayout>
-            </ProtectedRoute>
-          } />
+            <Route path="/exam/:examId" element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <ExamPage />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
 
-          <Route path="/results/:attemptId" element={
-            <ProtectedRoute>
-              <MainLayout>
-                <ResultDetailPage />
-              </MainLayout>
-            </ProtectedRoute>
-          } />
+            <Route path="/results/:attemptId" element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <ResultDetailPage />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
 
-          {/* Admin routes */}
-          <Route path="/admin" element={
-            <ProtectedRoute adminOnly>
-              <MainLayout>
-                <AdminDashboard />
-              </MainLayout>
-            </ProtectedRoute>
-          } />
+            {/* Admin routes */}
+            <Route path="/admin" element={
+              <ProtectedRoute adminOnly>
+                <MainLayout>
+                  <AdminDashboard />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
 
-          <Route path="/admin/exams" element={
-            <ProtectedRoute adminOnly>
-              <MainLayout>
-                <AdminExamsListPage />
-              </MainLayout>
-            </ProtectedRoute>
-          } />
+            <Route path="/admin/exams" element={
+              <ProtectedRoute adminOnly>
+                <MainLayout>
+                  <AdminExamsListPage />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
 
-          <Route path="/admin/exams/new" element={
-            <ProtectedRoute adminOnly>
-              <MainLayout>
-                <CreateExamPage />
-              </MainLayout>
-            </ProtectedRoute>
-          } />
+            <Route path="/admin/exams/new" element={
+              <ProtectedRoute adminOnly>
+                <MainLayout>
+                  <CreateExamPage />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
 
-          <Route path="/admin/exams/:examId" element={
-            <ProtectedRoute adminOnly>
-              <MainLayout>
-                <ExamManagePage />
-              </MainLayout>
-            </ProtectedRoute>
-          } />
+            <Route path="/admin/exams/:examId" element={
+              <ProtectedRoute adminOnly>
+                <MainLayout>
+                  <ExamManagePage />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
 
-          <Route path="/admin/exams/:examId/edit" element={
-            <ProtectedRoute adminOnly>
-              <MainLayout>
-                <EditExamPage />
-              </MainLayout>
-            </ProtectedRoute>
-          } />
+            <Route path="/admin/exams/:examId/edit" element={
+              <ProtectedRoute adminOnly>
+                <MainLayout>
+                  <EditExamPage />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
 
-          <Route path="/admin/exams/:examId/questions/new" element={
-            <ProtectedRoute adminOnly>
-              <MainLayout>
-                <AddQuestionPage />
-              </MainLayout>
-            </ProtectedRoute>
-          } />
+            <Route path="/admin/exams/:examId/questions/new" element={
+              <ProtectedRoute adminOnly>
+                <MainLayout>
+                  <AddQuestionPage />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
 
-          <Route path="/admin/questions/:questionId/edit" element={
-            <ProtectedRoute adminOnly>
-              <MainLayout>
-                <EditQuestionPage />
-              </MainLayout>
-            </ProtectedRoute>
-          } />
+            <Route path="/admin/questions/:questionId/edit" element={
+              <ProtectedRoute adminOnly>
+                <MainLayout>
+                  <EditQuestionPage />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
 
-          <Route path="/admin/students" element={
-            <ProtectedRoute adminOnly>
-              <MainLayout>
-                <StudentManagementPage />
-              </MainLayout>
-            </ProtectedRoute>
-          } />
+            <Route path="/admin/students" element={
+              <ProtectedRoute adminOnly>
+                <MainLayout>
+                  <StudentManagementPage />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
 
-          <Route path="/admin/analytics" element={
-            <ProtectedRoute adminOnly>
-              <MainLayout>
-                <AnalyticsPage />
-              </MainLayout>
-            </ProtectedRoute>
-          } />
+            <Route path="/admin/analytics" element={
+              <ProtectedRoute adminOnly>
+                <MainLayout>
+                  <AnalyticsPage />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
 
-          <Route path="/admin/exams/:examId/proctoring" element={
-            <ProtectedRoute adminOnly>
-              <MainLayout>
-                <ProctoringDashboardPage />
-              </MainLayout>
-            </ProtectedRoute>
-          } />
+            <Route path="/admin/exams/:examId/proctoring" element={
+              <ProtectedRoute adminOnly>
+                <MainLayout>
+                  <ProctoringDashboardPage />
+                </MainLayout>
+              </ProtectedRoute>
+            } />
 
-          {/* Catch all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Suspense>
-    </BrowserRouter>
+            {/* Catch all */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

@@ -8,6 +8,7 @@ import { useProctoring } from '../../hooks/useProctoring';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import { sanitizeText } from '../../utils/sanitizer';
 
 // Detect mobile device
 const isMobile = /Mobi|Android/i.test(navigator.userAgent);
@@ -613,7 +614,7 @@ const ExamPage = () => {
             <div className="space-y-6" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
               <div>
                 <p className="text-lg text-gray-900 font-medium">
-                  {currentQuestionIndex + 1}. {question?.question_text}
+                  {currentQuestionIndex + 1}. {sanitizeText(question?.question_text)}
                 </p>
                 {question?.marks > 1 && (
                   <span className="text-sm text-gray-500">({question.marks} marks)</span>
@@ -634,7 +635,7 @@ const ExamPage = () => {
                     }`}
                   >
                     <span className="font-medium mr-3">{option}.</span>
-                    {question?.[`option_${option.toLowerCase()}`]}
+                    {sanitizeText(question?.[`option_${option.toLowerCase()}`])}
                   </button>
                 ))}
               </div>

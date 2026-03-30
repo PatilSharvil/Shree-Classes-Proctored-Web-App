@@ -26,6 +26,7 @@ const initializeDatabase = () => {
       password TEXT NOT NULL,
       name TEXT,
       role TEXT NOT NULL CHECK(role IN ('ADMIN', 'STUDENT')),
+      must_change_password INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     )

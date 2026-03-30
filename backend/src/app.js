@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const crypto = require('crypto');
 
 const { errorHandler, notFoundHandler } = require('./middlewares/error.middleware');
 const logger = require('./utils/logger');
@@ -21,9 +22,56 @@ const app = express();
 // Security middleware
 app.use(helmet());
 
+// CSRF Protection Middleware
+const csrfProtection = (req, res, next) => {
+  // Generate CSRF token if not present
+  if (!req.cookies || !req.cookies.csrf_token) {
+    const token = crypto.randomBytes(32).toString('hex');
+    res.cookie('csrf_token', token, {
+      httpOnly: false, // Accessible by JavaScript
+      secure: env.nodeEnv === 'production', // HTTPS only in production
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+    req.csrfToken = token;
+  } else {
+    req.csrfToken = req.cookies.csrf_token;
+  }
+
+  // Verify CSRF token for state-changing requests
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+    const clientToken = req.headers['x-csrf-token'] || req.body._csrf;
+    
+    if (!clientToken || clientToken !== req.csrfToken) {
+      return res.status(403).json({
+        success: false,
+        message: 'CSRF token missing or invalid'
+      });
+    }
+  }
+
+  next();
+};
+
+// Cookie parser middleware (simple implementation)
+app.use((req, res, next) => {
+  const cookies = {};
+  if (req.headers.cookie) {
+    req.headers.cookie.split(';').forEach(cookie => {
+      const parts = cookie.split('=');
+      cookies[parts[0].trim()] = parts[1] ? parts[1].trim() : '';
+    });
+  }
+  req.cookies = cookies;
+  next();
+});
+
+// Apply CSRF protection to all API routes
+app.use('/api', csrfProtection);
+
 // CORS configuration - Production Ready
-const allowedOrigins = process.env.ALLOWED_ORIGINS 
-  ? process.env.ALLOWED_ORIGINS.split(',') 
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
   : ['http://localhost:5173', 'http://localhost:3000'];
 
 const corsOptions = {
