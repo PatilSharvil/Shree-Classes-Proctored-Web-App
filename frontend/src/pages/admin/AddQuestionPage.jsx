@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { questionsAPI } from '../../services/api';
+import { sanitizeText } from '../../utils/sanitizer';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import AdminSidebar from '../../components/layout/AdminSidebar';
