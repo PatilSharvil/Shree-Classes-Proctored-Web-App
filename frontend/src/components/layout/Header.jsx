@@ -3,11 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
 
 const Header = () => {
-  const { user, logout } = useAuthStore();
+  const { user, logout, isAuthenticated } = useAuthStore();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
@@ -30,7 +30,7 @@ const Header = () => {
         <nav className="flex items-center gap-4">
           {user ? (
             <>
-              <button 
+              <button
                 onClick={handleDashboardClick}
                 className="hover:text-primary-100 touch-target"
               >

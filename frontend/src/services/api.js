@@ -18,23 +18,18 @@ const setCSRFToken = (token) => {
   localStorage.setItem('csrf_token', token);
 };
 
-// Create axios instance
+// Create axios instance with credentials support
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
   },
-  withCredentials: true // Send cookies with requests
+  withCredentials: true // Send cookies with requests (required for httpOnly cookies)
 });
 
-// Request interceptor - add token and CSRF
+// Request interceptor - add CSRF token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    
     // Add CSRF token for state-changing requests
     if (['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase())) {
       const csrfToken = getCSRFToken();
@@ -65,8 +60,10 @@ api.interceptors.response.use(
     }
     
     if (error.response?.status === 401) {
+      // Clear local storage on auth failure
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('csrf_token');
       window.location.href = '/login';
     }
     
@@ -86,7 +83,8 @@ api.interceptors.response.use(
 export const authAPI = {
   login: (credentials) => api.post('/auth/login', credentials),
   getMe: () => api.get('/auth/me'),
-  changePassword: (data) => api.post('/auth/change-password', data)
+  changePassword: (data) => api.post('/auth/change-password', data),
+  logout: () => api.post('/auth/logout')
 };
 
 // Users API

@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const crypto = require('crypto');
+const cookieParser = require('cookie-parser');
 
 const { errorHandler, notFoundHandler } = require('./middlewares/error.middleware');
 const logger = require('./utils/logger');
@@ -21,7 +22,9 @@ const app = express();
 
 // Security middleware
 app.use(helmet());
+app.use(cookieParser());
 
+// Cookie parser middleware (now using cookie-parser package)
 // CSRF Protection Middleware
 const csrfProtection = (req, res, next) => {
   // Generate CSRF token if not present
@@ -52,19 +55,6 @@ const csrfProtection = (req, res, next) => {
 
   next();
 };
-
-// Cookie parser middleware (simple implementation)
-app.use((req, res, next) => {
-  const cookies = {};
-  if (req.headers.cookie) {
-    req.headers.cookie.split(';').forEach(cookie => {
-      const parts = cookie.split('=');
-      cookies[parts[0].trim()] = parts[1] ? parts[1].trim() : '';
-    });
-  }
-  req.cookies = cookies;
-  next();
-});
 
 // Apply CSRF protection to all API routes
 app.use('/api', csrfProtection);

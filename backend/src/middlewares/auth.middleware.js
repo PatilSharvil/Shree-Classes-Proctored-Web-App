@@ -4,19 +4,28 @@ const { errorResponse } = require('../utils/apiResponse');
 
 /**
  * JWT Authentication Middleware
- * Verifies JWT token from Authorization header
+ * Verifies JWT token from Authorization header OR httpOnly cookie
  */
 const authenticate = (req, res, next) => {
   try {
-    const authHeader = req.headers.authorization;
+    let token = null;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Try to get token from Authorization header first
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.split(' ')[1];
+    }
+    
+    // If no header token, try httpOnly cookie
+    if (!token && req.cookies && req.cookies.auth_token) {
+      token = req.cookies.auth_token;
+    }
+
+    if (!token) {
       return errorResponse(res, 401, 'Access denied. No token provided.');
     }
 
-    const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, env.jwtSecret);
-
     req.user = decoded;
     next();
   } catch (error) {

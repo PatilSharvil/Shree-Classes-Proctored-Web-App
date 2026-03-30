@@ -12,14 +12,48 @@ const createExam = (req, res) => {
       negative_marks, passing_percentage, scheduled_start, scheduled_end, is_active
     } = req.body;
 
-    if (!title || !duration_minutes || !total_marks) {
-      return errorResponse(res, 400, 'Title, duration_minutes, and total_marks are required.');
+    // Validation - Required fields
+    if (!title) {
+      return errorResponse(res, 400, 'Exam title is required.');
     }
+
+    if (!duration_minutes) {
+      return errorResponse(res, 400, 'Duration is required.');
+    }
+
     if (Number(duration_minutes) <= 0) {
       return errorResponse(res, 400, 'Duration must be a positive number (minimum 1 minute).');
     }
+
+    if (Number(duration_minutes) > 1440) {
+      return errorResponse(res, 400, 'Duration cannot exceed 24 hours (1440 minutes).');
+    }
+
+    if (!total_marks) {
+      return errorResponse(res, 400, 'Total marks is required.');
+    }
+
     if (Number(total_marks) <= 0) {
       return errorResponse(res, 400, 'Total marks must be a positive number.');
+    }
+
+    // Validation - Optional fields with constraints
+    if (negative_marks !== undefined && Number(negative_marks) < 0) {
+      return errorResponse(res, 400, 'Negative marks cannot be negative.');
+    }
+
+    if (passing_percentage !== undefined && (Number(passing_percentage) < 0 || Number(passing_percentage) > 100)) {
+      return errorResponse(res, 400, 'Passing percentage must be between 0 and 100.');
+    }
+
+    // Validate scheduled times
+    if (scheduled_start && scheduled_end) {
+      const startDate = new Date(scheduled_start);
+      const endDate = new Date(scheduled_end);
+      
+      if (endDate <= startDate) {
+        return errorResponse(res, 400, 'Scheduled end time must be after scheduled start time.');
+      }
     }
 
     const exam = examService.createExam({

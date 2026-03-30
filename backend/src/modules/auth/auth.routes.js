@@ -18,6 +18,13 @@ router.post('/login', authController.login);
 router.get('/me', authenticate, authController.getMe);
 
 /**
+ * @route   POST /api/auth/logout
+ * @desc    Logout user
+ * @access  Private
+ */
+router.post('/logout', authenticate, authController.logout);
+
+/**
  * @route   POST /api/auth/change-password
  * @desc    Change user password
  * @access  Private
