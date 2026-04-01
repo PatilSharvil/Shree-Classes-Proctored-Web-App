@@ -5,12 +5,6 @@
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
   "outputDirectory": "dist",
-  "env": {
-    "VITE_API_URL": {
-      "type": "encrypted",
-      "value": "http://localhost:5000/api"
-    }
-  },
   "routes": [
     {
       "src": "/assets/(.*)",
