@@ -24,9 +24,18 @@ const app = express();
 app.use(helmet());
 app.use(cookieParser());
 
+// Body parser middleware (MUST come before CSRF protection)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 // Cookie parser middleware (now using cookie-parser package)
 // CSRF Protection Middleware
 const csrfProtection = (req, res, next) => {
+  // Skip CSRF for login endpoint (no session yet)
+  if (req.path === '/auth/login' && req.method === 'POST') {
+    return next();
+  }
+
   // Generate CSRF token if not present
   if (!req.cookies || !req.cookies.csrf_token) {
     const token = crypto.randomBytes(32).toString('hex');
@@ -43,8 +52,8 @@ const csrfProtection = (req, res, next) => {
 
   // Verify CSRF token for state-changing requests
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
-    const clientToken = req.headers['x-csrf-token'] || req.body._csrf;
-    
+    const clientToken = req.headers['x-csrf-token'] || req.body?._csrf;
+
     if (!clientToken || clientToken !== req.csrfToken) {
       return res.status(403).json({
         success: false,
@@ -68,9 +77,9 @@ const corsOptions = {
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || 
-        origin.endsWith('.vercel.app') || 
+
+    if (allowedOrigins.indexOf(origin) !== -1 ||
+        origin.endsWith('.vercel.app') ||
         origin.endsWith('.netlify.app') ||
         origin.endsWith('shreescienceacademy.com')) {
       callback(null, true);
@@ -81,8 +90,8 @@ const corsOptions = {
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['X-Request-ID', 'X-RateLimit-Limit', 'X-RateLimit-Remaining'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
+  exposedHeaders: ['X-Request-ID', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-CSRF-Token'],
   maxAge: 86400 // 24 hours
 };
 
@@ -110,10 +119,6 @@ const authLimiter = rateLimit({
   skipSuccessfulRequests: true, // Only count failed requests
 });
 app.use('/api/auth/login', authLimiter);
-
-// Body parser middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Health check endpoint
 app.get('/health', (req, res) => {

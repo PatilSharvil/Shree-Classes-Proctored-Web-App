@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useAuthStore from '../../store/authStore';
-import { authAPI } from '../../services/api';
-import Card from '../ui/Card';
-import Button from '../ui/Button';
+import useAuthStore from '../store/authStore';
+import { authAPI } from '../services/api';
+import Card from './ui/Card';
+import Button from './ui/Button';
 
 const ChangePasswordModal = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
