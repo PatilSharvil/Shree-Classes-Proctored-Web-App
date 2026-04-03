@@ -10,9 +10,10 @@ const lockoutService = require('../../services/lockoutService');
  * POST /api/auth/login
  */
 const login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
+  const email = req.body?.email;
+  const password = req.body?.password;
 
+  try {
     if (!email || !password) {
       return errorResponse(res, 400, 'Email and password are required.');
     }
@@ -29,10 +30,10 @@ const login = async (req, res) => {
     }
 
     const result = await authService.login(email, password);
-    
+
     // Clear failed attempts on successful login
     lockoutService.clearFailedAttempts(identifier);
-    
+
     // Set JWT as httpOnly cookie
     const cookieOptions = {
       httpOnly: true, // Not accessible via JavaScript
@@ -41,12 +42,12 @@ const login = async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       path: '/'
     };
-    
+
     res.cookie('auth_token', result.token, cookieOptions);
-    
+
     // Return user data without token (token is in cookie)
     const { token, ...userData } = result.user;
-    
+
     return apiResponse(res, 200, { user: userData, cookieSet: true }, 'Login successful');
   } catch (error) {
     if (error.message === 'Invalid email or password.') {
@@ -54,15 +55,15 @@ const login = async (req, res) => {
       const clientIP = req.ip || req.connection.remoteAddress;
       const identifier = `${email || 'unknown'}:${clientIP}`;
       const lockoutStatus = lockoutService.recordFailedAttempt(identifier);
-      
+
       // Log the failed attempt for security monitoring
       console.log(`[SECURITY] Failed login attempt for ${email || 'unknown'} from ${clientIP}. Attempts remaining: ${lockoutStatus.attemptsRemaining}`);
-      
+
       // Return generic error message (don't reveal if email exists)
       if (lockoutStatus.attemptsRemaining <= 2 && lockoutStatus.attemptsRemaining > 0) {
         return errorResponse(res, 401, `Invalid credentials. ${lockoutStatus.attemptsRemaining} attempt(s) remaining before account lockout.`);
       }
-      
+
       return errorResponse(res, 401, 'Invalid email or password.');
     }
     return errorResponse(res, 500, 'Login failed.', error.message);
