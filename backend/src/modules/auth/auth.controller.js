@@ -1,6 +1,7 @@
 const authService = require('./auth.service');
 const { apiResponse, errorResponse } = require('../../utils/apiResponse');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const db = require('../../config/database');
 const env = require('../../config/env');
 const lockoutService = require('../../services/lockoutService');
@@ -44,6 +45,16 @@ const login = async (req, res) => {
     };
 
     res.cookie('auth_token', result.token, cookieOptions);
+
+    // Generate and set CSRF token for the session
+    const csrfToken = crypto.randomBytes(32).toString('hex');
+    res.cookie('csrf_token', csrfToken, {
+      httpOnly: false, // Accessible by JavaScript
+      secure: env.nodeEnv === 'production', // HTTPS only in production
+      sameSite: env.nodeEnv === 'production' ? 'none' : 'lax', // 'none' required for cross-origin production
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+    res.setHeader('X-CSRF-Token', csrfToken);
 
     // Return user data without token (token is in cookie)
     const { token, ...userData } = result.user;

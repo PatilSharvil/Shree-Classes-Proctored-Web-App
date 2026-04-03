@@ -50,6 +50,8 @@ const csrfProtection = (req, res, next) => {
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
     req.csrfToken = token;
+    // Send CSRF token in header for frontend to capture
+    res.setHeader('X-CSRF-Token', token);
   } else {
     req.csrfToken = req.cookies.csrf_token;
   }
@@ -110,6 +112,7 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false }, // Disable trust proxy validation (we trust our reverse proxy)
 });
 app.use('/api/', limiter);
 
@@ -121,6 +124,7 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Only count failed requests
+  validate: { trustProxy: false }, // Disable trust proxy validation (we trust our reverse proxy)
 });
 app.use('/api/auth/login', authLimiter);
 
