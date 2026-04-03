@@ -64,11 +64,18 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
 
       // Update local state
       updateUser({ mustChangePassword: false });
-      
+
       // Close modal and show success
       alert('Password changed successfully! You can now access the system.');
       onClose();
-      navigate('/dashboard');
+
+      // Redirect based on user role
+      const currentUser = useAuthStore.getState().user;
+      if (currentUser?.role === 'ADMIN') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to change password. Please try again.');
     } finally {
