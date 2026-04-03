@@ -34,10 +34,13 @@ api.interceptors.request.use(
     if (['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase())) {
       const csrfToken = getCSRFToken();
       if (csrfToken) {
+        console.log(`[API] Adding CSRF token to ${config.method.toUpperCase()} ${config.url}`);
         config.headers['X-CSRF-Token'] = csrfToken;
+      } else {
+        console.warn(`[API] No CSRF token found for ${config.method.toUpperCase()} ${config.url}`);
       }
     }
-    
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -49,7 +52,18 @@ api.interceptors.response.use(
     // Extract and store CSRF token from response headers
     const csrfToken = response.headers['x-csrf-token'];
     if (csrfToken) {
+      console.log('[API] CSRF token received from response headers:', csrfToken.substring(0, 10) + '...');
       setCSRFToken(csrfToken);
+    } else if (response.config.url?.includes('/auth/login')) {
+      // For login responses, try to get CSRF token from cookies
+      console.log('[API] Login response received, checking for CSRF token in cookies...');
+      const match = document.cookie.match(/csrf_token=([a-f0-9]+)/);
+      if (match) {
+        console.log('[API] CSRF token found in cookies after login:', match[1].substring(0, 10) + '...');
+        setCSRFToken(match[1]);
+      } else {
+        console.warn('[API] No CSRF token found in cookies after login');
+      }
     }
     return response;
   },
@@ -58,7 +72,17 @@ api.interceptors.response.use(
     if (error.response?.headers?.['x-csrf-token']) {
       setCSRFToken(error.response.headers['x-csrf-token']);
     }
-    
+
+    // Log detailed error information for debugging
+    console.error('[API] Error occurred:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      cookies: document.cookie
+    });
+
     if (error.response?.status === 401) {
       // Clear local storage on auth failure
       localStorage.removeItem('token');
@@ -66,15 +90,16 @@ api.interceptors.response.use(
       localStorage.removeItem('csrf_token');
       window.location.href = '/login';
     }
-    
+
     // Handle CSRF token errors
     if (error.response?.status === 403 && error.response?.data?.message?.includes('CSRF')) {
+      console.error('[API] CSRF token validation failed. Clearing and reloading...');
       // Clear invalid token and reload to get new one
       localStorage.removeItem('csrf_token');
       document.cookie = 'csrf_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
       window.location.reload();
     }
-    
+
     return Promise.reject(error);
   }
 );

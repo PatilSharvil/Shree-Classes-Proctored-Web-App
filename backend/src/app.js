@@ -41,6 +41,7 @@ const csrfProtection = (req, res, next) => {
   }
 
   // Generate CSRF token if not present
+  // Check both cookies and if this is a fresh request after login
   if (!req.cookies || !req.cookies.csrf_token) {
     const token = crypto.randomBytes(32).toString('hex');
     res.cookie('csrf_token', token, {
@@ -52,6 +53,7 @@ const csrfProtection = (req, res, next) => {
     req.csrfToken = token;
     // Send CSRF token in header for frontend to capture
     res.setHeader('X-CSRF-Token', token);
+    console.log('[CSRF] Generated new CSRF token:', token.substring(0, 10) + '...');
   } else {
     req.csrfToken = req.cookies.csrf_token;
   }
@@ -60,10 +62,23 @@ const csrfProtection = (req, res, next) => {
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
     const clientToken = req.headers['x-csrf-token'] || req.body?._csrf;
 
+    console.log('[CSRF] Verification attempt:', {
+      path: req.path,
+      method: req.method,
+      hasCookieToken: !!req.cookies?.csrf_token,
+      hasClientToken: !!clientToken,
+      tokensMatch: clientToken === req.csrfToken
+    });
+
     if (!clientToken || clientToken !== req.csrfToken) {
+      console.error('[CSRF] Token validation failed!', {
+        clientToken: clientToken ? clientToken.substring(0, 10) + '...' : 'MISSING',
+        serverToken: req.csrfToken ? req.csrfToken.substring(0, 10) + '...' : 'MISSING'
+      });
+      
       return res.status(403).json({
         success: false,
-        message: 'CSRF token missing or invalid'
+        message: 'CSRF token missing or invalid. Please refresh the page and try again.'
       });
     }
   }

@@ -119,24 +119,35 @@ const logout = async (req, res) => {
  */
 const changePassword = async (req, res) => {
   try {
+    console.log('[changePassword] Request received');
+    console.log('[changePassword] User ID from token:', req.user?.id);
+    console.log('[changePassword] Request body keys:', Object.keys(req.body));
+    
     const { currentPassword, newPassword } = req.body;
     const userId = req.user.id;
 
     if (!currentPassword || !newPassword) {
+      console.log('[changePassword] Missing currentPassword or newPassword');
       return errorResponse(res, 400, 'Current password and new password are required.');
     }
 
     // Get user
     const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
     if (!user) {
+      console.log('[changePassword] User not found:', userId);
       return errorResponse(res, 404, 'User not found.');
     }
+
+    console.log('[changePassword] User found:', user.email, 'must_change_password:', user.must_change_password);
 
     // Verify current password
     const isValidPassword = await bcrypt.compare(currentPassword, user.password);
     if (!isValidPassword) {
+      console.log('[changePassword] Current password is incorrect for user:', user.email);
       return errorResponse(res, 401, 'Current password is incorrect.');
     }
+
+    console.log('[changePassword] Current password verified successfully');
 
     // Validate new password strength
     if (newPassword.length < 8) {
@@ -149,18 +160,24 @@ const changePassword = async (req, res) => {
       return errorResponse(res, 400, 'New password must contain at least one number.');
     }
 
+    console.log('[changePassword] New password validation passed');
+
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Update password and clear must_change_password flag
-    db.prepare(`
-      UPDATE users 
+    const result = db.prepare(`
+      UPDATE users
       SET password = ?, must_change_password = 0, updated_at = datetime('now')
       WHERE id = ?
     `).run(hashedPassword, userId);
 
+    console.log('[changePassword] Password updated successfully. Rows changed:', result.changes);
+
     return apiResponse(res, 200, null, 'Password changed successfully');
   } catch (error) {
+    console.error('[changePassword] Error occurred:', error.message);
+    console.error('[changePassword] Error stack:', error.stack);
     return errorResponse(res, 500, 'Failed to change password', error.message);
   }
 };

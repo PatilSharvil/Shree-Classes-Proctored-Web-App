@@ -57,10 +57,15 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
     setLoading(true);
 
     try {
-      await authAPI.changePassword({
+      console.log('[ChangePasswordModal] Attempting password change...');
+      console.log('[ChangePasswordModal] Current cookies:', document.cookie);
+      
+      const response = await authAPI.changePassword({
         currentPassword: formData.currentPassword,
         newPassword: formData.newPassword
       });
+
+      console.log('[ChangePasswordModal] Password change response:', response);
 
       // Update local state
       updateUser({ mustChangePassword: false });
@@ -77,7 +82,25 @@ const ChangePasswordModal = ({ isOpen, onClose }) => {
         navigate('/dashboard');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to change password. Please try again.');
+      console.error('[ChangePasswordModal] Password change error:', err);
+      console.error('[ChangePasswordModal] Error response:', err.response);
+      console.error('[ChangePasswordModal] Error data:', err.response?.data);
+      console.error('[ChangePasswordModal] Error status:', err.response?.status);
+      
+      // More specific error messages
+      let errorMessage = 'Failed to change password. Please try again.';
+      
+      if (err.response?.status === 401) {
+        errorMessage = 'Current password is incorrect. Please check and try again.';
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Session expired or CSRF token invalid. Please refresh the page and try again.';
+      } else if (err.response?.status === 400) {
+        errorMessage = err.response?.data?.message || 'Invalid input. Please check your password meets all requirements.';
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
