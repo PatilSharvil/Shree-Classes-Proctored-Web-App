@@ -20,6 +20,10 @@ const proctoringRoutes = require('./modules/proctoring/proctoring.routes');
 
 const app = express();
 
+// Trust proxy headers (required for Render, Vercel, and other cloud platforms)
+// This allows express-rate-limit to correctly identify users behind reverse proxies
+app.set('trust proxy', true);
+
 // Security middleware
 app.use(helmet());
 app.use(cookieParser());
