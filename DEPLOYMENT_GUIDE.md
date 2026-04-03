@@ -11,9 +11,9 @@
 ### ✅ GitHub Backup Setup (COMPLETED)
 
 - [x] GitHub Repository Created
-  - **URL:** https://github.com/PatilSharvil/shree-classes-data-backup
-  - **Branch:** master
-  - **Visibility:** Public
+  - **URL:** https://github.com/PatilSharvil/exam-data
+  - **Branch:** main
+  - **Visibility:** Private (recommended) or Public
 
 - [x] Personal Access Token Generated
   - **Token:** `ghp_your_token_here`
@@ -67,8 +67,8 @@ Click **"Advanced"** → **"Add Environment Variable"** for each:
 | `PORT` | `5000` | Auto-set by Render |
 | `GITHUB_TOKEN` | `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` | **Your token** |
 | `GITHUB_OWNER` | `PatilSharvil` | Your username |
-| `GITHUB_REPO` | `shree-classes-data-backup` | Backup repo |
-| `GITHUB_BRANCH` | `master` | Your branch |
+| `GITHUB_REPO` | `exam-data` | Backup repo |
+| `GITHUB_BRANCH` | `main` | Your branch |
 | `EXCEL_PATH` | `data` | Excel folder path |
 | `JWT_SECRET` | `shree-classes-proctored-exam-system-jwt-secret-key-2026-production` | Or generate new |
 | `JWT_EXPIRE` | `1h` | Token expiry |
@@ -196,7 +196,7 @@ Replace with your actual Vercel URL.
 
 #### **Test 4: GitHub Sync Working**
 1. Wait 5-10 minutes after first login
-2. Go to: https://github.com/PatilSharvil/shree-classes-data-backup
+2. Go to: https://github.com/PatilSharvil/exam-data
 3. Should see Excel files appear:
    - `students.xlsx`
    - `exams.xlsx`

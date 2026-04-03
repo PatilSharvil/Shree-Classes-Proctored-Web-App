@@ -7,7 +7,7 @@ services:
     plan: free
     branch: main
     rootDir: backend
-    buildCommand: npm install
+    buildCommand: chmod +x .render-build.sh && ./.render-build.sh
     startCommand: npm start
     healthCheckPath: /health
     envVars:
@@ -20,9 +20,9 @@ services:
       - key: GITHUB_OWNER
         value: PatilSharvil
       - key: GITHUB_REPO
-        value: shree-classes-data-backup
+        value: exam-data
       - key: GITHUB_BRANCH
-        value: master
+        value: main
       - key: EXCEL_PATH
         value: data
       - key: JWT_SECRET
