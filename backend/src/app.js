@@ -120,13 +120,27 @@ const authLimiter = rateLimit({
 });
 app.use('/api/auth/login', authLimiter);
 
-// Health check endpoint
+// Health check endpoint (for Render health monitoring)
 app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Server is running',
     timestamp: new Date().toISOString(),
     environment: env.nodeEnv
+  });
+});
+
+// Keep-alive endpoint (for cron jobs / uptime monitors)
+// Lightweight endpoint that can be pinged by external services to prevent sleep
+app.get('/ping', (req, res) => {
+  res.status(200).send('pong');
+});
+
+app.get('/keep-alive', (req, res) => {
+  res.status(200).json({
+    status: 'alive',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
   });
 });
 
