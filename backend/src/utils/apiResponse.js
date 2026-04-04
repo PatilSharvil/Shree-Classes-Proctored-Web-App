@@ -8,8 +8,9 @@ const apiResponse = (res, statusCode, data, message = 'Success') => {
     data
   };
 
-  // Include CSRF token in response headers
-  if (res.req && res.req.csrfToken) {
+  // Include CSRF token in response headers ONLY if it exists
+  // IMPORTANT: Don't overwrite valid CSRF token that was set by login controller
+  if (res.req && res.req.csrfToken && res.req.csrfToken !== 'undefined') {
     res.setHeader('X-CSRF-Token', res.req.csrfToken);
   }
 
@@ -27,8 +28,8 @@ const errorResponse = (res, statusCode, message, errors = null) => {
     timestamp: new Date().toISOString()
   };
 
-  // Include CSRF token in response headers even for errors
-  if (res.req && res.req.csrfToken) {
+  // Include CSRF token in response headers even for errors, but only if it exists
+  if (res.req && res.req.csrfToken && res.req.csrfToken !== 'undefined') {
     res.setHeader('X-CSRF-Token', res.req.csrfToken);
   }
 
