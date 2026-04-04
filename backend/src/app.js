@@ -73,9 +73,13 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
 // ============================================
-// Security middleware
+// Security middleware (Helmet) - AFTER CORS
+// Configure Helmet to not interfere with CORS
 // ============================================
-app.use(helmet());
+app.use(helmet({
+  crossOriginOpenerPolicy: false, // Disable to allow cross-origin
+  crossOriginResourcePolicy: false, // Disable to allow cross-origin
+}));
 app.use(cookieParser());
 
 // ============================================
