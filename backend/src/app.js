@@ -97,32 +97,49 @@ const csrfProtection = (req, res, next) => {
     return next();
   }
 
+  // Check if client sent a CSRF token in header
+  const clientToken = req.headers['x-csrf-token'] || req.body?._csrf;
+  
+  // Check cookie for CSRF token
+  const cookieToken = req.cookies?.csrf_token;
+
+  // If we have a client token but no cookie token, trust the client token
+  // This handles the case where Cloudflare strips cookies
+  if (clientToken && !cookieToken) {
+    req.csrfToken = clientToken;
+    // Set it as cookie for future requests
+    res.cookie('csrf_token', clientToken, {
+      httpOnly: false,
+      secure: env.nodeEnv === 'production',
+      sameSite: env.nodeEnv === 'production' ? 'none' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000
+    });
+    console.log('[CSRF] Using client-provided token (cookie was missing)');
+    return next();
+  }
+
   // Generate CSRF token if not present
-  // Check both cookies and if this is a fresh request after login
-  if (!req.cookies || !req.cookies.csrf_token) {
+  if (!cookieToken) {
     const token = crypto.randomBytes(32).toString('hex');
     res.cookie('csrf_token', token, {
-      httpOnly: false, // Accessible by JavaScript
-      secure: env.nodeEnv === 'production', // HTTPS only in production
-      sameSite: env.nodeEnv === 'production' ? 'none' : 'lax', // 'none' required for cross-origin production
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      httpOnly: false,
+      secure: env.nodeEnv === 'production',
+      sameSite: env.nodeEnv === 'production' ? 'none' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000
     });
     req.csrfToken = token;
-    // Send CSRF token in header for frontend to capture
     res.setHeader('X-CSRF-Token', token);
     console.log('[CSRF] Generated new CSRF token:', token.substring(0, 10) + '...');
   } else {
-    req.csrfToken = req.cookies.csrf_token;
+    req.csrfToken = cookieToken;
   }
 
   // Verify CSRF token for state-changing requests
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
-    const clientToken = req.headers['x-csrf-token'] || req.body?._csrf;
-
     console.log('[CSRF] Verification attempt:', {
       path: req.path,
       method: req.method,
-      hasCookieToken: !!req.cookies?.csrf_token,
+      hasCookieToken: !!cookieToken,
       hasClientToken: !!clientToken,
       tokensMatch: clientToken === req.csrfToken
     });
