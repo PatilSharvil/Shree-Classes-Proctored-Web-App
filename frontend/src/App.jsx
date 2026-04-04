@@ -35,14 +35,34 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
 
+  console.log('[ProtectedRoute] Checking auth:', { isAuthenticated, userRole: user?.role, adminOnly });
+
+  // Double-check: if state says not authenticated but localStorage has user, trust localStorage
   if (!isAuthenticated) {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      console.log('[ProtectedRoute] State says not authenticated but localStorage has user, allowing access');
+      // User exists in localStorage, allow access
+      if (adminOnly) {
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser.role !== 'ADMIN') {
+          console.log('[ProtectedRoute] Admin-only route but user is not admin, redirecting to dashboard');
+          return <Navigate to="/dashboard" replace />;
+        }
+      }
+      return children;
+    }
+    
+    console.log('[ProtectedRoute] No auth found, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
   if (adminOnly && user?.role !== 'ADMIN') {
+    console.log('[ProtectedRoute] Admin-only route but user is not admin, redirecting to dashboard');
     return <Navigate to="/dashboard" replace />;
   }
 
+  console.log('[ProtectedRoute] Auth check passed, allowing access');
   return children;
 };
 

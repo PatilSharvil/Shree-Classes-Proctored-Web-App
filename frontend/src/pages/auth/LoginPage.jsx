@@ -23,19 +23,28 @@ const LoginPage = () => {
     try {
       const response = await login(email, password);
       const user = response.data?.user;
-      
+
+      console.log('[LoginPage] Login response received:', user);
+
       // Check if password change is required
       if (user?.mustChangePassword) {
+        console.log('[LoginPage] Password change required, showing modal');
         setShowPasswordChange(true);
       } else {
         // Redirect based on user role
-        if (user?.role === 'ADMIN') {
-          navigate('/admin');
-        } else {
-          navigate('/dashboard');
-        }
+        console.log('[LoginPage] Login successful, navigating to:', user?.role === 'ADMIN' ? '/admin' : '/dashboard');
+        
+        // Use setTimeout to ensure state update propagates before navigation
+        setTimeout(() => {
+          if (user?.role === 'ADMIN') {
+            navigate('/admin');
+          } else {
+            navigate('/dashboard');
+          }
+        }, 100);
       }
     } catch (err) {
+      console.error('[LoginPage] Login error:', err);
       setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
