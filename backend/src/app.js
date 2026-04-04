@@ -24,16 +24,69 @@ const app = express();
 // This allows express-rate-limit to correctly identify users behind reverse proxies
 app.set('trust proxy', true);
 
+// ============================================
+// CORS Configuration - MUST BE FIRST
+// This ensures CORS headers are set on ALL responses
+// ============================================
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:5173', 'http://localhost:3000'];
+
+console.log('[CORS] Allowed origins:', allowedOrigins);
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      console.log('[CORS] Allowing request with no origin');
+      return callback(null, true);
+    }
+
+    // Check if origin is in allowed list
+    const isAllowed = allowedOrigins.indexOf(origin) !== -1;
+    
+    // Allow common deployment platforms
+    const isVercel = origin.includes('.vercel.app');
+    const isNetlify = origin.includes('.netlify.app');
+    const isRender = origin.includes('.onrender.com');
+    const isCustomDomain = origin.includes('shreescienceacademy.com');
+
+    if (isAllowed || isVercel || isNetlify || isRender || isCustomDomain) {
+      console.log('[CORS] Allowing origin:', origin);
+      callback(null, true);
+    } else {
+      console.error('[CORS] Blocking origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
+  exposedHeaders: ['X-Request-ID', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-CSRF-Token'],
+  maxAge: 86400 // 24 hours
+};
+
+app.use(cors(corsOptions));
+
+// Handle preflight requests for all routes
+app.options('*', cors(corsOptions));
+
+// ============================================
 // Security middleware
+// ============================================
 app.use(helmet());
 app.use(cookieParser());
 
+// ============================================
 // Body parser middleware (MUST come before CSRF protection)
+// ============================================
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Cookie parser middleware (now using cookie-parser package)
+// ============================================
 // CSRF Protection Middleware
+// ============================================
 const csrfProtection = (req, res, next) => {
   // Skip CSRF for login endpoint (no session yet)
   if (req.path === '/auth/login' && req.method === 'POST') {
@@ -89,36 +142,9 @@ const csrfProtection = (req, res, next) => {
 // Apply CSRF protection to all API routes
 app.use('/api', csrfProtection);
 
-// CORS configuration - Production Ready
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',')
-  : ['http://localhost:5173', 'http://localhost:3000'];
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.indexOf(origin) !== -1 ||
-        origin.endsWith('.vercel.app') ||
-        origin.endsWith('.netlify.app') ||
-        origin.endsWith('shreescienceacademy.com')) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  optionsSuccessStatus: 200,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
-  exposedHeaders: ['X-Request-ID', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-CSRF-Token'],
-  maxAge: 86400 // 24 hours
-};
-
-app.use(cors(corsOptions));
-
-// Rate limiting - less strict in development to prevent 429 errors while testing
+// ============================================
+// Rate limiting
+// ============================================
 const isDev = env.nodeEnv === 'development';
 
 const limiter = rateLimit({
