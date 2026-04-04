@@ -1,22 +1,29 @@
 import { create } from 'zustand';
 import { authAPI } from '../services/api';
 
-// Check if user exists in localStorage on initialization
+// Check if user/token exists in localStorage on initialization
 const storedUser = localStorage.getItem('user');
+const storedToken = localStorage.getItem('token');
 const initialUser = storedUser ? JSON.parse(storedUser) : null;
 
 const useAuthStore = create((set, get) => ({
   user: initialUser,
-  isAuthenticated: !!initialUser, // Initialize based on localStorage
+  isAuthenticated: !!initialUser,
 
   login: async (email, password) => {
     const response = await authAPI.login({ email, password });
-    const { user, cookieSet } = response.data.data;
+    const { user, token, cookieSet } = response.data.data;
 
-    // Store user data in localStorage (but NOT the token - it's in httpOnly cookie)
+    // Store user data in localStorage
     localStorage.setItem('user', JSON.stringify(user));
+    
+    // CRITICAL: Store token in localStorage as fallback when cookies are stripped by proxy
+    if (token) {
+      localStorage.setItem('token', token);
+      console.log('[AuthStore] Token stored in localStorage');
+    }
 
-    // Update state synchronously before returning
+    // Update state synchronously
     set({ user, isAuthenticated: true });
     
     console.log('[AuthStore] Login successful, user authenticated:', user.email);
@@ -25,14 +32,13 @@ const useAuthStore = create((set, get) => ({
 
   logout: async () => {
     try {
-      // Call logout endpoint to clear cookie
       await authAPI.logout();
     } catch (error) {
       console.error('Logout API call failed:', error);
     } finally {
-      // Always clear local state even if API call fails
       localStorage.removeItem('user');
       localStorage.removeItem('csrf_token');
+      localStorage.removeItem('token'); // Clear token on logout
       set({ user: null, isAuthenticated: false });
       console.log('[AuthStore] User logged out');
     }
@@ -45,10 +51,10 @@ const useAuthStore = create((set, get) => ({
     console.log('[AuthStore] User updated:', updatedUser);
   },
 
-  // Check if user is authenticated (call this on app load)
   checkAuth: () => {
     const user = localStorage.getItem('user');
-    if (user) {
+    const token = localStorage.getItem('token');
+    if (user && token) {
       const parsedUser = JSON.parse(user);
       set({ user: parsedUser, isAuthenticated: true });
       console.log('[AuthStore] Auth check passed, user authenticated:', parsedUser.email);

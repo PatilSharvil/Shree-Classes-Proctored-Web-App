@@ -27,7 +27,7 @@ const api = axios.create({
   withCredentials: true // Send cookies with requests (required for httpOnly cookies)
 });
 
-// Request interceptor - add CSRF token
+// Request interceptor - add CSRF token and Authorization header
 api.interceptors.request.use(
   (config) => {
     // Add CSRF token for state-changing requests
@@ -39,6 +39,14 @@ api.interceptors.request.use(
       } else {
         console.warn(`[API] No CSRF token found for ${config.method.toUpperCase()} ${config.url}`);
       }
+    }
+
+    // CRITICAL: Add Authorization header with token from localStorage
+    // This is a fallback when cookies are stripped by Cloudflare/proxy
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+      console.log(`[API] Adding Authorization header to ${config.method.toUpperCase()} ${config.url}`);
     }
 
     return config;

@@ -35,12 +35,12 @@ const login = async (req, res) => {
     // Clear failed attempts on successful login
     lockoutService.clearFailedAttempts(identifier);
 
-    // Set JWT as httpOnly cookie
+    // Set JWT as httpOnly cookie (for same-origin/local development)
     const cookieOptions = {
-      httpOnly: true, // Not accessible via JavaScript
-      secure: env.nodeEnv === 'production', // HTTPS only in production
-      sameSite: env.nodeEnv === 'production' ? 'none' : 'lax', // 'none' required for cross-origin production
-      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      httpOnly: true,
+      secure: env.nodeEnv === 'production',
+      sameSite: env.nodeEnv === 'production' ? 'none' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000,
       path: '/'
     };
 
@@ -49,17 +49,23 @@ const login = async (req, res) => {
     // Generate and set CSRF token for the session
     const csrfToken = crypto.randomBytes(32).toString('hex');
     res.cookie('csrf_token', csrfToken, {
-      httpOnly: false, // Accessible by JavaScript
-      secure: env.nodeEnv === 'production', // HTTPS only in production
-      sameSite: env.nodeEnv === 'production' ? 'none' : 'lax', // 'none' required for cross-origin production
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      httpOnly: false,
+      secure: env.nodeEnv === 'production',
+      sameSite: env.nodeEnv === 'production' ? 'none' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000
     });
     res.setHeader('X-CSRF-Token', csrfToken);
 
-    // Return user data without token (token is in cookie)
-    const { token, ...userData } = result.user;
+    // CRITICAL: Return token in response body as fallback
+    // Cloudflare/proxies may strip Set-Cookie headers for cross-origin requests
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
 
-    return apiResponse(res, 200, { user: userData, cookieSet: true }, 'Login successful');
+    // Return user data WITH token in response body for Authorization header fallback
+    return apiResponse(res, 200, {
+      user: result.user,
+      token: result.token, // Token in body for localStorage fallback
+      cookieSet: true
+    }, 'Login successful');
   } catch (error) {
     if (error.message === 'Invalid email or password.') {
       // Record failed attempt

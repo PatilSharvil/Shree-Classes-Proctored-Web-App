@@ -4,29 +4,36 @@ const { errorResponse } = require('../utils/apiResponse');
 
 /**
  * JWT Authentication Middleware
- * Verifies JWT token from Authorization header OR httpOnly cookie
+ * Verifies JWT token from:
+ * 1. Authorization header (Bearer token) - PRIMARY for cross-origin
+ * 2. httpOnly cookie (auth_token) - FALLBACK for same-origin
  */
 const authenticate = (req, res, next) => {
   try {
     let token = null;
+    let tokenSource = 'none';
 
-    // Try to get token from Authorization header first
+    // PRIORITY 1: Try Authorization header (works with Cloudflare/proxy)
     const authHeader = req.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer ')) {
       token = authHeader.split(' ')[1];
+      tokenSource = 'Authorization header';
     }
-    
-    // If no header token, try httpOnly cookie
+
+    // PRIORITY 2: Try httpOnly cookie (for same-origin/local development)
     if (!token && req.cookies && req.cookies.auth_token) {
       token = req.cookies.auth_token;
+      tokenSource = 'httpOnly cookie';
     }
 
     if (!token) {
+      console.log('[authenticate] No token found. Auth header:', !!authHeader, 'Cookie:', !!req.cookies?.auth_token);
       return errorResponse(res, 401, 'Access denied. No token provided.');
     }
 
     const decoded = jwt.verify(token, env.jwtSecret);
     req.user = decoded;
+    console.log('[authenticate] Token verified from:', tokenSource, 'User:', decoded.email);
     next();
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
