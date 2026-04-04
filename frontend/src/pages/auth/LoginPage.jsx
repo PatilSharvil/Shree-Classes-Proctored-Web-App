@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
-import ChangePasswordModal from '../../components/ChangePasswordModal';
 import './LoginPage.css';
 import classImg from '../../assets/class_studying.png';
 
@@ -10,7 +9,6 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPasswordChange, setShowPasswordChange] = useState(false);
 
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
@@ -24,25 +22,16 @@ const LoginPage = () => {
       const response = await login(email, password);
       const user = response.data?.user;
 
-      console.log('[LoginPage] Login response received:', user);
+      console.log('[LoginPage] Login successful, user:', user);
 
-      // Check if password change is required
-      if (user?.mustChangePassword) {
-        console.log('[LoginPage] Password change required, showing modal');
-        setShowPasswordChange(true);
-      } else {
-        // Redirect based on user role
-        console.log('[LoginPage] Login successful, navigating to:', user?.role === 'ADMIN' ? '/admin' : '/dashboard');
-        
-        // Use setTimeout to ensure state update propagates before navigation
-        setTimeout(() => {
-          if (user?.role === 'ADMIN') {
-            navigate('/admin');
-          } else {
-            navigate('/dashboard');
-          }
-        }, 100);
-      }
+      // Redirect based on user role
+      setTimeout(() => {
+        if (user?.role === 'ADMIN') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
+      }, 100);
     } catch (err) {
       console.error('[LoginPage] Login error:', err);
       setError(err.response?.data?.message || 'Login failed. Please try again.');
@@ -127,11 +116,6 @@ const LoginPage = () => {
           </div>
         </div>
       </div>
-
-      <ChangePasswordModal
-        isOpen={showPasswordChange}
-        onClose={() => setShowPasswordChange(false)}
-      />
     </>
   );
 };

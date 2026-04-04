@@ -38,7 +38,7 @@ class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
-        mustChangePassword: user.must_change_password === 1
+        mustChangePassword: false // Disabled - direct dashboard access
       }
     };
   }
@@ -60,10 +60,10 @@ class AuthService {
     db.prepare(`
       INSERT INTO users (id, email, password, name, role, must_change_password)
       VALUES (?, ?, ?, ?, ?, ?)
-    `).run(adminId, env.adminEmail, hashedPassword, 'Admin', 'ADMIN', 1);
+    `).run(adminId, env.adminEmail, hashedPassword, 'Admin', 'ADMIN', 0);
 
-    console.log('Default admin user created with password change required');
-    return { id: adminId, email: env.adminEmail, role: 'ADMIN', must_change_password: 1 };
+    console.log('Default admin user created');
+    return { id: adminId, email: env.adminEmail, role: 'ADMIN', must_change_password: 0 };
   }
 
   /**
