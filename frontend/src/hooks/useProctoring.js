@@ -86,15 +86,22 @@ export const useProctoring = (sessionId, config = {}) => {
     sessionIdRef.current = sessionId;
   }, [sessionId]);
 
-  // Add warning to local state
+  // Add warning to local state with auto-dismiss
   const addWarning = useCallback((message, type) => {
+    const id = Date.now() + Math.random();
     const warning = {
-      id: Date.now(),
+      id,
       message,
       type,
       timestamp: new Date().toISOString()
     };
     setWarnings(prev => [...prev.slice(-4), warning]); // Keep last 5 warnings
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+      setWarnings(prev => prev.filter(w => w.id !== id));
+    }, 5000);
+
     return warning;
   }, []);
 
