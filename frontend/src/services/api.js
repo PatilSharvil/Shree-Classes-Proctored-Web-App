@@ -96,7 +96,14 @@ api.interceptors.response.use(
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       localStorage.removeItem('csrf_token');
-      window.location.href = '/login';
+
+      // Only redirect to login if not already on an auth-related page
+      const currentPath = window.location.pathname;
+      const authPaths = ['/login', '/', '/register', '/reset-password'];
+      if (!authPaths.includes(currentPath)) {
+        console.warn('[API] 401 Unauthorized, redirecting to login from:', currentPath);
+        window.location.href = '/login';
+      }
     }
 
     // Handle CSRF token errors

@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import useAuthStore from './store/authStore';
 import MainLayout from './layouts/MainLayout';
@@ -34,15 +34,35 @@ const PageLoader = () => (
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const user = useAuthStore((state) => state.user);
+  const checkAuth = useAuthStore((state) => state.checkAuth);
+  const [isValidating, setValidating] = useState(true);
 
-  console.log('[ProtectedRoute] Checking auth:', { isAuthenticated, userRole: user?.role, adminOnly });
+  useEffect(() => {
+    const validate = async () => {
+      const storedUser = localStorage.getItem('user');
+      const storedToken = localStorage.getItem('token');
+      // Only validate if we have credentials; otherwise skip and let the sync state handle it
+      if (storedUser && storedToken) {
+        await checkAuth();
+      }
+      setValidating(false);
+    };
+    validate();
+  }, [checkAuth]);
 
-  // Double-check: if state says not authenticated but localStorage has user, trust localStorage
-  if (!isAuthenticated) {
+  if (isValidating) {
+    return <PageLoader />;
+  }
+
+  const currentAuth = useAuthStore.getState().isAuthenticated;
+  const currentUser = useAuthStore.getState().user;
+
+  console.log('[ProtectedRoute] Checking auth:', { isAuthenticated: currentAuth, userRole: currentUser?.role, adminOnly });
+
+  if (!currentAuth) {
     const storedUser = localStorage.getItem('user');
     if (storedUser) {
       console.log('[ProtectedRoute] State says not authenticated but localStorage has user, allowing access');
-      // User exists in localStorage, allow access
       if (adminOnly) {
         const parsedUser = JSON.parse(storedUser);
         if (parsedUser.role !== 'ADMIN') {
@@ -52,12 +72,12 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
       }
       return children;
     }
-    
+
     console.log('[ProtectedRoute] No auth found, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
-  if (adminOnly && user?.role !== 'ADMIN') {
+  if (adminOnly && currentUser?.role !== 'ADMIN') {
     console.log('[ProtectedRoute] Admin-only route but user is not admin, redirecting to dashboard');
     return <Navigate to="/dashboard" replace />;
   }

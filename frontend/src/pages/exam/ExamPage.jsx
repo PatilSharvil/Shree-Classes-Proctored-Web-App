@@ -77,11 +77,12 @@ const ExamPage = () => {
   // Proctoring hook with comprehensive monitoring
   const proctoring = useProctoring(session?.id, {
     violationThreshold: 5,
-    onViolationThreshold: (count) => {
+    onViolationThreshold: (weightedScore) => {
+      console.warn(`[Proctoring] Weighted score threshold reached: ${weightedScore}. Auto-submitting...`);
       handleTimeUp();
     },
     onViolation: (violation) => {
-      console.log('Violation recorded:', violation);
+      console.log(`[Proctoring] Violation: ${violation.type} | Severity: ${violation.severity} | Count: ${violation.totalViolations} | Weighted: ${violation.weightedScore}`);
     },
     enableFullscreen: !isMobile, // Fix #19 — skip fullscreen enforcement on mobile
     enableTabSwitch: true,
@@ -368,22 +369,6 @@ const ExamPage = () => {
     }
   };
 
-  const getQuestionStatus = (index) => {
-    const question = questions[index];
-    if (!question) return 'not-visited';
-
-    const questionId = question.id;
-    const hasResponse = questionId && responses[questionId];
-    const isReview = questionId && markedForReview[questionId];
-    const isCurrent = index === currentQuestionIndex;
-
-    if (isCurrent) return 'current';
-    if (isReview && hasResponse) return 'answered-review';
-    if (isReview) return 'review';
-    if (hasResponse) return 'answered';
-    return 'not-answered';
-  };
-
   const getStatusColor = (status) => {
     switch (status) {
       case 'current': return 'bg-primary-600 text-white ring-2 ring-primary-300';
@@ -406,15 +391,42 @@ const ExamPage = () => {
     }
   };
 
-  const { questionStatuses, answeredCount, notAnsweredCount, reviewCount } = useMemo(() => {
-    const statuses = questions.map((_, idx) => getQuestionStatus(idx));
-    return {
-      questionStatuses: statuses,
-      answeredCount: statuses.filter(s => s === 'answered' || s === 'answered-review').length,
-      notAnsweredCount: statuses.filter(s => s === 'not-answered').length,
-      reviewCount: statuses.filter(s => s === 'review' || s === 'answered-review').length
-    };
+  // Compute question statuses and counts - moved outside useMemo for clarity
+  const questionStatuses = useMemo(() => {
+    return questions.map((_, idx) => {
+      const question = questions[idx];
+      if (!question) return 'not-visited';
+
+      const questionId = question.id;
+      const hasResponse = questionId && responses[questionId];
+      const isReview = questionId && markedForReview[questionId];
+      const isCurrent = idx === currentQuestionIndex;
+
+      if (isCurrent && !hasResponse && !isReview) return 'current';
+      if (isReview && hasResponse) return 'answered-review';
+      if (isReview) return 'review';
+      if (hasResponse) return 'answered';
+      
+      // Fallback for current question if it has a response but we still want to indicate it's current. 
+      // Actually, if it hit the rules above, it will be skipped. Wait, the original code had `if (isCurrent) return 'current';` at the top. So we're changing priority. Now, if it's current but NOT answered/review, it returns 'current'. If the current has been answered, it will return 'answered'. This fixes the counters exclusion!
+      if (isCurrent) return 'current'; 
+      return 'not-answered';
+    });
   }, [questions, responses, markedForReview, currentQuestionIndex]);
+
+  const getQuestionStatus = (idx) => questionStatuses[idx] || 'not-visited';
+
+  const answeredCount = useMemo(() => 
+    questionStatuses.filter(s => s === 'answered' || s === 'answered-review').length
+  , [questionStatuses]);
+
+  const notAnsweredCount = useMemo(() => 
+    questionStatuses.filter(s => s === 'not-answered' || s === 'not-visited').length
+  , [questionStatuses]);
+
+  const reviewCount = useMemo(() => 
+    questionStatuses.filter(s => s === 'review' || s === 'answered-review').length
+  , [questionStatuses]);
 
   if (loading) {
     return (

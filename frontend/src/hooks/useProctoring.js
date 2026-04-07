@@ -74,6 +74,12 @@ export const useProctoring = (sessionId, config = {}) => {
   const sessionIdRef = useRef(sessionId);
   const activityQueueRef = useRef([]);
   const isSendingRef = useRef(false);
+  const violationSeverityWeights = useRef({
+    LOW: 1,
+    MEDIUM: 2,
+    HIGH: 3,
+    CRITICAL: 5
+  });
 
   // Update session ID ref
   useEffect(() => {
@@ -141,22 +147,30 @@ export const useProctoring = (sessionId, config = {}) => {
       });
 
       const data = result.data.data;
-      violationCountRef.current = data.totalViolations;
-      weightedScoreRef.current = data.totalViolations;
-      setViolationCount(data.totalViolations);
-      setWeightedScore(data.totalViolations);
+      
+      // Backend returns weighted score in violation_count field
+      // Track violation count separately (increment by 1 for each violation)
+      const newViolationCount = violationCountRef.current + 1;
+      const newWeightedScore = data.totalViolations || weightedScoreRef.current;
+      
+      violationCountRef.current = newViolationCount;
+      weightedScoreRef.current = newWeightedScore;
+      setViolationCount(newViolationCount);
+      setWeightedScore(newWeightedScore);
+
+      console.log(`[Proctoring] Violation recorded: ${type} | Severity: ${severity} | Count: ${newViolationCount} | Weighted Score: ${newWeightedScore}`);
 
       // Log the violation as activity
       queueActivityLog(`VIOLATION_${type}`, { description, severity, metadata }, true);
 
       // Call onViolation callback
       if (onViolation) {
-        onViolation({ type, description, severity, totalViolations: data.totalViolations });
+        onViolation({ type, description, severity, totalViolations: newViolationCount, weightedScore: newWeightedScore });
       }
 
-      // Check threshold
-      if (onViolationThreshold && data.totalViolations >= violationThreshold) {
-        onViolationThreshold(data.totalViolations);
+      // Check threshold - use weighted score for auto-submit decision
+      if (onViolationThreshold && newWeightedScore >= violationThreshold) {
+        onViolationThreshold(newWeightedScore);
       }
 
       return data;
@@ -269,9 +283,10 @@ export const useProctoring = (sessionId, config = {}) => {
   }, [enableNetworkMonitor, recordViolation, queueActivityLog, addWarning]);
 
   // Handle clipboard events (copy/paste)
-  const handleClipboardEvent = useCallback(async (type) => {
+  const handleClipboardEvent = useCallback(async (e) => {
     if (!enableClipboardMonitor) return;
 
+    const type = e.type === 'copy' || e.type === 'cut' ? 'copy' : 'paste';
     const violationType = type === 'copy' ? VIOLATION_TYPES.COPY_ATTEMPT : VIOLATION_TYPES.PASTE_ATTEMPT;
     const description = type === 'copy' 
       ? 'Copy attempt detected during exam' 

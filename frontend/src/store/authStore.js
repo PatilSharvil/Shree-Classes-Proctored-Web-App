@@ -51,18 +51,40 @@ const useAuthStore = create((set, get) => ({
     console.log('[AuthStore] User updated:', updatedUser);
   },
 
-  checkAuth: () => {
+  checkAuth: async () => {
     const user = localStorage.getItem('user');
     const token = localStorage.getItem('token');
-    if (user && token) {
+    if (!user || !token) {
+      set({ user: null, isAuthenticated: false });
+      console.log('[AuthStore] Auth check failed, no user or token found');
+      return false;
+    }
+
+    // Validate token with backend before setting authenticated state
+    try {
+      const response = await authAPI.getMe();
+      const parsedUser = response.data.data;
+      // Update localStorage with fresh user data from backend
+      localStorage.setItem('user', JSON.stringify(parsedUser));
+      set({ user: parsedUser, isAuthenticated: true });
+      console.log('[AuthStore] Auth check passed, token validated:', parsedUser.email);
+      return true;
+    } catch (error) {
+      // Only clear auth state on 401 (token invalid/expired), not on network errors
+      if (error.response?.status === 401) {
+        console.error('[AuthStore] Token validation failed (401), clearing auth state');
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('csrf_token');
+        set({ user: null, isAuthenticated: false });
+        return false;
+      }
+      // Network error or server unreachable — trust localStorage as fallback
+      console.warn('[AuthStore] Backend unreachable, trusting localStorage:', error.message);
       const parsedUser = JSON.parse(user);
       set({ user: parsedUser, isAuthenticated: true });
-      console.log('[AuthStore] Auth check passed, user authenticated:', parsedUser.email);
       return true;
     }
-    set({ isAuthenticated: false });
-    console.log('[AuthStore] Auth check failed, no user found');
-    return false;
   }
 }));
 
