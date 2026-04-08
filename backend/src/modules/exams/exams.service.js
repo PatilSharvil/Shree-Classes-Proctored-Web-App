@@ -148,6 +148,24 @@ class ExamService {
    */
   deleteExam(id) {
     const exam = this.getExamById(id);
+    
+    // Delete related records in the correct order to avoid foreign key constraint violations
+    const deleteResponses = db.prepare('DELETE FROM responses WHERE session_id IN (SELECT id FROM exam_sessions WHERE exam_id = ?)');
+    deleteResponses.run(id);
+    
+    const deleteViolations = db.prepare('DELETE FROM violations WHERE session_id IN (SELECT id FROM exam_sessions WHERE exam_id = ?)');
+    deleteViolations.run(id);
+    
+    const deleteProctoringLogs = db.prepare('DELETE FROM proctoring_logs WHERE session_id IN (SELECT id FROM exam_sessions WHERE exam_id = ?)');
+    deleteProctoringLogs.run(id);
+    
+    const deleteSessions = db.prepare('DELETE FROM exam_sessions WHERE exam_id = ?');
+    deleteSessions.run(id);
+    
+    const deleteAttemptHistory = db.prepare('DELETE FROM attempt_history WHERE exam_id = ?');
+    deleteAttemptHistory.run(id);
+    
+    // Questions will be auto-deleted via ON DELETE CASCADE
     db.prepare('DELETE FROM exams WHERE id = ?').run(id);
     return { message: 'Exam deleted successfully.' };
   }
