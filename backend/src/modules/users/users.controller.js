@@ -1,4 +1,5 @@
 const authService = require('../auth/auth.service');
+const excelService = require('../../services/excelService');
 const { apiResponse, errorResponse, paginatedResponse } = require('../../utils/apiResponse');
 const db = require('../../config/database');
 
@@ -130,10 +131,45 @@ const deleteUser = (req, res) => {
   }
 };
 
+/**
+ * Upload students via Excel file
+ * POST /api/users/upload
+ */
+const uploadStudents = (req, res) => {
+  try {
+    if (!req.file) {
+      return errorResponse(res, 400, 'Excel file is required.');
+    }
+
+    // Parse Excel file
+    const excelData = excelService.importFromBuffer(req.file.buffer);
+
+    if (!excelData || excelData.length === 0) {
+      return errorResponse(res, 400, 'Excel file is empty or invalid.');
+    }
+
+    // Map Excel data to student format
+    const studentsData = excelData.map(row => ({
+      name: row.Name || row.name || '',
+      email: row.Email || row.email || '',
+      password: row.Password || row.password || ''
+    }));
+
+    // Import students
+    const result = authService.bulkImportStudents(studentsData, req.user.id);
+    
+    const statusCode = result.success > 0 ? 201 : 400;
+    return apiResponse(res, statusCode, result, 'Students import completed');
+  } catch (error) {
+    return errorResponse(res, 500, 'Failed to import students.', error.message);
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  uploadStudents
 };

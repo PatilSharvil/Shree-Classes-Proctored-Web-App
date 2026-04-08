@@ -189,6 +189,110 @@ class AuthService {
     db.prepare('DELETE FROM users WHERE id = ?').run(id);
     return { message: 'User deleted successfully.' };
   }
+
+  /**
+   * Bulk import students from Excel data
+   */
+  bulkImportStudents(studentsData, createdBy) {
+    const results = {
+      success: 0,
+      failed: 0,
+      errors: [],
+      students: []
+    };
+
+    const insertUser = db.prepare(`
+      INSERT INTO users (id, email, password, name, role)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+
+    const insertMany = db.transaction((students) => {
+      for (const studentData of students) {
+        try {
+          // Validate required fields
+          if (!studentData.email || !studentData.password) {
+            results.failed++;
+            results.errors.push({
+              email: studentData.email || 'Unknown',
+              error: 'Email and password are required'
+            });
+            continue;
+          }
+
+          // Validate email format
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(studentData.email)) {
+            results.failed++;
+            results.errors.push({
+              email: studentData.email,
+              error: 'Invalid email format'
+            });
+            continue;
+          }
+
+          // Validate password strength
+          if (studentData.password.length < 8) {
+            results.failed++;
+            results.errors.push({
+              email: studentData.email,
+              error: 'Password must be at least 8 characters'
+            });
+            continue;
+          }
+          if (!/[A-Z]/.test(studentData.password)) {
+            results.failed++;
+            results.errors.push({
+              email: studentData.email,
+              error: 'Password must contain at least one uppercase letter'
+            });
+            continue;
+          }
+          if (!/[0-9]/.test(studentData.password)) {
+            results.failed++;
+            results.errors.push({
+              email: studentData.email,
+              error: 'Password must contain at least one number'
+            });
+            continue;
+          }
+
+          // Check if user already exists
+          const existingUser = db.prepare('SELECT id FROM users WHERE email = ?').get(studentData.email);
+          if (existingUser) {
+            results.failed++;
+            results.errors.push({
+              email: studentData.email,
+              error: 'User already exists'
+            });
+            continue;
+          }
+
+          // Create user
+          const userId = uuidv4();
+          const hashedPassword = bcrypt.hashSync(studentData.password, 10);
+          const name = studentData.name || '';
+
+          insertUser.run(userId, studentData.email, hashedPassword, name, 'STUDENT');
+
+          results.success++;
+          results.students.push({
+            id: userId,
+            email: studentData.email,
+            name: name
+          });
+        } catch (error) {
+          results.failed++;
+          results.errors.push({
+            email: studentData.email || 'Unknown',
+            error: error.message
+          });
+        }
+      }
+    });
+
+    insertMany(studentsData);
+    return results;
+  }
 }
 
 module.exports = new AuthService();

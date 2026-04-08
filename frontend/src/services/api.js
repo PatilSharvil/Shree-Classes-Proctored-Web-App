@@ -133,7 +133,14 @@ export const usersAPI = {
   getById: (id) => api.get(`/users/${id}`),
   create: (data) => api.post('/users', data),
   update: (id, data) => api.put(`/users/${id}`, data),
-  delete: (id) => api.delete(`/users/${id}`)
+  delete: (id) => api.delete(`/users/${id}`),
+  upload: (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/users/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  }
 };
 
 // Exams API
