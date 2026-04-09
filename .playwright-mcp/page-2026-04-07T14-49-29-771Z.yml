@@ -1,0 +1,219 @@
+- generic [ref=e3]:
+  - navigation [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]: 
+        - generic [ref=e8]: Shree Science Academy
+      - list [ref=e9]:
+        - listitem [ref=e10]:
+          - link "Home" [ref=e11] [cursor=pointer]:
+            - /url: "#home"
+        - listitem [ref=e12]:
+          - link "Courses" [ref=e13] [cursor=pointer]:
+            - /url: "#courses"
+        - listitem [ref=e14]:
+          - link "Online Tests" [ref=e15] [cursor=pointer]:
+            - /url: "#exams"
+        - listitem [ref=e16]:
+          - link "Results" [ref=e17] [cursor=pointer]:
+            - /url: "#results"
+        - listitem [ref=e18]:
+          - link "Contact" [ref=e19] [cursor=pointer]:
+            - /url: "#contact"
+      - link "Login" [ref=e21] [cursor=pointer]:
+        - /url: /login
+        - button "Login" [ref=e22]
+      - text: 
+  - banner [ref=e23]:
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - heading "Best Coaching for MHT CET Success" [level=1] [ref=e26]
+        - paragraph [ref=e27]: Expert guidance for Class 12th students preparing for MHT CET PCM & PCB. Comprehensive study material, mock tests, and personalized mentorship for engineering & medical aspirants.
+        - generic [ref=e28]:
+          - textbox "Search for PCM/PCB courses, mock tests..." [ref=e29]
+          - button "Search" [ref=e30] [cursor=pointer]
+      - img "Students studying" [ref=e32]
+  - generic [ref=e35]:
+    - heading "Latest News and Notifications" [level=2] [ref=e36]
+    - generic [ref=e37]:
+      - button "":
+        - generic: 
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - img "News 1" [ref=e40]
+          - generic [ref=e41]:
+            - heading "MHT CET 2026 Registration Opens" [level=3] [ref=e42]
+            - paragraph [ref=e43]: State Common Entrance Test Cell announces registration dates for PCM/PCB groups. Apply before deadline.
+            - link "Read More " [ref=e44] [cursor=pointer]:
+              - /url: "#"
+              - text: Read More
+              - generic [ref=e45]: 
+        - generic [ref=e46]:
+          - img "News 2" [ref=e47]
+          - generic [ref=e48]:
+            - heading "MHT CET Syllabus 2026 Released" [level=3] [ref=e49]
+            - paragraph [ref=e50]: Complete syllabus for Physics, Chemistry, Mathematics & Biology now available. Download from official website.
+            - link "Read More " [ref=e51] [cursor=pointer]:
+              - /url: "#"
+              - text: Read More
+              - generic [ref=e52]: 
+        - generic [ref=e53]:
+          - img "News 3" [ref=e54]
+          - generic [ref=e55]:
+            - heading "New Batch Starting for Class 12th CET" [level=3] [ref=e56]
+            - paragraph [ref=e57]: Join our upcoming batch for MHT CET preparation. Limited seats available. Register now!
+            - link "Read More " [ref=e58] [cursor=pointer]:
+              - /url: "#"
+              - text: Read More
+              - generic [ref=e59]: 
+      - button "" [ref=e60] [cursor=pointer]:
+        - generic [ref=e61]: 
+  - generic [ref=e62]:
+    - generic [ref=e63]:
+      - heading "Why Choose Us?" [level=2] [ref=e64]
+      - paragraph [ref=e65]: We provide the best preparation for MHT CET PCM & PCB
+    - generic [ref=e66]:
+      - generic [ref=e67]:
+        - generic [ref=e69]: 
+        - heading "MHT CET PCM" [level=3] [ref=e70]
+        - paragraph [ref=e71]: Physics, Chemistry, Mathematics for Engineering aspirants. Complete syllabus coverage.
+        - button "Explore " [ref=e72] [cursor=pointer]:
+          - text: Explore
+          - generic [ref=e73]: 
+      - generic [ref=e74]:
+        - generic [ref=e76]: 
+        - heading "MHT CET PCB" [level=3] [ref=e77]
+        - paragraph [ref=e78]: Physics, Chemistry, Biology for Medical aspirants. NEET preparation included.
+        - button "Explore " [ref=e79] [cursor=pointer]:
+          - text: Explore
+          - generic [ref=e80]: 
+      - generic [ref=e81]:
+        - generic [ref=e83]: 
+        - heading "Online Mock Tests" [level=3] [ref=e84]
+        - paragraph [ref=e85]: Full syllabus mock tests with detailed analysis & All India ranking.
+        - button "Explore " [ref=e86] [cursor=pointer]:
+          - text: Explore
+          - generic [ref=e87]: 
+      - generic [ref=e88]:
+        - generic [ref=e90]: 
+        - heading "Study Material" [level=3] [ref=e91]
+        - paragraph [ref=e92]: Chapter-wise notes, formula sheets & practice questions for all subjects.
+        - button "Explore " [ref=e93] [cursor=pointer]:
+          - text: Explore
+          - generic [ref=e94]: 
+      - generic [ref=e95]:
+        - generic [ref=e97]: 
+        - heading "Performance Analysis" [level=3] [ref=e98]
+        - paragraph [ref=e99]: Track your progress with detailed reports & improvement suggestions.
+        - button "Explore " [ref=e100] [cursor=pointer]:
+          - text: Explore
+          - generic [ref=e101]: 
+  - generic [ref=e102]:
+    - heading "Online CET Mock Tests" [level=2] [ref=e103]
+    - generic [ref=e104]:
+      - generic [ref=e105]:
+        - generic [ref=e107]: 
+        - generic [ref=e108]:
+          - heading "MHT CET PCM Mock Test" [level=3] [ref=e109]
+          - paragraph [ref=e110]: Full syllabus mock test for Engineering aspirants. Physics, Chemistry, Mathematics.
+          - generic [ref=e111]: Available 24/7 | 180 Minutes
+        - link "Take Test" [ref=e112] [cursor=pointer]:
+          - /url: /dashboard
+          - button "Take Test" [ref=e113]
+      - generic [ref=e114]:
+        - generic [ref=e116]: 
+        - generic [ref=e117]:
+          - heading "MHT CET PCB Mock Test" [level=3] [ref=e118]
+          - paragraph [ref=e119]: Full syllabus mock test for Medical aspirants. Physics, Chemistry, Biology.
+          - generic [ref=e120]: Available 24/7 | 180 Minutes
+        - link "Take Test" [ref=e121] [cursor=pointer]:
+          - /url: /dashboard
+          - button "Take Test" [ref=e122]
+      - generic [ref=e123]:
+        - generic [ref=e125]: 
+        - generic [ref=e126]:
+          - heading "Chapter-wise Tests" [level=3] [ref=e127]
+          - paragraph [ref=e128]: Test your knowledge after completing each chapter. Subject-wise tests available.
+          - generic [ref=e129]: Available 24/7 | 45 Minutes
+        - link "Take Test" [ref=e130] [cursor=pointer]:
+          - /url: /dashboard
+          - button "Take Test" [ref=e131]
+  - generic [ref=e132]:
+    - heading "Our Success Record" [level=2] [ref=e133]
+    - generic [ref=e134]:
+      - generic [ref=e135]:
+        - generic [ref=e136]: 
+        - generic [ref=e137]: 500+
+        - generic [ref=e138]: Students Trained
+      - generic [ref=e139]:
+        - generic [ref=e140]: 
+        - generic [ref=e141]: 150+
+        - generic [ref=e142]: Top Colleges
+      - generic [ref=e143]:
+        - generic [ref=e144]: 
+        - generic [ref=e145]: 50+
+        - generic [ref=e146]: Top 100 Ranks
+  - generic [ref=e149]:
+    - heading "Start Your CET Preparation Today!" [level=2] [ref=e150]
+    - paragraph [ref=e151]: Join Shree Science Academy for expert coaching, mock tests, and personalized mentorship.
+  - contentinfo [ref=e152]:
+    - generic [ref=e153]:
+      - generic [ref=e154]:
+        - heading "About Shree Science Academy" [level=3] [ref=e155]
+        - paragraph [ref=e156]: We are dedicated to providing quality education to Class 12th students preparing for MHT CET PCM & PCB. Our expert faculty, comprehensive study material, and online mock tests ensure complete preparation for engineering & medical entrance exams.
+      - generic [ref=e157]:
+        - heading "Quick Links" [level=4] [ref=e158]
+        - list [ref=e159]:
+          - listitem [ref=e160]:
+            - link "Home" [ref=e161] [cursor=pointer]:
+              - /url: /
+          - listitem [ref=e162]:
+            - link "Login" [ref=e163] [cursor=pointer]:
+              - /url: /login
+          - listitem [ref=e164]:
+            - link "Register" [ref=e165] [cursor=pointer]:
+              - /url: /register
+          - listitem [ref=e166]:
+            - link "Dashboard" [ref=e167] [cursor=pointer]:
+              - /url: /dashboard
+      - generic [ref=e168]:
+        - heading "Our Courses" [level=4] [ref=e169]
+        - list [ref=e170]:
+          - listitem [ref=e171]:
+            - link "MHT CET PCM" [ref=e172] [cursor=pointer]:
+              - /url: "#"
+          - listitem [ref=e173]:
+            - link "MHT CET PCB" [ref=e174] [cursor=pointer]:
+              - /url: "#"
+          - listitem [ref=e175]:
+            - link "Mock Test Series" [ref=e176] [cursor=pointer]:
+              - /url: "#"
+          - listitem [ref=e177]:
+            - link "Study Material" [ref=e178] [cursor=pointer]:
+              - /url: "#"
+      - generic [ref=e179]:
+        - heading "Contact Us" [level=4] [ref=e180]
+        - paragraph [ref=e181]:
+          - generic [ref=e182]: 
+          - text: info@shreescienceacademy.com
+        - paragraph [ref=e183]:
+          - generic [ref=e184]: 
+          - text: +91 98765 43210
+        - paragraph [ref=e185]:
+          - generic [ref=e186]: 
+          - text: Maharashtra, India
+    - generic [ref=e187]:
+      - paragraph [ref=e188]: © 2026 Shree Science Academy. All Rights Reserved.
+      - generic [ref=e189]:
+        - link "" [ref=e190] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e191]: 
+        - link "" [ref=e192] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e193]: 
+        - link "" [ref=e194] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e195]: 
+        - link "" [ref=e196] [cursor=pointer]:
+          - /url: "#"
+          - generic [ref=e197]: 

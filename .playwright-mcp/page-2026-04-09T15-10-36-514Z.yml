@@ -1,0 +1,14 @@
+- generic [ref=e2]:
+  - heading "🎥 Webcam & MediaPipe Test" [level=1] [ref=e3]
+  - generic [ref=e4]:
+    - button "Start Webcam" [active] [ref=e5] [cursor=pointer]
+    - button "Start MediaPipe Detection" [ref=e6] [cursor=pointer]
+    - button "Stop All" [ref=e7] [cursor=pointer]
+  - generic [ref=e8]:
+    - 'heading "Status: Camera Active" [level=3] [ref=e15]'
+    - paragraph [ref=e10]: "Face Count: 0"
+    - paragraph [ref=e11]: "Face Position: N/A"
+    - paragraph [ref=e12]: "Detections: 0"
+  - generic [ref=e14]:
+    - generic [ref=e16]: "[8:40:35 PM] Requesting camera permission..."
+    - generic [ref=e17]: "[8:40:36 PM] ✅ Webcam started successfully!"

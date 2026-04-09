@@ -1,0 +1,80 @@
+- generic [ref=e5]:
+  - banner [ref=e6]:
+    - generic [ref=e7]:
+      - link " Shree Science Academy" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: 
+        - generic [ref=e10]: Shree Science Academy
+      - navigation [ref=e11]:
+        - button "Dashboard" [ref=e12] [cursor=pointer]
+        - generic [ref=e13]: admin@example.com
+        - button "Logout" [ref=e14] [cursor=pointer]
+  - main [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - heading "Test Exam - Browser Test" [level=2] [ref=e43]
+          - paragraph [ref=e44]: Q 1/5
+        - generic [ref=e45]:
+          - generic "Online" [ref=e46]:
+            - generic [ref=e47]: 📶
+            - generic [ref=e48]: Online
+          - generic "Windowed" [ref=e49]:
+            - generic [ref=e50]: ⚠️
+            - generic [ref=e51]: Windowed
+        - generic [ref=e52]: 29:16
+        - button "Submit" [ref=e54] [cursor=pointer]
+      - generic [ref=e58]: ⚠️ Full-screen mode is required for this exam.
+      - generic [ref=e59]:
+        - generic [ref=e60]:
+          - generic [ref=e62]:
+            - generic [ref=e63]:
+              - paragraph [ref=e64]: 1. What is the SI unit of force?
+              - generic [ref=e65]: (4 marks)
+            - generic [ref=e66]:
+              - button "A.Newton" [active] [ref=e67] [cursor=pointer]:
+                - generic [ref=e68]: A.
+                - text: Newton
+              - button "B.Joule" [ref=e69] [cursor=pointer]:
+                - generic [ref=e70]: B.
+                - text: Joule
+              - button "C.Watt" [ref=e71] [cursor=pointer]:
+                - generic [ref=e72]: C.
+                - text: Watt
+              - button "D.Pascal" [ref=e73] [cursor=pointer]:
+                - generic [ref=e74]: D.
+                - text: Pascal
+            - button "Mark for Review" [ref=e76] [cursor=pointer]:
+              - generic [ref=e78]: Mark for Review
+          - generic [ref=e79]:
+            - button "⬅ Previous" [disabled] [ref=e80]
+            - button "Next ➡" [ref=e81] [cursor=pointer]
+        - generic [ref=e83]:
+          - heading "Question Palette" [level=3] [ref=e84]
+          - generic [ref=e85]:
+            - generic [ref=e86]:
+              - generic [ref=e87]:
+                - generic [ref=e88]: ✓
+                - generic [ref=e89]: Answered
+              - generic [ref=e92]: Not Answered
+              - generic [ref=e93]:
+                - generic [ref=e94]: ✓
+                - generic [ref=e95]: Answered + Review
+              - generic [ref=e98]: Marked for Review
+              - generic [ref=e101]: Current
+            - generic [ref=e102]:
+              - generic [ref=e103]:
+                - generic [ref=e104]: "1"
+                - generic [ref=e105]: Answered
+              - generic [ref=e106]:
+                - generic [ref=e107]: "4"
+                - generic [ref=e108]: Not Answered
+              - generic [ref=e109]:
+                - generic [ref=e110]: "0"
+                - generic [ref=e111]: Marked for Review
+            - generic [ref=e112]:
+              - button "1" [ref=e113] [cursor=pointer]
+              - button "2" [ref=e114] [cursor=pointer]
+              - button "3" [ref=e115] [cursor=pointer]
+              - button "4" [ref=e116] [cursor=pointer]
+              - button "5" [ref=e117] [cursor=pointer]

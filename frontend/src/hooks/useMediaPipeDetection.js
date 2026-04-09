@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { FaceDetection } from '@mediapipe/face_detection';
-import { Hands } from '@mediapipe/hands';
+import { FaceDetector, FilesetResolver } from '@mediapipe/tasks-vision';
 
 /**
  * AI Detection types for proctoring
@@ -9,10 +8,7 @@ export const AI_DETECTION_TYPES = {
   NO_FACE: 'NO_FACE',
   MULTIPLE_FACES: 'MULTIPLE_FACES',
   LOOKING_AWAY: 'LOOKING_AWAY',
-  PHONE_DETECTED: 'PHONE_DETECTED',
-  UNAUTHORIZED_MATERIAL: 'UNAUTHORIZED_MATERIAL',
-  OFF_CENTER: 'OFF_CENTER',
-  SUSPICIOUS_HAND: 'SUSPICIOUS_HAND'
+  OFF_CENTER: 'OFF_CENTER'
 };
 
 /**
@@ -22,37 +18,31 @@ export const AI_SEVERITY = {
   [AI_DETECTION_TYPES.NO_FACE]: 'HIGH',
   [AI_DETECTION_TYPES.MULTIPLE_FACES]: 'CRITICAL',
   [AI_DETECTION_TYPES.LOOKING_AWAY]: 'MEDIUM',
-  [AI_DETECTION_TYPES.PHONE_DETECTED]: 'CRITICAL',
-  [AI_DETECTION_TYPES.UNAUTHORIZED_MATERIAL]: 'HIGH',
-  [AI_DETECTION_TYPES.OFF_CENTER]: 'LOW',
-  [AI_DETECTION_TYPES.SUSPICIOUS_HAND]: 'MEDIUM'
+  [AI_DETECTION_TYPES.OFF_CENTER]: 'LOW'
 };
 
 /**
  * MediaPipe-based AI detection hook for proctoring
- * Detects face presence, face count, gaze direction, and hand movements
+ * Uses @mediapipe/tasks-vision for stable face detection
  */
 const useMediaPipeDetection = (options = {}) => {
   const {
     enabled = true,
     videoRef = null,
-    detectionFps = 2, // Process 2 frames per second for performance
-    faceConfidenceThreshold = 0.75,
+    detectionFps = 2,
+    faceConfidenceThreshold = 0.5,
     minFaceAbsenceSec = 5,
     minGazeAwaySec = 10,
     onDetection = null,
     onSnapshotCapture = null
   } = options;
 
-  const faceDetectionRef = useRef(null);
-  const handsDetectionRef = useRef(null);
+  const faceDetectorRef = useRef(null);
   const [isReady, setIsReady] = useState(false);
   const [detections, setDetections] = useState({
     faceCount: 0,
     facePosition: null,
-    gazeDirection: 'center',
-    handsDetected: false,
-    handPositions: []
+    gazeDirection: 'center'
   });
 
   const [activeViolations, setActiveViolations] = useState({});
@@ -60,119 +50,142 @@ const useMediaPipeDetection = (options = {}) => {
   const gazeAwaySinceRef = useRef(null);
   const lastDetectionTimeRef = useRef(0);
   const detectionIntervalRef = useRef(null);
+  const activeViolationsRef = useRef({});
 
-  // Initialize MediaPipe Face Detection
+  // Keep ref in sync with state
+  useEffect(() => {
+    activeViolationsRef.current = activeViolations;
+  }, [activeViolations]);
+
+  // Initialize MediaPipe Face Detector
   useEffect(() => {
     if (!enabled) return;
 
-    const faceDetection = new FaceDetection({
-      locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection/${file}`;
+    let mounted = true;
+
+    const initializeDetector = async () => {
+      try {
+        console.log('[MediaPipe] Initializing face detector...');
+        
+        const fileset = await FilesetResolver.forVisionTasks(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+        );
+
+        const detector = await FaceDetector.createFromOptions(fileset, {
+          baseOptions: {
+            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite',
+            delegate: 'GPU'
+          },
+          runningMode: 'VIDEO',
+          minSuppressionThreshold: 0.5
+        });
+
+        if (mounted) {
+          faceDetectorRef.current = detector;
+          setIsReady(true);
+          console.log('[MediaPipe] ✅ Face detector ready!');
+        }
+      } catch (err) {
+        console.error('[MediaPipe] Initialization error:', err);
       }
-    });
+    };
 
-    faceDetection.setOptions({
-      model: 'short', // 'short' or 'full' - short is faster
-      minDetectionConfidence: faceConfidenceThreshold
-    });
-
-    faceDetection.onResults((results) => {
-      if (!results.detections) return;
-
-      const faceCount = results.detections.length;
-      
-      if (faceCount === 0) {
-        handleNoFaceDetection();
-      } else if (faceCount === 1) {
-        handleSingleFaceDetected(results.detections[0]);
-      } else if (faceCount > 1) {
-        handleMultipleFacesDetected(faceCount);
-      }
-    });
-
-    faceDetectionRef.current = faceDetection;
-    setIsReady(true);
+    initializeDetector();
 
     return () => {
-      faceDetection.close();
+      mounted = false;
+      if (faceDetectorRef.current) {
+        faceDetectorRef.current.close();
+        faceDetectorRef.current = null;
+      }
     };
-  }, [enabled, faceConfidenceThreshold]);
+  }, [enabled]);
 
   // Start detection loop
   useEffect(() => {
     if (!enabled || !isReady || !videoRef?.current) return;
 
     const intervalMs = 1000 / detectionFps;
+    console.log(`[MediaPipe] Starting detection at ${detectionFps} FPS`);
 
-    detectionIntervalRef.current = setInterval(() => {
-      if (!videoRef.current || videoRef.current.readyState < 2) return;
+    const detect = async () => {
+      if (!faceDetectorRef.current || !videoRef.current) return;
+      if (videoRef.current.readyState < 2) return; // Video not ready
 
       const now = Date.now();
       if (now - lastDetectionTimeRef.current < intervalMs) return;
       lastDetectionTimeRef.current = now;
 
-      runDetection();
-    }, intervalMs);
+      try {
+        const results = faceDetectorRef.current.detectForVideo(videoRef.current, now);
+        processDetections(results.detections || []);
+      } catch (err) {
+        console.error('[MediaPipe] Detection error:', err);
+      }
+    };
+
+    detectionIntervalRef.current = setInterval(detect, intervalMs);
 
     return () => {
       if (detectionIntervalRef.current) {
         clearInterval(detectionIntervalRef.current);
+        detectionIntervalRef.current = null;
       }
     };
   }, [enabled, isReady, detectionFps, videoRef]);
 
-  const runDetection = useCallback(async () => {
-    if (!faceDetectionRef.current || !videoRef.current) return;
-
-    try {
-      await faceDetectionRef.current.send({ image: videoRef.current });
-    } catch (err) {
-      console.error('[MediaPipe] Detection error:', err);
-    }
-  }, [videoRef]);
-
-  const handleNoFaceDetection = useCallback(() => {
+  const processDetections = useCallback((detections) => {
+    const faceCount = detections.length;
     const now = Date.now();
 
+    if (faceCount === 0) {
+      handleNoFace(now);
+    } else if (faceCount === 1) {
+      handleSingleFace(detections[0], now);
+    } else if (faceCount > 1) {
+      handleMultipleFaces(faceCount, now);
+    }
+
+    setDetections({
+      faceCount,
+      facePosition: faceCount === 1 ? {
+        x: detections[0].boundingBox.originX,
+        y: detections[0].boundingBox.originY
+      } : null,
+      gazeDirection: faceCount === 1 ? 'center' : 'unknown'
+    });
+  }, []);
+
+  const handleNoFace = useCallback((now) => {
     if (!faceAbsentSinceRef.current) {
       faceAbsentSinceRef.current = now;
     }
 
     const absenceDuration = (now - faceAbsentSinceRef.current) / 1000;
 
-    // Only flag if absent for minimum duration
     if (absenceDuration >= minFaceAbsenceSec) {
       triggerViolation(
         AI_DETECTION_TYPES.NO_FACE,
-        `No face detected for ${Math.round(absenceDuration)} seconds`,
-        absenceDuration,
+        `No face detected for ${Math.round(absenceDuration)}s`,
+        absenceDuration / 10,
         true
       );
     }
 
-    // Reset gaze tracking when no face
     gazeAwaySinceRef.current = null;
-
-    setDetections(prev => ({
-      ...prev,
-      faceCount: 0,
-      facePosition: null
-    }));
   }, [minFaceAbsenceSec]);
 
-  const handleSingleFaceDetected = useCallback((detection) => {
-    const now = Date.now();
-    faceAbsentSinceRef.current = null; // Reset face absence timer
-
-    // Clear no-face violation if active
+  const handleSingleFace = useCallback((detection, now) => {
+    faceAbsentSinceRef.current = null;
     clearViolation(AI_DETECTION_TYPES.NO_FACE);
 
-    // Extract face position
-    const boundingBox = detection.boundingBox;
-    const centerX = boundingBox.xCenter;
-    const centerY = boundingBox.yCenter;
+    const box = detection.boundingBox;
+    const videoWidth = videoRef.current?.videoWidth || 640;
+    const videoHeight = videoRef.current?.videoHeight || 480;
+    
+    const centerX = (box.originX + box.width / 2) / videoWidth;
+    const centerY = (box.originY + box.height / 2) / videoHeight;
 
-    // Detect if face is off-center (looking away)
     const isOffCenter = centerX < 0.3 || centerX > 0.7;
 
     if (isOffCenter) {
@@ -181,59 +194,41 @@ const useMediaPipeDetection = (options = {}) => {
       }
 
       const gazeDuration = (now - gazeAwaySinceRef.current) / 1000;
-
       if (gazeDuration >= minGazeAwaySec) {
         triggerViolation(
           AI_DETECTION_TYPES.LOOKING_AWAY,
-          `Looking away from screen for ${Math.round(gazeDuration)} seconds (position: ${Math.round(centerX * 100)}%, ${Math.round(centerY * 100)}%)`,
-          gazeDuration,
+          `Looking away (${Math.round(centerX * 100)}%, ${Math.round(centerY * 100)}%)`,
+          gazeDuration / 10,
           true
         );
       }
     } else {
-      // Reset gaze tracking when looking at center
       if (gazeAwaySinceRef.current) {
         clearViolation(AI_DETECTION_TYPES.LOOKING_AWAY);
         gazeAwaySinceRef.current = null;
       }
     }
+  }, [minGazeAwaySec, videoRef]);
 
-    setDetections(prev => ({
-      ...prev,
-      faceCount: 1,
-      facePosition: { x: centerX, y: centerY },
-      gazeDirection: isOffCenter ? (centerX < 0.3 ? 'left' : 'right') : 'center'
-    }));
-  }, [minGazeAwaySec]);
-
-  const handleMultipleFacesDetected = useCallback((faceCount) => {
+  const handleMultipleFaces = useCallback((count, now) => {
     faceAbsentSinceRef.current = null;
     gazeAwaySinceRef.current = null;
 
     triggerViolation(
       AI_DETECTION_TYPES.MULTIPLE_FACES,
-      `${faceCount} faces detected - possible unauthorized assistance`,
-      faceCount,
+      `${count} faces detected`,
+      0.9,
       true
     );
-
-    setDetections(prev => ({
-      ...prev,
-      faceCount,
-      facePosition: null
-    }));
   }, []);
 
   const triggerViolation = useCallback((type, description, confidence, shouldSnapshot) => {
-    const violationKey = type;
+    if (activeViolationsRef.current[type]?.triggered) return;
+
     const now = Date.now();
-
-    // Don't spam violations - only trigger once per type until cleared
-    if (activeViolations[violationKey]?.triggered) return;
-
     setActiveViolations(prev => ({
       ...prev,
-      [violationKey]: {
+      [type]: {
         type,
         description,
         confidence,
@@ -243,12 +238,10 @@ const useMediaPipeDetection = (options = {}) => {
       }
     }));
 
-    // Capture snapshot if requested
     if (shouldSnapshot && onSnapshotCapture) {
       onSnapshotCapture(type, confidence);
     }
 
-    // Notify parent
     onDetection?.({
       type,
       description,
@@ -256,10 +249,11 @@ const useMediaPipeDetection = (options = {}) => {
       severity: AI_SEVERITY[type],
       timestamp: now
     });
-  }, [activeViolations, onDetection, onSnapshotCapture]);
+  }, [onDetection, onSnapshotCapture]);
 
   const clearViolation = useCallback((type) => {
     setActiveViolations(prev => {
+      if (!prev[type]) return prev;
       const updated = { ...prev };
       delete updated[type];
       return updated;
@@ -268,14 +262,13 @@ const useMediaPipeDetection = (options = {}) => {
 
   const reset = useCallback(() => {
     setActiveViolations({});
+    activeViolationsRef.current = {};
     faceAbsentSinceRef.current = null;
     gazeAwaySinceRef.current = null;
     setDetections({
       faceCount: 0,
       facePosition: null,
-      gazeDirection: 'center',
-      handsDetected: false,
-      handPositions: []
+      gazeDirection: 'center'
     });
   }, []);
 

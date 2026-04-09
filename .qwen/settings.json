@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_type",
+      "mcp__playwright__browser_run_code",
+      "Bash(node *)",
+      "Bash(curl *)",
+      "Bash(findstr *)",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_evaluate"
+    ]
+  },
+  "$version": 3
+}

@@ -1,0 +1,26 @@
+- generic [ref=e4]:
+  - generic [ref=e5]:
+    - link " Back to Home" [ref=e6] [cursor=pointer]:
+      - /url: /
+      - generic [ref=e7]: 
+      - text: Back to Home
+    - generic [ref=e8]:
+      - heading "Welcome Back!" [level=1] [ref=e9]
+      - paragraph [ref=e10]: Please login to access your dashboard.
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e13]: Email Address
+        - generic [ref=e14]:
+          - generic [ref=e15]: 
+          - textbox "Email Address" [ref=e16]:
+            - /placeholder: you@example.com
+            - text: admin@example.com
+      - generic [ref=e17]:
+        - generic [ref=e18]: Password
+        - generic [ref=e19]:
+          - generic [ref=e20]: 
+          - textbox "Password" [active] [ref=e21]:
+            - /placeholder: ••••••••
+            - text: Admin@123
+      - button "Sign In" [ref=e22] [cursor=pointer]
+  - img "Students Studying in Class" [ref=e25]

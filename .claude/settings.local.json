@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -X POST http://localhost:5000/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"admin@example.com\",\"password\":\"Admin@123\"}' -c /tmp/cookies.txt -D /tmp/headers.txt)",
+      "Read(//tmp/**)"
+    ]
+  }
+}

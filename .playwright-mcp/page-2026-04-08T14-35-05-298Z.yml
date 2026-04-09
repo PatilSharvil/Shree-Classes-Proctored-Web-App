@@ -1,0 +1,79 @@
+- generic [ref=e223]:
+  - banner [ref=e224]:
+    - generic [ref=e225]:
+      - link " Shree Science Academy" [ref=e226] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e227]: 
+        - generic [ref=e228]: Shree Science Academy
+      - navigation [ref=e229]:
+        - button "Dashboard" [ref=e230] [cursor=pointer]
+        - generic [ref=e231]: admin@example.com
+        - button "Logout" [ref=e232] [cursor=pointer]
+  - main [ref=e233]:
+    - generic [ref=e234]:
+      - text: 
+      - complementary [ref=e235]:
+        - link "" [ref=e236] [cursor=pointer]:
+          - /url: /admin
+          - generic [ref=e237]: 
+        - link "" [ref=e238] [cursor=pointer]:
+          - /url: /admin/exams
+          - generic [ref=e239]: 
+        - link "" [ref=e240] [cursor=pointer]:
+          - /url: /admin/analytics
+          - generic [ref=e241]: 
+        - link "" [ref=e242] [cursor=pointer]:
+          - /url: /admin/students
+          - generic [ref=e243]: 
+      - main [ref=e244]:
+        - heading "Dashboard" [level=1] [ref=e246]
+        - generic [ref=e247]:
+          - generic [ref=e248]:
+            - generic [ref=e249]:
+              - generic [ref=e250]:
+                - generic [ref=e252]: 
+                - text: Test Minutes
+              - generic [ref=e253]: 
+            - generic [ref=e254]:
+              - generic [ref=e255]:
+                - text: 30 minutes
+                - generic [ref=e256]: 0.5 Hr
+              - paragraph [ref=e257]: Total Available Test Hours
+          - generic [ref=e258]:
+            - generic [ref=e259]:
+              - generic [ref=e260]:
+                - generic [ref=e262]: 
+                - text: Test Duration Analytics
+              - generic [ref=e263]:
+                - generic [ref=e264]:
+                  - generic [ref=e265]: "3"
+                  - generic [ref=e266]: Registered Students
+                - generic [ref=e267]: 
+            - generic [ref=e268]:
+              - generic [ref=e269]:
+                - generic [ref=e272]: 30m
+                - generic [ref=e274]: 60m
+                - generic [ref=e276]: 90m
+                - generic [ref=e278]: 120m
+                - generic [ref=e280]: 150m
+                - generic [ref=e282]: 150+
+              - generic [ref=e283]:
+                - button "General" [ref=e284] [cursor=pointer]
+                - button "PCM" [ref=e285] [cursor=pointer]
+                - button "PCB" [ref=e286] [cursor=pointer]
+        - generic [ref=e287]:
+          - generic [ref=e288]:
+            - heading "Your Created Tests | All Domains 1" [level=2] [ref=e289]:
+              - text: Your Created Tests
+              - generic [ref=e290]: "| All Domains 1"
+            - link "View All " [ref=e291] [cursor=pointer]:
+              - /url: /admin/exams
+              - text: View All
+              - generic [ref=e292]: 
+          - link "Test Exam - Browser Test General 30 Test Exam - Browser Test" [ref=e294] [cursor=pointer]:
+            - /url: /admin/exams/246addd8-ec72-4ee1-b40e-37477ed4007d
+            - generic [ref=e295]:
+              - img "Test Exam - Browser Test" [ref=e296]
+              - generic [ref=e297]: General
+              - generic [ref=e299]: "30"
+            - generic [ref=e300]: Test Exam - Browser Test

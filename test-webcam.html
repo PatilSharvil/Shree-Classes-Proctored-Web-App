@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Webcam & MediaPipe Test</title>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4/face_detection.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #1a1a1a; color: white; }
+    .container { max-width: 800px; margin: 0 auto; }
+    video { width: 640px; height: 480px; background: #333; border: 3px solid #00ff00; border-radius: 10px; }
+    .status { margin: 20px 0; padding: 15px; background: #2a2a2a; border-radius: 8px; }
+    .success { color: #00ff00; }
+    .error { color: #ff4444; }
+    button { padding: 12px 24px; font-size: 16px; background: #0066ff; color: white; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+    button:hover { background: #0052cc; }
+    #log { background: #0a0a0a; padding: 15px; border-radius: 5px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎥 Webcam & MediaPipe Test</h1>
+    
+    <div>
+      <button onclick="startWebcam()">Start Webcam</button>
+      <button onclick="startMediaPipe()">Start MediaPipe Detection</button>
+      <button onclick="stopAll()">Stop All</button>
+    </div>
+
+    <div class="status" id="status">
+      <h3>Status: <span id="statusText">Ready</span></h3>
+      <p>Face Count: <span id="faceCount">0</span></p>
+      <p>Face Position: <span id="facePosition">N/A</span></p>
+      <p>Detections: <span id="detectionCount">0</span></p>
+    </div>
+
+    <video id="webcam" autoplay playsinline muted></video>
+    
+    <div id="log"></div>
+  </div>
+
+  <script>
+    let videoStream = null;
+    let faceDetection = null;
+    let detectionInterval = null;
+    let detectionCount = 0;
+
+    function log(message, type = 'info') {
+      const logDiv = document.getElementById('log');
+      const timestamp = new Date().toLocaleTimeString();
+      const color = type === 'error' ? '#ff4444' : type === 'success' ? '#00ff00' : '#00aaff';
+      logDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+      logDiv.scrollTop = logDiv.scrollHeight;
+      console.log(`[Webcam Test] ${message}`);
+    }
+
+    async function startWebcam() {
+      try {
+        log('Requesting camera permission...', 'info');
+        document.getElementById('statusText').textContent = 'Requesting permission...';
+        
+        videoStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 640, height: 480, frameRate: 30 },
+          audio: false
+        });
+
+        const video = document.getElementById('webcam');
+        video.srcObject = videoStream;
+        
+        await video.play();
+        
+        log('✅ Webcam started successfully!', 'success');
+        document.getElementById('statusText').textContent = 'Camera Active';
+        document.getElementById('statusText').className = 'success';
+        
+      } catch (err) {
+        log(`❌ Webcam error: ${err.message}`, 'error');
+        document.getElementById('statusText').textContent = `Error: ${err.name}`;
+        document.getElementById('statusText').className = 'error';
+      }
+    }
+
+    async function startMediaPipe() {
+      if (!videoStream) {
+        log('⚠️ Please start webcam first!', 'error');
+        return;
+      }
+
+      try {
+        log('Initializing MediaPipe Face Detection...', 'info');
+        
+        faceDetection = new FaceDetection({
+          locateFile: (file) => {
+            return `https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4/${file}`;
+          }
+        });
+
+        faceDetection.setOptions({
+          model: 'short',
+          minDetectionConfidence: 0.5
+        });
+
+        faceDetection.onResults((results) => {
+          detectionCount++;
+          const faceCount = results.detections ? results.detections.length : 0;
+          
+          document.getElementById('faceCount').textContent = faceCount;
+          document.getElementById('detectionCount').textContent = detectionCount;
+          
+          if (faceCount === 0) {
+            log('⚠️ No face detected', 'error');
+          } else if (faceCount === 1) {
+            const box = results.detections[0].boundingBox;
+            const pos = `x: ${Math.round(box.xCenter * 100)}%, y: ${Math.round(box.yCenter * 100)}%`;
+            document.getElementById('facePosition').textContent = pos;
+            log(`✅ Face detected at ${pos}`, 'success');
+          } else {
+            log(`⚠️ ${faceCount} faces detected!`, 'error');
+          }
+        });
+
+        // Start detection loop at 2 FPS
+        detectionInterval = setInterval(async () => {
+          const video = document.getElementById('webcam');
+          if (video.readyState >= 2 && faceDetection) {
+            try {
+              await faceDetection.send({ image: video });
+            } catch (err) {
+              log(`Detection error: ${err.message}`, 'error');
+            }
+          }
+        }, 500);
+
+        log('✅ MediaPipe started!', 'success');
+        document.getElementById('statusText').textContent = 'AI Detection Active';
+        
+      } catch (err) {
+        log(`❌ MediaPipe error: ${err.message}`, 'error');
+      }
+    }
+
+    function stopAll() {
+      if (detectionInterval) {
+        clearInterval(detectionInterval);
+        detectionInterval = null;
+      }
+      
+      if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+      }
+      
+      if (faceDetection) {
+        faceDetection.close();
+        faceDetection = null;
+      }
+      
+      const video = document.getElementById('webcam');
+      video.srcObject = null;
+      
+      log('🛑 All stopped', 'info');
+      document.getElementById('statusText').textContent = 'Ready';
+      document.getElementById('statusText').className = '';
+      document.getElementById('faceCount').textContent = '0';
+      document.getElementById('facePosition').textContent = 'N/A';
+      document.getElementById('detectionCount').textContent = '0';
+    }
+  </script>
+</body>
+</html>

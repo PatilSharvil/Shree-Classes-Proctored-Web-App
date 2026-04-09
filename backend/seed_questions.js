@@ -1,0 +1,13 @@
+const db = require('better-sqlite3');
+const d = new db('./data/exam.db');
+const eid = '246addd8-ec72-4ee1-b40e-37477ed4007d';
+d.pragma('journal_mode = WAL');
+const ins = d.prepare('INSERT INTO questions (id, exam_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks) VALUES (?,?,?,?,?,?,?,?,?)');
+ins.run('tq1', eid, 'What is the SI unit of force?', 'Newton', 'Joule', 'Watt', 'Pascal', 'A', 4);
+ins.run('tq2', eid, 'Speed of light in vacuum?', '3e6 m/s', '3e8 m/s', '3e10 m/s', '3e4 m/s', 'B', 4);
+ins.run('tq3', eid, 'F=ma is which law?', 'First Law', 'Second Law', 'Third Law', 'Gravitation', 'B', 4);
+ins.run('tq4', eid, 'Unit of electric current?', 'Volt', 'Ohm', 'Ampere', 'Watt', 'C', 4);
+ins.run('tq5', eid, 'Conservation of Energy is?', 'Energy Law', 'Ohm Law', 'Newton Law', 'Hooke Law', 'A', 4);
+const cnt = d.prepare('SELECT COUNT(*) as c FROM questions WHERE exam_id=?').get(eid);
+console.log('Count:', cnt.c);
+d.close();

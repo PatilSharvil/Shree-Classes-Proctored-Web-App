@@ -1,0 +1,11 @@
+- generic [ref=e2]:
+  - heading "🎥 Webcam & MediaPipe Test" [level=1] [ref=e3]
+  - generic [ref=e4]:
+    - button "Start Webcam" [ref=e5] [cursor=pointer]
+    - button "Start MediaPipe Detection" [ref=e6] [cursor=pointer]
+    - button "Stop All" [ref=e7] [cursor=pointer]
+  - generic [ref=e8]:
+    - 'heading "Status: Ready" [level=3] [ref=e9]'
+    - paragraph [ref=e10]: "Face Count: 0"
+    - paragraph [ref=e11]: "Face Position: N/A"
+    - paragraph [ref=e12]: "Detections: 0"
