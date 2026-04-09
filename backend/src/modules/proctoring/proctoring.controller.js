@@ -231,7 +231,7 @@ const saveSnapshot = (req, res) => {
       detectionType,
       confidence,
       violationId,
-      retentionDays || 30
+      retentionDays || 7
     );
 
     return apiResponse(res, 201, result, 'Snapshot saved');
@@ -273,6 +273,32 @@ const getExamEvidenceGallery = (req, res) => {
   }
 };
 
+/**
+ * Get storage statistics (Admin)
+ * GET /api/proctoring/storage-stats
+ */
+const getStorageStats = (req, res) => {
+  try {
+    const stats = proctoringService.getStorageStats();
+    return apiResponse(res, 200, stats, 'Storage statistics retrieved');
+  } catch (error) {
+    return errorResponse(res, 500, 'Failed to get storage stats.', error.message);
+  }
+};
+
+/**
+ * Cleanup expired snapshots (Admin)
+ * POST /api/proctoring/cleanup
+ */
+const cleanupSnapshots = (req, res) => {
+  try {
+    const result = proctoringService.cleanupExpiredSnapshots();
+    return apiResponse(res, 200, result, 'Cleanup completed');
+  } catch (error) {
+    return errorResponse(res, 500, 'Failed to cleanup snapshots.', error.message);
+  }
+};
+
 module.exports = {
   recordViolation,
   logActivity,
@@ -290,5 +316,7 @@ module.exports = {
   exportProctoringReport,
   saveSnapshot,
   getSessionSnapshots,
-  getExamEvidenceGallery
+  getExamEvidenceGallery,
+  getStorageStats,
+  cleanupSnapshots
 };

@@ -125,4 +125,18 @@ router.get('/snapshots/:sessionId', proctoringController.getSessionSnapshots);
  */
 router.get('/evidence/:examId', authorize('ADMIN'), proctoringController.getExamEvidenceGallery);
 
+/**
+ * @route   GET /api/proctoring/storage-stats
+ * @desc    Get storage statistics (Admin only)
+ * @access  Private/Admin
+ */
+router.get('/storage-stats', authorize('ADMIN'), proctoringController.getStorageStats);
+
+/**
+ * @route   POST /api/proctoring/cleanup
+ * @desc    Cleanup expired snapshots (Admin only)
+ * @access  Private/Admin
+ */
+router.post('/cleanup', authorize('ADMIN'), proctoringController.cleanupSnapshots);
+
 module.exports = router;

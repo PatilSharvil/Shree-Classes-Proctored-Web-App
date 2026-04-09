@@ -1,6 +1,7 @@
 const db = require('../../config/database');
 const { v4: uuidv4 } = require('uuid');
 const env = require('../../config/env');
+const snapshotFileManager = require('../../utils/snapshotFileManager');
 
 class ProctoringService {
   /**
@@ -297,19 +298,31 @@ class ProctoringService {
 
   /**
    * Save AI proctoring snapshot (evidence image)
+   * Images are stored as files on disk, database only stores file paths
    */
-  saveSnapshot(sessionId, imageData, detectionType, confidence, violationId = null, retentionDays = 30) {
+  saveSnapshot(sessionId, imageData, detectionType, confidence, violationId = null, retentionDays = 7) {
     const snapshotId = uuidv4();
+
+    // Generate file path
+    const filePath = snapshotFileManager.generateFilePath(snapshotId, detectionType);
+
+    // Save image to file
+    const saveResult = snapshotFileManager.saveImage(imageData, filePath);
     
+    if (!saveResult.success) {
+      throw new Error(`Failed to save snapshot image: ${saveResult.error}`);
+    }
+
     // Calculate expiration date
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + retentionDays);
     const expiresAtStr = expiresAt.toISOString().replace('T', ' ').substring(0, 19);
 
+    // Store file path and metadata in database (NOT the image data)
     db.prepare(`
-      INSERT INTO proctoring_snapshots (id, session_id, violation_id, image_data, detection_type, confidence, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(snapshotId, sessionId, violationId, imageData, detectionType, confidence, expiresAtStr);
+      INSERT INTO proctoring_snapshots (id, session_id, violation_id, file_path, file_size, detection_type, confidence, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(snapshotId, sessionId, violationId, filePath, saveResult.fileSize, detectionType, confidence, expiresAtStr);
 
     // Update violation with snapshot reference if provided
     if (violationId) {
@@ -318,12 +331,16 @@ class ProctoringService {
       `).run(snapshotId, confidence, violationId);
     }
 
+    logger.info(`[Proctoring] Snapshot saved: ${filePath} (${(saveResult.fileSize / 1024).toFixed(2)} KB)`);
+
     return {
       snapshotId,
       sessionId,
       violationId,
       detectionType,
       confidence,
+      filePath,
+      fileSize: saveResult.fileSize,
       expiresAt: expiresAtStr
     };
   }
@@ -342,16 +359,18 @@ class ProctoringService {
 
   /**
    * Get evidence gallery for an exam (all sessions)
+   * Reads image files and includes them as base64 in response
    */
   getExamEvidenceGallery(examId, options = {}) {
-    const { limit = 50, detectionType = null, minConfidence = 0 } = options;
+    const { limit = 50, detectionType = null, minConfidence = 0, includeImage = true } = options;
 
     let query = `
       SELECT
         s.id as snapshot_id,
         s.session_id,
         s.violation_id,
-        s.image_data,
+        s.file_path,
+        s.file_size,
         s.detection_type,
         s.confidence,
         s.timestamp,
@@ -379,21 +398,74 @@ class ProctoringService {
     query += ` ORDER BY s.timestamp DESC LIMIT ?`;
     params.push(limit);
 
-    return db.prepare(query).all(...params);
+    const snapshots = db.prepare(query).all(...params);
+
+    // Read image files and convert to base64 for frontend display
+    return snapshots.map(snapshot => {
+      const imageData = includeImage ? snapshotFileManager.readImage(snapshot.file_path) : null;
+      
+      return {
+        ...snapshot,
+        image_data: imageData,
+        file_exists: imageData !== null
+      };
+    });
   }
 
   /**
    * Delete expired snapshots (cleanup job)
+   * Deletes both database records and actual image files
    */
   cleanupExpiredSnapshots() {
     const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    
+    // Get expired snapshots
+    const expired = db.prepare(`
+      SELECT id, file_path, file_size FROM proctoring_snapshots WHERE expires_at < ?
+    `).all(now);
+
+    if (expired.length === 0) {
+      return { deleted: 0, freedSpace: 0, message: 'No expired snapshots to clean' };
+    }
+
+    // Delete files first
+    const filePaths = expired.map(s => s.file_path);
+    const cleanupResult = snapshotFileManager.cleanupExpired(filePaths);
+
+    // Then delete database records
     const result = db.prepare(`
       DELETE FROM proctoring_snapshots WHERE expires_at < ?
     `).run(now);
+
+    const totalFreed = cleanupResult.freedSpace;
     
+    logger.info(`[Proctoring] Cleanup: Deleted ${result.changes} snapshot records, freed ${(totalFreed / 1024 / 1024).toFixed(2)} MB`);
+
     return {
       deleted: result.changes,
-      message: `Deleted ${result.changes} expired snapshots`
+      freedSpace: totalFreed,
+      message: `Deleted ${result.changes} expired snapshots, freed ${(totalFreed / 1024 / 1024).toFixed(2)} MB`
+    };
+  }
+
+  /**
+   * Get storage statistics
+   */
+  getStorageStats() {
+    const fileStats = snapshotFileManager.getStorageStats();
+    
+    const dbStats = db.prepare(`
+      SELECT COUNT(*) as total_records, SUM(file_size) as total_db_size
+      FROM proctoring_snapshots
+    `).get();
+
+    return {
+      files: fileStats,
+      database: {
+        totalRecords: dbStats.total_records,
+        totalSize: dbStats.total_db_size || 0,
+        totalSizeMB: ((dbStats.total_db_size || 0) / 1024 / 1024).toFixed(2)
+      }
     };
   }
 }

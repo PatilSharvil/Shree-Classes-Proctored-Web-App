@@ -142,12 +142,15 @@ const initializeDatabase = () => {
   }
 
   // Proctoring snapshots table (AI evidence images)
+  // NOTE: Images are stored as files in data/proctoring-snapshots/ directory
+  // Database only stores file paths and metadata
   db.exec(`
     CREATE TABLE IF NOT EXISTS proctoring_snapshots (
       id TEXT PRIMARY KEY,
       session_id TEXT NOT NULL,
       violation_id TEXT,
-      image_data TEXT NOT NULL,
+      file_path TEXT NOT NULL,
+      file_size INTEGER DEFAULT 0,
       detection_type TEXT NOT NULL,
       confidence REAL NOT NULL,
       timestamp TEXT DEFAULT (datetime('now')),
