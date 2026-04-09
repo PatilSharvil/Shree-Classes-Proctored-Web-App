@@ -104,4 +104,25 @@ router.delete('/violations/:sessionId', authorize('ADMIN'), proctoringController
  */
 router.get('/export/:examId', authorize('ADMIN'), proctoringController.exportProctoringReport);
 
+/**
+ * @route   POST /api/proctoring/snapshots
+ * @desc    Save AI proctoring snapshot
+ * @access  Private
+ */
+router.post('/snapshots', proctoringController.saveSnapshot);
+
+/**
+ * @route   GET /api/proctoring/snapshots/:sessionId
+ * @desc    Get snapshots for a session
+ * @access  Private
+ */
+router.get('/snapshots/:sessionId', proctoringController.getSessionSnapshots);
+
+/**
+ * @route   GET /api/proctoring/evidence/:examId
+ * @desc    Get evidence gallery for an exam (Admin only)
+ * @access  Private/Admin
+ */
+router.get('/evidence/:examId', authorize('ADMIN'), proctoringController.getExamEvidenceGallery);
+
 module.exports = router;

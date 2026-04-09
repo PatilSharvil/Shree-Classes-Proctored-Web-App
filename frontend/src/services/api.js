@@ -199,7 +199,11 @@ export const proctoringAPI = {
   getBreakdown: (params) => api.get('/proctoring/breakdown', { params }),
   getViolationPatterns: () => api.get('/proctoring/patterns'),
   clearViolations: (sessionId) => api.delete(`/proctoring/violations/${sessionId}`),
-  exportProctoringReport: (examId) => api.get(`/proctoring/export/${examId}`)
+  exportProctoringReport: (examId) => api.get(`/proctoring/export/${examId}`),
+  // AI Proctoring endpoints
+  saveSnapshot: (data) => api.post('/proctoring/snapshots', data),
+  getSessionSnapshots: (sessionId) => api.get(`/proctoring/snapshots/${sessionId}`),
+  getExamEvidenceGallery: (examId, params) => api.get(`/proctoring/evidence/${examId}`, { params })
 };
 
 export default api;

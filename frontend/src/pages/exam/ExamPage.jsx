@@ -5,6 +5,7 @@ import useExamStore from '../../store/examStore';
 import useAuthStore from '../../store/authStore';
 import { formatTime } from '../../hooks/useExamTimer';
 import { useProctoring } from '../../hooks/useProctoring';
+import AIProctoringWrapper from '../../components/proctoring/AIProctoringWrapper';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -890,6 +891,14 @@ const ExamPage = () => {
             </div>
           </Card>
         </div>
+      )}
+
+      {/* AI Proctoring (Webcam + Face Detection) */}
+      {examStarted && session?.id && (
+        <AIProctoringWrapper
+          sessionId={session.id}
+          enabled={true}
+        />
       )}
     </div>
   );

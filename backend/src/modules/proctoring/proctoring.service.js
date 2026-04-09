@@ -282,7 +282,7 @@ class ProctoringService {
    */
   exportProctoringReport(examId) {
     const sessions = this.getExamActivitySummary(examId);
-    
+
     return sessions.map(session => ({
       sessionId: session.session_id,
       studentName: session.name,
@@ -293,6 +293,108 @@ class ProctoringService {
       violationEvents: session.violation_events,
       lastActivity: session.last_activity
     }));
+  }
+
+  /**
+   * Save AI proctoring snapshot (evidence image)
+   */
+  saveSnapshot(sessionId, imageData, detectionType, confidence, violationId = null, retentionDays = 30) {
+    const snapshotId = uuidv4();
+    
+    // Calculate expiration date
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + retentionDays);
+    const expiresAtStr = expiresAt.toISOString().replace('T', ' ').substring(0, 19);
+
+    db.prepare(`
+      INSERT INTO proctoring_snapshots (id, session_id, violation_id, image_data, detection_type, confidence, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(snapshotId, sessionId, violationId, imageData, detectionType, confidence, expiresAtStr);
+
+    // Update violation with snapshot reference if provided
+    if (violationId) {
+      db.prepare(`
+        UPDATE violations SET snapshot_id = ?, confidence_score = ? WHERE id = ?
+      `).run(snapshotId, confidence, violationId);
+    }
+
+    return {
+      snapshotId,
+      sessionId,
+      violationId,
+      detectionType,
+      confidence,
+      expiresAt: expiresAtStr
+    };
+  }
+
+  /**
+   * Get all snapshots for a session
+   */
+  getSessionSnapshots(sessionId) {
+    return db.prepare(`
+      SELECT id, session_id, violation_id, detection_type, confidence, timestamp, expires_at
+      FROM proctoring_snapshots
+      WHERE session_id = ?
+      ORDER BY timestamp DESC
+    `).all(sessionId);
+  }
+
+  /**
+   * Get evidence gallery for an exam (all sessions)
+   */
+  getExamEvidenceGallery(examId, options = {}) {
+    const { limit = 50, detectionType = null, minConfidence = 0 } = options;
+
+    let query = `
+      SELECT
+        s.id as snapshot_id,
+        s.session_id,
+        s.violation_id,
+        s.image_data,
+        s.detection_type,
+        s.confidence,
+        s.timestamp,
+        v.type as violation_type,
+        v.description as violation_description,
+        v.severity,
+        es.user_id,
+        u.name as student_name,
+        u.email as student_email
+      FROM proctoring_snapshots s
+      INNER JOIN exam_sessions es ON s.session_id = es.id
+      LEFT JOIN users u ON es.user_id = u.id
+      LEFT JOIN violations v ON s.violation_id = v.id
+      WHERE es.exam_id = ?
+        AND s.confidence >= ?
+    `;
+
+    const params = [examId, minConfidence];
+
+    if (detectionType) {
+      query += ` AND s.detection_type = ?`;
+      params.push(detectionType);
+    }
+
+    query += ` ORDER BY s.timestamp DESC LIMIT ?`;
+    params.push(limit);
+
+    return db.prepare(query).all(...params);
+  }
+
+  /**
+   * Delete expired snapshots (cleanup job)
+   */
+  cleanupExpiredSnapshots() {
+    const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const result = db.prepare(`
+      DELETE FROM proctoring_snapshots WHERE expires_at < ?
+    `).run(now);
+    
+    return {
+      deleted: result.changes,
+      message: `Deleted ${result.changes} expired snapshots`
+    };
   }
 }
 

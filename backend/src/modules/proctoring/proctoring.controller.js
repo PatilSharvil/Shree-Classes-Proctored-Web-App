@@ -209,7 +209,67 @@ const exportProctoringReport = (req, res) => {
     const report = proctoringService.exportProctoringReport(req.params.examId);
     return apiResponse(res, 200, report, 'Proctoring report exported');
   } catch (error) {
-    return errorResponse(res, 500, 'Failed to export report.', error.message);
+    return errorResponse(res, 500, 'Failed to export proctoring report.', error.message);
+  }
+};
+
+/**
+ * Save AI proctoring snapshot
+ * POST /api/proctoring/snapshots
+ */
+const saveSnapshot = (req, res) => {
+  try {
+    const { sessionId, imageData, detectionType, confidence, violationId, retentionDays } = req.body;
+
+    if (!sessionId || !imageData || !detectionType || confidence === undefined) {
+      return errorResponse(res, 400, 'sessionId, imageData, detectionType, and confidence are required.');
+    }
+
+    const result = proctoringService.saveSnapshot(
+      sessionId,
+      imageData,
+      detectionType,
+      confidence,
+      violationId,
+      retentionDays || 30
+    );
+
+    return apiResponse(res, 201, result, 'Snapshot saved');
+  } catch (error) {
+    return errorResponse(res, 500, 'Failed to save snapshot.', error.message);
+  }
+};
+
+/**
+ * Get snapshots for a session
+ * GET /api/proctoring/snapshots/:sessionId
+ */
+const getSessionSnapshots = (req, res) => {
+  try {
+    const snapshots = proctoringService.getSessionSnapshots(req.params.sessionId);
+    return apiResponse(res, 200, snapshots, 'Session snapshots retrieved');
+  } catch (error) {
+    return errorResponse(res, 500, 'Failed to get session snapshots.', error.message);
+  }
+};
+
+/**
+ * Get evidence gallery for an exam (Admin)
+ * GET /api/proctoring/evidence/:examId
+ */
+const getExamEvidenceGallery = (req, res) => {
+  try {
+    const { limit, detectionType, minConfidence } = req.query;
+    const options = {
+      limit: parseInt(limit) || 50,
+      detectionType: detectionType || null,
+      minConfidence: parseFloat(minConfidence) || 0
+    };
+
+    const evidence = proctoringService.getExamEvidenceGallery(req.params.examId, options);
+    return apiResponse(res, 200, evidence, 'Evidence gallery retrieved');
+  } catch (error) {
+    return errorResponse(res, 500, 'Failed to get evidence gallery.', error.message);
   }
 };
 
@@ -227,5 +287,8 @@ module.exports = {
   getViolationTypeBreakdown,
   getViolationPatterns,
   clearViolations,
-  exportProctoringReport
+  exportProctoringReport,
+  saveSnapshot,
+  getSessionSnapshots,
+  getExamEvidenceGallery
 };

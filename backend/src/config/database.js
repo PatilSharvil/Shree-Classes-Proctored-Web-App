@@ -128,6 +128,41 @@ const initializeDatabase = () => {
     // Column already exists, ignore
   }
 
+  // Add AI detection columns to violations (safe migration)
+  try {
+    db.exec(`ALTER TABLE violations ADD COLUMN confidence_score REAL DEFAULT 0`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
+  try {
+    db.exec(`ALTER TABLE violations ADD COLUMN snapshot_id TEXT`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
+  // Proctoring snapshots table (AI evidence images)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS proctoring_snapshots (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      violation_id TEXT,
+      image_data TEXT NOT NULL,
+      detection_type TEXT NOT NULL,
+      confidence REAL NOT NULL,
+      timestamp TEXT DEFAULT (datetime('now')),
+      expires_at TEXT,
+      FOREIGN KEY (session_id) REFERENCES exam_sessions(id) ON DELETE CASCADE,
+      FOREIGN KEY (violation_id) REFERENCES violations(id) ON DELETE SET NULL
+    )
+  `);
+
+  // Create indexes for snapshots
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_snapshots_session ON proctoring_snapshots(session_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_snapshots_violation ON proctoring_snapshots(violation_id)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_snapshots_detection ON proctoring_snapshots(detection_type)`);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_snapshots_expires ON proctoring_snapshots(expires_at)`);
+
   // Proctoring activity logs table (detailed tracking)
   db.exec(`
     CREATE TABLE IF NOT EXISTS proctoring_logs (
