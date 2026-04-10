@@ -1,0 +1,70 @@
+- generic [ref=e5]:
+  - banner [ref=e6]:
+    - generic [ref=e7]:
+      - link " Shree Science Academy" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: 
+        - generic [ref=e10]: Shree Science Academy
+      - navigation [ref=e11]:
+        - button "Dashboard" [ref=e12] [cursor=pointer]
+        - generic [ref=e13]: admin@example.com
+        - button "Logout" [ref=e14] [cursor=pointer]
+  - main [ref=e15]:
+    - generic [ref=e16]:
+      - text: 
+      - complementary [ref=e17]:
+        - link "" [ref=e18] [cursor=pointer]:
+          - /url: /admin
+          - generic [ref=e19]: 
+        - link "" [ref=e20] [cursor=pointer]:
+          - /url: /admin/exams
+          - generic [ref=e21]: 
+        - link "" [ref=e22] [cursor=pointer]:
+          - /url: /admin/analytics
+          - generic [ref=e23]: 
+        - link "" [ref=e24] [cursor=pointer]:
+          - /url: /admin/students
+          - generic [ref=e25]: 
+      - main [ref=e26]:
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - generic [ref=e29]:
+              - link "←" [ref=e30] [cursor=pointer]:
+                - /url: /admin/exams/246addd8-ec72-4ee1-b40e-37477ed4007d/manage
+                - button "←" [ref=e31]
+              - heading "Proctoring Dashboard" [level=1] [ref=e32]
+            - paragraph [ref=e33]: Test Exam - Browser Test
+          - generic [ref=e34]:
+            - generic [ref=e35]:
+              - checkbox "Auto-refresh (10s)" [checked] [ref=e36]
+              - text: Auto-refresh (10s)
+            - button "Refresh" [ref=e37] [cursor=pointer]
+        - generic [ref=e38]:
+          - generic [ref=e39]:
+            - generic [ref=e40]: "0"
+            - generic [ref=e41]: Active Students
+          - generic [ref=e42]:
+            - generic [ref=e43]: "0"
+            - generic [ref=e44]: With Violations
+          - generic [ref=e45]:
+            - generic [ref=e46]: "0"
+            - generic [ref=e47]: Avg Violations
+          - generic [ref=e48]:
+            - generic [ref=e49]: Active
+            - generic [ref=e50]: Exam Status
+        - generic [ref=e51]:
+          - button "🔴 Live Monitoring" [ref=e52] [cursor=pointer]
+          - button "🚨 Cheating Detection" [active] [ref=e53] [cursor=pointer]
+          - button "📊 All Sessions" [ref=e54] [cursor=pointer]
+        - generic [ref=e60]:
+          - generic [ref=e61]:
+            - generic [ref=e62]:
+              - heading "🚨 AI Cheating Detection" [level=2] [ref=e63]
+              - paragraph [ref=e64]: Monitor gaze tracking, face detection, and suspicious behavior
+            - generic [ref=e65]:
+              - generic [ref=e66]: 0 High Risk
+              - generic [ref=e67]: 0 Medium Risk
+          - generic [ref=e68]:
+            - generic [ref=e69]: 📊
+            - paragraph [ref=e70]: No student data available
+            - paragraph [ref=e71]: Students need to take the exam to generate cheating detection data

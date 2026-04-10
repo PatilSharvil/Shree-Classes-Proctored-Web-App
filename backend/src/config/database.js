@@ -135,6 +135,13 @@ const initializeDatabase = () => {
     // Column already exists, ignore
   }
 
+  // Add metadata column for AI detection data (safe migration)
+  try {
+    db.exec(`ALTER TABLE violations ADD COLUMN metadata TEXT`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
   try {
     db.exec(`ALTER TABLE violations ADD COLUMN snapshot_id TEXT`);
   } catch (e) {
