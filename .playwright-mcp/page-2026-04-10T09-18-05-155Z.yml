@@ -1,0 +1,12 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link " Shree Science Academy" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: 
+        - generic [ref=e8]: Shree Science Academy
+      - navigation [ref=e9]:
+        - button "Dashboard" [ref=e10] [cursor=pointer]
+        - generic [ref=e11]: test1@example.com
+        - button "Logout" [ref=e12] [cursor=pointer]
+  - main [ref=e13]

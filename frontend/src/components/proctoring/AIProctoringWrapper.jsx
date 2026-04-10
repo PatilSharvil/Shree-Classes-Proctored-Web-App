@@ -1,29 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import useWebcam from '../../hooks/useWebcam';
 import useMediaPipeDetection, { AI_DETECTION_TYPES, AI_SEVERITY } from '../../hooks/useMediaPipeDetection';
 import WebcamPreview from '../proctoring/WebcamPreview';
-import AIDetectionStatus from '../proctoring/AIDetectionStatus';
 import { proctoringAPI } from '../../services/api';
 
 /**
  * AI Proctoring Wrapper Component
- * Integrates webcam and AI detection into exam pages
- * Works alongside existing text-based proctoring
+ * Simplified for free-tier deployment - text-only violations, no image storage
  */
-const AIProctoringWrapper = ({ sessionId, enabled = true, className = '' }) => {
+const AIProctoringWrapper = ({ sessionId, enabled = true }) => {
   const [showStatus, setShowStatus] = useState(false);
-  const [aiViolations, setAiViolations] = useState({});
-  const [snapshotQueue, setSnapshotQueue] = useState([]);
+  const [aiStatus, setAiStatus] = useState('Initializing...');
+  const [lastViolation, setLastViolation] = useState(null);
+  const violationCooldownRef = useRef({});
 
   // Initialize webcam
   const webcam = useWebcam({
     enabled,
     width: 320,
     height: 240,
-    fps: 30,
-    onPermissionDenied: () => {
-      console.warn('[AI Proctoring] Webcam permission denied');
-    }
+    fps: 30
   });
 
   // Initialize AI detection
@@ -31,22 +27,39 @@ const AIProctoringWrapper = ({ sessionId, enabled = true, className = '' }) => {
     enabled: enabled && webcam.isReady,
     videoRef: webcam.videoRef,
     detectionFps: 2,
-    faceConfidenceThreshold: 0.75,
+    faceConfidenceThreshold: 0.5,
     minFaceAbsenceSec: 5,
     minGazeAwaySec: 10,
-    onDetection: handleAIDetection,
-    onSnapshotCapture: handleSnapshotCapture
+    onDetection: handleAIDetection
   });
 
-  // Handle AI detection events
+  // Handle AI detection events - TEXT ONLY, no snapshots
   async function handleAIDetection(detection) {
-    console.log('[AI Proctoring] Detection:', detection);
-
     if (!sessionId) return;
 
+    // Cooldown: only record same violation type once per 60 seconds
+    const now = Date.now();
+    const cooldownMs = 60000;
+    if (violationCooldownRef.current[detection.type] && 
+        now - violationCooldownRef.current[detection.type] < cooldownMs) {
+      return;
+    }
+
+    violationCooldownRef.current[detection.type] = now;
+
+    setLastViolation({
+      type: detection.type,
+      description: detection.description,
+      severity: detection.severity,
+      confidence: detection.confidence,
+      timestamp: new Date().toLocaleTimeString()
+    });
+
+    setAiStatus(`⚠️ ${detection.type}`);
+
     try {
-      // Record violation with existing proctoring system
-      const response = await proctoringAPI.recordViolation({
+      // Record violation as TEXT ONLY - no image data
+      await proctoringAPI.recordViolation({
         sessionId,
         type: detection.type,
         description: detection.description,
@@ -57,67 +70,37 @@ const AIProctoringWrapper = ({ sessionId, enabled = true, className = '' }) => {
           timestamp: detection.timestamp
         }
       });
-
-      // Track active violations
-      setAiViolations(prev => ({
-        ...prev,
-        [detection.type]: {
-          ...detection,
-          violationId: response.data?.data?.violationId
-        }
-      }));
-
-      // Queue snapshot for upload if we have one
-      if (snapshotQueue.length > 0) {
-        uploadQueuedSnapshots(response.data?.data?.violationId);
-      }
     } catch (error) {
       console.error('[AI Proctoring] Failed to record violation:', error);
     }
   }
 
-  // Handle snapshot capture from AI detection
-  function handleSnapshotCapture(detectionType, confidence) {
-    const snapshot = webcam.captureSnapshot();
-    if (snapshot) {
-      setSnapshotQueue(prev => [...prev, { snapshot, detectionType, confidence }]);
-    }
-  }
-
-  // Upload queued snapshots
-  async function uploadQueuedSnapshots(violationId) {
-    for (const item of snapshotQueue) {
-      try {
-        await proctoringAPI.saveSnapshot({
-          sessionId,
-          imageData: item.snapshot,
-          detectionType: item.detectionType,
-          confidence: item.confidence,
-          violationId,
-          retentionDays: 30
-        });
-      } catch (error) {
-        console.error('[AI Proctoring] Failed to upload snapshot:', error);
-      }
-    }
-    setSnapshotQueue([]);
-  }
-
-  // Clear violation from active list
-  const clearViolation = (type) => {
-    setAiViolations(prev => {
-      const updated = { ...prev };
-      delete updated[type];
-      return updated;
-    });
-  };
-
-  // Cleanup on unmount
+  // Update status display
   useEffect(() => {
-    return () => {
-      webcam.stopWebcam();
-    };
-  }, []);
+    if (!enabled) {
+      setAiStatus('Disabled');
+      return;
+    }
+
+    if (!webcam.isReady) {
+      setAiStatus(webcam.error ? '❌ Camera Error' : '📷 Starting Camera...');
+      return;
+    }
+
+    if (!aiDetection.isReady) {
+      setAiStatus('🤖 Loading AI Model...');
+      return;
+    }
+
+    const { faceCount } = aiDetection.detections;
+    if (faceCount === 0) {
+      setAiStatus('⚠️ No Face Detected');
+    } else if (faceCount === 1) {
+      setAiStatus('✅ Face Detected - Monitoring Active');
+    } else {
+      setAiStatus(`⚠️ ${faceCount} Faces Detected`);
+    }
+  }, [enabled, webcam.isReady, webcam.error, aiDetection.isReady, aiDetection.detections]);
 
   if (!enabled) {
     return null;
@@ -144,10 +127,41 @@ const AIProctoringWrapper = ({ sessionId, enabled = true, className = '' }) => {
       {/* AI Detection Status Panel */}
       {showStatus && (
         <div className="fixed bottom-20 left-4 w-72 z-50">
-          <AIDetectionStatus
-            detections={aiDetection.detections}
-            activeViolations={aiViolations}
-          />
+          <div className="bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg p-3 shadow-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <i className="fas fa-robot text-purple-600"></i>
+              <span className="text-xs font-bold text-gray-700">AI Proctoring Status</span>
+            </div>
+
+            {/* Current Status */}
+            <div className="bg-gray-50 rounded p-2 mb-2">
+              <p className="text-xs font-bold text-gray-700">{aiStatus}</p>
+            </div>
+
+            {/* Face Detection Info */}
+            <div className="space-y-1 text-[10px] text-gray-600 mb-2">
+              <p>👤 Faces: {aiDetection.detections.faceCount}</p>
+              <p>🎯 Detection Rate: 2 FPS</p>
+              <p>⏱️ Cooldown: 60s per violation type</p>
+            </div>
+
+            {/* Last Violation */}
+            {lastViolation && (
+              <div className="bg-red-50 border border-red-200 rounded p-2">
+                <p className="text-[10px] font-bold text-red-700 mb-1">⚠️ Last Violation:</p>
+                <p className="text-[9px] text-red-600">{lastViolation.type}</p>
+                <p className="text-[8px] text-red-500">{lastViolation.description}</p>
+                <p className="text-[8px] text-gray-400">{lastViolation.timestamp}</p>
+              </div>
+            )}
+
+            {/* Privacy Notice */}
+            <div className="mt-2 pt-2 border-t border-gray-200">
+              <p className="text-[8px] text-gray-500 text-center">
+                🔒 All processing happens locally. No images are stored.
+              </p>
+            </div>
+          </div>
           <button
             onClick={() => setShowStatus(false)}
             className="mt-2 w-full py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold hover:bg-gray-200 transition-all"
@@ -165,7 +179,7 @@ const AIProctoringWrapper = ({ sessionId, enabled = true, className = '' }) => {
             <div className="flex-1">
               <h4 className="text-sm font-bold text-yellow-900 mb-1">Camera Access Required</h4>
               <p className="text-xs text-yellow-800 mb-2">
-                This exam requires webcam access for AI proctoring. Please allow camera access and refresh the page.
+                This exam requires webcam access for AI proctoring. Please allow camera access and refresh.
               </p>
               <button
                 onClick={() => window.location.reload()}

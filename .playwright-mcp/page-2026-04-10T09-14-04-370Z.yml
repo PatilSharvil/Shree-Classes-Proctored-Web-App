@@ -1,0 +1,96 @@
+- generic [ref=e151]:
+  - banner [ref=e152]:
+    - generic [ref=e153]:
+      - link " Shree Science Academy" [ref=e154] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e155]: 
+        - generic [ref=e156]: Shree Science Academy
+      - navigation [ref=e157]:
+        - button "Dashboard" [ref=e158] [cursor=pointer]
+        - generic [ref=e159]: test1@example.com
+        - button "Logout" [ref=e160] [cursor=pointer]
+  - main [ref=e161]:
+    - generic [ref=e162]:
+      - generic [ref=e164]:
+        - generic [ref=e165]:
+          - generic [ref=e166]: Student Portal Active
+          - heading "Welcome Back, Student" [level=1] [ref=e168]:
+            - text: Welcome Back,
+            - text: Student
+          - paragraph [ref=e169]: MHT-CET Exam Prep — Study smart and achieve your best scores with Shree Science Academy.
+          - generic [ref=e171]: Get Started
+        - generic [ref=e174]: 
+      - generic [ref=e176]:
+        - generic [ref=e177]:
+          - generic [ref=e179]: 
+          - generic [ref=e180]: "0"
+          - generic [ref=e181]: Tests Taken
+        - generic [ref=e182]:
+          - generic [ref=e184]: 
+          - generic [ref=e185]: 0%
+          - generic [ref=e186]: Avg Score
+        - generic [ref=e187]:
+          - generic [ref=e189]: 
+          - generic [ref=e190]: "0"
+          - generic [ref=e191]: Total Points
+        - generic [ref=e192]:
+          - generic [ref=e194]: 
+          - generic [ref=e195]: "0"
+          - generic [ref=e196]: Study Minutes
+      - generic [ref=e197]:
+        - generic [ref=e198]:
+          - generic [ref=e199]:
+            - generic [ref=e200]:
+              - heading "Available Exams" [level=2] [ref=e201]: Available Exams
+              - generic [ref=e204]: 1 Available
+            - generic [ref=e208]:
+              - generic [ref=e209]:
+                - generic [ref=e211]: 
+                - generic [ref=e212]: Physics
+              - generic [ref=e213]:
+                - heading "Test Exam - Browser Test" [level=3] [ref=e214]
+                - paragraph [ref=e215]: Automated browser testing exam
+              - generic [ref=e216]:
+                - generic [ref=e217]:
+                  - generic [ref=e218]: Time Limit
+                  - generic [ref=e219]: 30 Minutes
+                - generic [ref=e220]:
+                  - generic [ref=e221]: Questions
+                  - generic [ref=e222]: 8 MCQs
+              - link "Start Exam " [ref=e223] [cursor=pointer]:
+                - /url: /exam/246addd8-ec72-4ee1-b40e-37477ed4007d
+                - button "Start Exam " [ref=e224]:
+                  - text: Start Exam
+                  - generic [ref=e225]: 
+          - generic [ref=e226]:
+            - generic [ref=e227]:
+              - heading "Recent Performance" [level=2] [ref=e228]: Recent Performance
+              - link "View Full History" [ref=e230] [cursor=pointer]:
+                - /url: /profile
+            - generic [ref=e231]:
+              - generic [ref=e232]: 
+              - paragraph [ref=e233]: Take your first exam to see your progress
+        - generic [ref=e234]:
+          - generic [ref=e236]:
+            - heading " Subject Performance" [level=3] [ref=e238]:
+              - generic [ref=e240]: 
+              - text: Subject Performance
+            - generic [ref=e242]:
+              - generic [ref=e244]:
+                - generic [ref=e245]: Physics
+                - generic [ref=e246]: 0%
+              - generic [ref=e249]:
+                - generic [ref=e250]: Chemistry
+                - generic [ref=e251]: 0%
+              - generic [ref=e254]:
+                - generic [ref=e255]: Mathematics
+                - generic [ref=e256]: 0%
+              - generic [ref=e259]:
+                - generic [ref=e260]: Biology
+                - generic [ref=e261]: 0%
+            - paragraph [ref=e264]: Focus on General Prep to improve your overall score.
+          - generic [ref=e269]:
+            - generic [ref=e270]:
+              - generic [ref=e272]: 
+              - generic [ref=e273]: Secure Exam Session
+            - paragraph [ref=e274]: Stay in the exam window and avoid switching tabs during the test.

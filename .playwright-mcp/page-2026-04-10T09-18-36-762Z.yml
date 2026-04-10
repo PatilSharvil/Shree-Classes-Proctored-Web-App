@@ -1,0 +1,93 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link " Shree Science Academy" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: 
+        - generic [ref=e8]: Shree Science Academy
+      - navigation [ref=e9]:
+        - button "Dashboard" [ref=e10] [cursor=pointer]
+        - generic [ref=e11]: test1@example.com
+        - button "Logout" [ref=e12] [cursor=pointer]
+  - main [ref=e13]:
+    - generic [ref=e14]:
+      - generic [ref=e40]:
+        - generic [ref=e41]:
+          - heading "Test Exam - Browser Test" [level=2] [ref=e42]
+          - paragraph [ref=e43]: Q 1/8
+        - generic [ref=e44]:
+          - generic "Online" [ref=e45]:
+            - generic [ref=e46]: 📶
+            - generic [ref=e47]: Online
+          - generic "Windowed" [ref=e48]:
+            - generic [ref=e49]: ⚠️
+            - generic [ref=e50]: Windowed
+        - generic [ref=e51]: 29:57
+        - button "Submit" [ref=e53] [cursor=pointer]
+      - generic [ref=e57]: ⚠️ Full-screen mode is required for this exam.
+      - generic [ref=e58]:
+        - generic [ref=e59]:
+          - generic [ref=e61]:
+            - generic [ref=e62]:
+              - paragraph [ref=e63]: 1. Speed of light in vacuum?
+              - generic [ref=e64]: (4 marks)
+            - generic [ref=e65]:
+              - button "A.3e6 m/s" [ref=e66] [cursor=pointer]:
+                - generic [ref=e67]: A.
+                - text: 3e6 m/s
+              - button "B.3e8 m/s" [ref=e68] [cursor=pointer]:
+                - generic [ref=e69]: B.
+                - text: 3e8 m/s
+              - button "C.3e10 m/s" [ref=e70] [cursor=pointer]:
+                - generic [ref=e71]: C.
+                - text: 3e10 m/s
+              - button "D.3e4 m/s" [ref=e72] [cursor=pointer]:
+                - generic [ref=e73]: D.
+                - text: 3e4 m/s
+            - button "Mark for Review" [ref=e75] [cursor=pointer]:
+              - generic [ref=e77]: Mark for Review
+          - generic [ref=e78]:
+            - button "⬅ Previous" [disabled] [ref=e79]
+            - button "Next ➡" [ref=e80] [cursor=pointer]
+        - generic [ref=e82]:
+          - heading "Question Palette" [level=3] [ref=e83]
+          - generic [ref=e84]:
+            - generic [ref=e85]:
+              - generic [ref=e86]:
+                - generic [ref=e87]: ✓
+                - generic [ref=e88]: Answered
+              - generic [ref=e91]: Not Answered
+              - generic [ref=e92]:
+                - generic [ref=e93]: ✓
+                - generic [ref=e94]: Answered + Review
+              - generic [ref=e97]: Marked for Review
+              - generic [ref=e100]: Current
+            - generic [ref=e101]:
+              - generic [ref=e102]:
+                - generic [ref=e103]: "0"
+                - generic [ref=e104]: Answered
+              - generic [ref=e105]:
+                - generic [ref=e106]: "7"
+                - generic [ref=e107]: Not Answered
+              - generic [ref=e108]:
+                - generic [ref=e109]: "0"
+                - generic [ref=e110]: Marked for Review
+            - generic [ref=e111]:
+              - button "1" [ref=e112] [cursor=pointer]
+              - button "2" [ref=e113] [cursor=pointer]
+              - button "3" [ref=e114] [cursor=pointer]
+              - button "4" [ref=e115] [cursor=pointer]
+              - button "5" [ref=e116] [cursor=pointer]
+              - button "6" [ref=e117] [cursor=pointer]
+              - button "7" [ref=e118] [cursor=pointer]
+              - button "8" [ref=e119] [cursor=pointer]
+      - generic [ref=e120]:
+        - generic [ref=e121]:
+          - generic [ref=e124]: AI Proctoring
+          - generic [ref=e125]: LIVE
+        - generic [ref=e130]: REC
+        - generic [ref=e132]:
+          - generic [ref=e133]: AI Monitoring Active
+          - generic [ref=e134]: 
+      - button "" [ref=e135] [cursor=pointer]:
+        - generic [ref=e136]: 

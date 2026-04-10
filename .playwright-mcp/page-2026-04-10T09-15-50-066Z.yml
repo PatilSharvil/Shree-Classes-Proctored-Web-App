@@ -1,0 +1,90 @@
+- generic [ref=e151]:
+  - banner [ref=e152]:
+    - generic [ref=e153]:
+      - link " Shree Science Academy" [ref=e154] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e155]: 
+        - generic [ref=e156]: Shree Science Academy
+      - navigation [ref=e157]:
+        - button "Dashboard" [ref=e158] [cursor=pointer]
+        - generic [ref=e159]: test1@example.com
+        - button "Logout" [ref=e160] [cursor=pointer]
+  - main [ref=e161]:
+    - generic [ref=e276]:
+      - generic [ref=e301]:
+        - generic [ref=e302]:
+          - heading "Test Exam - Browser Test" [level=2] [ref=e303]
+          - paragraph [ref=e304]: Q 1/8
+        - generic [ref=e305]:
+          - generic "Online" [ref=e306]:
+            - generic [ref=e307]: 📶
+            - generic [ref=e308]: Online
+          - generic "Windowed" [ref=e309]:
+            - generic [ref=e310]: ⚠️
+            - generic [ref=e311]: Windowed
+        - generic [ref=e312]: 29:58
+        - button "Submit" [ref=e314] [cursor=pointer]
+      - generic [ref=e318]: ⚠️ Full-screen mode is required for this exam.
+      - generic [ref=e319]:
+        - generic [ref=e320]:
+          - generic [ref=e322]:
+            - generic [ref=e323]:
+              - paragraph [ref=e324]: 1. Unit of electric current?
+              - generic [ref=e325]: (4 marks)
+            - generic [ref=e326]:
+              - button "A.Volt" [ref=e327] [cursor=pointer]:
+                - generic [ref=e328]: A.
+                - text: Volt
+              - button "B.Ohm" [ref=e329] [cursor=pointer]:
+                - generic [ref=e330]: B.
+                - text: Ohm
+              - button "C.Ampere" [ref=e331] [cursor=pointer]:
+                - generic [ref=e332]: C.
+                - text: Ampere
+              - button "D.Watt" [ref=e333] [cursor=pointer]:
+                - generic [ref=e334]: D.
+                - text: Watt
+            - button "Mark for Review" [ref=e336] [cursor=pointer]:
+              - generic [ref=e338]: Mark for Review
+          - generic [ref=e339]:
+            - button "⬅ Previous" [disabled] [ref=e340]
+            - button "Next ➡" [ref=e341] [cursor=pointer]
+        - generic [ref=e343]:
+          - heading "Question Palette" [level=3] [ref=e344]
+          - generic [ref=e345]:
+            - generic [ref=e346]:
+              - generic [ref=e347]:
+                - generic [ref=e348]: ✓
+                - generic [ref=e349]: Answered
+              - generic [ref=e352]: Not Answered
+              - generic [ref=e353]:
+                - generic [ref=e354]: ✓
+                - generic [ref=e355]: Answered + Review
+              - generic [ref=e358]: Marked for Review
+              - generic [ref=e361]: Current
+            - generic [ref=e362]:
+              - generic [ref=e363]:
+                - generic [ref=e364]: "0"
+                - generic [ref=e365]: Answered
+              - generic [ref=e366]:
+                - generic [ref=e367]: "7"
+                - generic [ref=e368]: Not Answered
+              - generic [ref=e369]:
+                - generic [ref=e370]: "0"
+                - generic [ref=e371]: Marked for Review
+            - generic [ref=e372]:
+              - button "1" [ref=e373] [cursor=pointer]
+              - button "2" [ref=e374] [cursor=pointer]
+              - button "3" [ref=e375] [cursor=pointer]
+              - button "4" [ref=e376] [cursor=pointer]
+              - button "5" [ref=e377] [cursor=pointer]
+              - button "6" [ref=e378] [cursor=pointer]
+              - button "7" [ref=e379] [cursor=pointer]
+              - button "8" [ref=e380] [cursor=pointer]
+      - generic [ref=e381]:
+        - generic [ref=e385]: AI Proctoring
+        - generic [ref=e389]:
+          - generic [ref=e390]: 
+          - paragraph [ref=e391]: Initializing Camera...
+      - button "" [ref=e392] [cursor=pointer]:
+        - generic [ref=e393]: 
