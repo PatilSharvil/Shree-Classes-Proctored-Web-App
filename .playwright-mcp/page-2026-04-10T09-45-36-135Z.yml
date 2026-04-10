@@ -1,0 +1,154 @@
+- generic [ref=e26]:
+  - banner [ref=e27]:
+    - generic [ref=e28]:
+      - link " Shree Science Academy" [ref=e29] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e30]: 
+        - generic [ref=e31]: Shree Science Academy
+      - navigation [ref=e32]:
+        - button "Dashboard" [ref=e33] [cursor=pointer]
+        - generic [ref=e34]: test1@example.com
+        - button "Logout" [ref=e35] [cursor=pointer]
+  - main [ref=e36]:
+    - generic [ref=e192]:
+      - generic [ref=e194]:
+        - generic [ref=e195]:
+          - generic [ref=e196]: Student Portal Active
+          - heading "Welcome Back, Student" [level=1] [ref=e198]:
+            - text: Welcome Back,
+            - text: Student
+          - paragraph [ref=e199]: MHT-CET Exam Prep — Study smart and achieve your best scores with Shree Science Academy.
+          - generic [ref=e201]: Keep Practicing
+        - generic [ref=e204]: 
+      - generic [ref=e207]:
+        - generic [ref=e208]:
+          - generic [ref=e210]: 
+          - generic [ref=e211]: "3"
+          - generic [ref=e212]: Tests Taken
+        - generic [ref=e213]:
+          - generic [ref=e215]: 
+          - generic [ref=e216]: 0.0%
+          - generic [ref=e217]: Avg Score
+        - generic [ref=e218]:
+          - generic [ref=e220]: 
+          - generic [ref=e221]: "0"
+          - generic [ref=e222]: Total Points
+        - generic [ref=e223]:
+          - generic [ref=e225]: 
+          - generic [ref=e226]: "27"
+          - generic [ref=e227]: Study Minutes
+      - generic [ref=e228]:
+        - generic [ref=e229]:
+          - generic [ref=e230]:
+            - generic [ref=e231]:
+              - heading "Available Exams" [level=2] [ref=e232]: Available Exams
+              - generic [ref=e235]: 1 Available
+            - generic [ref=e239]:
+              - generic [ref=e240]:
+                - generic [ref=e242]: 
+                - generic [ref=e243]: Physics
+              - generic [ref=e244]:
+                - heading "Test Exam - Browser Test" [level=3] [ref=e245]
+                - paragraph [ref=e246]: Automated browser testing exam
+              - generic [ref=e247]:
+                - generic [ref=e248]:
+                  - generic [ref=e249]: Time Limit
+                  - generic [ref=e250]: 30 Minutes
+                - generic [ref=e251]:
+                  - generic [ref=e252]: Questions
+                  - generic [ref=e253]: 8 MCQs
+              - link "Start Exam " [ref=e254] [cursor=pointer]:
+                - /url: /exam/246addd8-ec72-4ee1-b40e-37477ed4007d
+                - button "Start Exam " [ref=e255]:
+                  - text: Start Exam
+                  - generic [ref=e256]: 
+          - generic [ref=e257]:
+            - generic [ref=e258]:
+              - heading "Recent Performance" [level=2] [ref=e259]: Recent Performance
+              - link "View Full History" [ref=e261] [cursor=pointer]:
+                - /url: /profile
+            - generic [ref=e262]:
+              - generic [ref=e264]:
+                - generic [ref=e265]:
+                  - generic [ref=e267]: 
+                  - generic [ref=e268]:
+                    - heading "Test Exam - Browser Test" [level=3] [ref=e269]
+                    - generic [ref=e270]:
+                      - generic [ref=e271]:
+                        - generic [ref=e272]: 
+                        - generic [ref=e273]: 4/10/2026
+                      - generic [ref=e274]:
+                        - generic [ref=e275]: 
+                        - generic [ref=e276]: 16:37
+                - generic [ref=e277]:
+                  - generic [ref=e278]:
+                    - generic [ref=e279]: 0%
+                    - generic [ref=e280]: Score
+                  - link "" [ref=e281] [cursor=pointer]:
+                    - /url: /results/76a860c7-fd10-4dc5-acca-32d9ccf50a69
+                    - button "" [ref=e282]:
+                      - generic [ref=e283]: 
+              - generic [ref=e285]:
+                - generic [ref=e286]:
+                  - generic [ref=e288]: 
+                  - generic [ref=e289]:
+                    - heading "Test Exam - Browser Test" [level=3] [ref=e290]
+                    - generic [ref=e291]:
+                      - generic [ref=e292]:
+                        - generic [ref=e293]: 
+                        - generic [ref=e294]: 4/10/2026
+                      - generic [ref=e295]:
+                        - generic [ref=e296]: 
+                        - generic [ref=e297]: 8:20
+                - generic [ref=e298]:
+                  - generic [ref=e299]:
+                    - generic [ref=e300]: 0%
+                    - generic [ref=e301]: Score
+                  - link "" [ref=e302] [cursor=pointer]:
+                    - /url: /results/22db778d-339f-4ee4-b4b1-bf3977fc97bf
+                    - button "" [ref=e303]:
+                      - generic [ref=e304]: 
+              - generic [ref=e306]:
+                - generic [ref=e307]:
+                  - generic [ref=e309]: 
+                  - generic [ref=e310]:
+                    - heading "Test Exam - Browser Test" [level=3] [ref=e311]
+                    - generic [ref=e312]:
+                      - generic [ref=e313]:
+                        - generic [ref=e314]: 
+                        - generic [ref=e315]: 4/10/2026
+                      - generic [ref=e316]:
+                        - generic [ref=e317]: 
+                        - generic [ref=e318]: 1:57
+                - generic [ref=e319]:
+                  - generic [ref=e320]:
+                    - generic [ref=e321]: 0%
+                    - generic [ref=e322]: Score
+                  - link "" [ref=e323] [cursor=pointer]:
+                    - /url: /results/ad4de275-9a0a-42ea-8ac7-976b5d2549b5
+                    - button "" [ref=e324]:
+                      - generic [ref=e325]: 
+        - generic [ref=e326]:
+          - generic [ref=e328]:
+            - heading " Subject Performance" [level=3] [ref=e330]:
+              - generic [ref=e332]: 
+              - text: Subject Performance
+            - generic [ref=e334]:
+              - generic [ref=e336]:
+                - generic [ref=e337]: Physics
+                - generic [ref=e338]: 0%
+              - generic [ref=e341]:
+                - generic [ref=e342]: Chemistry
+                - generic [ref=e343]: 0%
+              - generic [ref=e346]:
+                - generic [ref=e347]: Mathematics
+                - generic [ref=e348]: 0%
+              - generic [ref=e351]:
+                - generic [ref=e352]: Biology
+                - generic [ref=e353]: 0%
+            - paragraph [ref=e356]: Focus on General Prep to improve your overall score.
+          - generic [ref=e361]:
+            - generic [ref=e362]:
+              - generic [ref=e364]: 
+              - generic [ref=e365]: Secure Exam Session
+            - paragraph [ref=e366]: Stay in the exam window and avoid switching tabs during the test.

@@ -1,0 +1,91 @@
+- generic [ref=e26]:
+  - banner [ref=e27]:
+    - generic [ref=e28]:
+      - link " Shree Science Academy" [ref=e29] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e30]: 
+        - generic [ref=e31]: Shree Science Academy
+      - navigation [ref=e32]:
+        - button "Dashboard" [ref=e33] [cursor=pointer]
+        - generic [ref=e34]: test1@example.com
+        - button "Logout" [ref=e35] [cursor=pointer]
+  - main [ref=e36]:
+    - generic [ref=e368]:
+      - generic [ref=e393]:
+        - generic [ref=e394]:
+          - heading "Test Exam - Browser Test" [level=2] [ref=e395]
+          - paragraph [ref=e396]: Q 1/8
+        - generic [ref=e397]:
+          - generic "Online" [ref=e398]:
+            - generic [ref=e399]: 📶
+            - generic [ref=e400]: Online
+          - generic "Windowed" [ref=e401]:
+            - generic [ref=e402]: ⚠️
+            - generic [ref=e403]: Windowed
+        - generic [ref=e404]: 29:57
+        - button "Submit" [ref=e406] [cursor=pointer]
+      - generic [ref=e410]: ⚠️ Full-screen mode is required for this exam.
+      - generic [ref=e411]:
+        - generic [ref=e412]:
+          - generic [ref=e414]:
+            - paragraph [ref=e416]: 1. What is 5 * 6?
+            - generic [ref=e417]:
+              - button "A.25" [ref=e418] [cursor=pointer]:
+                - generic [ref=e419]: A.
+                - text: "25"
+              - button "B.35" [ref=e420] [cursor=pointer]:
+                - generic [ref=e421]: B.
+                - text: "35"
+              - button "C.30" [ref=e422] [cursor=pointer]:
+                - generic [ref=e423]: C.
+                - text: "30"
+              - button "D.40" [ref=e424] [cursor=pointer]:
+                - generic [ref=e425]: D.
+                - text: "40"
+            - button "Mark for Review" [ref=e427] [cursor=pointer]:
+              - generic [ref=e429]: Mark for Review
+          - generic [ref=e430]:
+            - button "⬅ Previous" [disabled] [ref=e431]
+            - button "Next ➡" [ref=e432] [cursor=pointer]
+        - generic [ref=e434]:
+          - heading "Question Palette" [level=3] [ref=e435]
+          - generic [ref=e436]:
+            - generic [ref=e437]:
+              - generic [ref=e438]:
+                - generic [ref=e439]: ✓
+                - generic [ref=e440]: Answered
+              - generic [ref=e443]: Not Answered
+              - generic [ref=e444]:
+                - generic [ref=e445]: ✓
+                - generic [ref=e446]: Answered + Review
+              - generic [ref=e449]: Marked for Review
+              - generic [ref=e452]: Current
+            - generic [ref=e453]:
+              - generic [ref=e454]:
+                - generic [ref=e455]: "0"
+                - generic [ref=e456]: Answered
+              - generic [ref=e457]:
+                - generic [ref=e458]: "7"
+                - generic [ref=e459]: Not Answered
+              - generic [ref=e460]:
+                - generic [ref=e461]: "0"
+                - generic [ref=e462]: Marked for Review
+            - generic [ref=e463]:
+              - button "1" [ref=e464] [cursor=pointer]
+              - button "2" [ref=e465] [cursor=pointer]
+              - button "3" [ref=e466] [cursor=pointer]
+              - button "4" [ref=e467] [cursor=pointer]
+              - button "5" [ref=e468] [cursor=pointer]
+              - button "6" [ref=e469] [cursor=pointer]
+              - button "7" [ref=e470] [cursor=pointer]
+              - button "8" [ref=e471] [cursor=pointer]
+      - generic [ref=e472]:
+        - generic [ref=e473]:
+          - generic [ref=e476]: AI Proctoring
+          - generic [ref=e477]: LIVE
+        - generic [ref=e482]: REC
+        - generic [ref=e484]:
+          - generic [ref=e485]: AI Monitoring Active
+          - generic [ref=e486]: 
+      - button "" [ref=e487] [cursor=pointer]:
+        - generic [ref=e488]: 

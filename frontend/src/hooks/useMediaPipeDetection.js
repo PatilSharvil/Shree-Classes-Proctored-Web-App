@@ -32,7 +32,7 @@ const useMediaPipeDetection = (options = {}) => {
     detectionFps = 2,
     faceConfidenceThreshold = 0.5,
     minFaceAbsenceSec = 5,
-    minGazeAwaySec = 10,
+    minGazeAwaySec = 4, // Changed from 10 to 4 seconds as requested
     onDetection = null,
     onSnapshotCapture = null
   } = options;
@@ -182,32 +182,75 @@ const useMediaPipeDetection = (options = {}) => {
     const box = detection.boundingBox;
     const videoWidth = videoRef.current?.videoWidth || 640;
     const videoHeight = videoRef.current?.videoHeight || 480;
-    
+
     const centerX = (box.originX + box.width / 2) / videoWidth;
     const centerY = (box.originY + box.height / 2) / videoHeight;
 
-    const isOffCenter = centerX < 0.3 || centerX > 0.7;
+    // Determine gaze direction based on face position
+    // Center Zone: 35%-65% width (looking at screen)
+    // Left Zone: <35% (looking left)
+    // Right Zone: >65% (looking right)
+    // Away: <30% or >70% vertical (looking up/down)
+    let gazeDirection = 'center';
+    let isLookingAway = false;
+    let directionLabel = '';
 
-    if (isOffCenter) {
+    if (centerX < 0.35) {
+      gazeDirection = 'left';
+      isLookingAway = true;
+      directionLabel = `Looking LEFT (${Math.round(centerX * 100)}% from center)`;
+    } else if (centerX > 0.65) {
+      gazeDirection = 'right';
+      isLookingAway = true;
+      directionLabel = `Looking RIGHT (${Math.round(centerX * 100)}% from center)`;
+    } else if (centerY < 0.3 || centerY > 0.7) {
+      gazeDirection = 'away';
+      isLookingAway = true;
+      directionLabel = `Looking AWAY (vertical: ${Math.round(centerY * 100)}%)`;
+    } else {
+      gazeDirection = 'center';
+      isLookingAway = false;
+      directionLabel = 'Looking at SCREEN';
+    }
+
+    // Track looking away duration
+    if (isLookingAway) {
       if (!gazeAwaySinceRef.current) {
         gazeAwaySinceRef.current = now;
       }
 
       const gazeDuration = (now - gazeAwaySinceRef.current) / 1000;
+      
+      // Only trigger violation after 4+ seconds of looking away
       if (gazeDuration >= minGazeAwaySec) {
         triggerViolation(
           AI_DETECTION_TYPES.LOOKING_AWAY,
-          `Looking away (${Math.round(centerX * 100)}%, ${Math.round(centerY * 100)}%)`,
-          gazeDuration / 10,
-          true
+          `${directionLabel} for ${Math.round(gazeDuration)}s`,
+          Math.min(gazeDuration / 10, 0.95),
+          false // No snapshot for free tier
         );
+        
+        // Log every 2 seconds while looking away
+        if (Math.round(gazeDuration) % 2 === 0) {
+          console.log(`[Gaze Detection] ⚠️ ${directionLabel} - Duration: ${gazeDuration.toFixed(1)}s`);
+        }
       }
     } else {
+      // Reset when looking back at screen
       if (gazeAwaySinceRef.current) {
+        const totalAwayTime = (now - gazeAwaySinceRef.current) / 1000;
+        console.log(`[Gaze Detection] ✅ Returned to screen after ${totalAwayTime.toFixed(1)}s`);
         clearViolation(AI_DETECTION_TYPES.LOOKING_AWAY);
         gazeAwaySinceRef.current = null;
       }
     }
+
+    setDetections(prev => ({
+      ...prev,
+      faceCount: 1,
+      facePosition: { x: centerX, y: centerY },
+      gazeDirection
+    }));
   }, [minGazeAwaySec, videoRef]);
 
   const handleMultipleFaces = useCallback((count, now) => {

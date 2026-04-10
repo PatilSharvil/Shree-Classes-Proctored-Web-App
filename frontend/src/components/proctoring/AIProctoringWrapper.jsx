@@ -29,7 +29,7 @@ const AIProctoringWrapper = ({ sessionId, enabled = true }) => {
     detectionFps: 2,
     faceConfidenceThreshold: 0.5,
     minFaceAbsenceSec: 5,
-    minGazeAwaySec: 10,
+    minGazeAwaySec: 4, // 4 seconds threshold as requested
     onDetection: handleAIDetection
   });
 
