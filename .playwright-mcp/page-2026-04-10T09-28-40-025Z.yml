@@ -1,0 +1,35 @@
+- generic [ref=e26]:
+  - banner [ref=e27]:
+    - generic [ref=e28]:
+      - link " Shree Science Academy" [ref=e29] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e30]: 
+        - generic [ref=e31]: Shree Science Academy
+      - navigation [ref=e32]:
+        - button "Dashboard" [ref=e33] [cursor=pointer]
+        - generic [ref=e34]: test1@example.com
+        - button "Logout" [ref=e35] [cursor=pointer]
+  - main [ref=e36]:
+    - generic [ref=e193]:
+      - generic [ref=e194]:
+        - heading "Test Exam - Browser Test" [level=1] [ref=e195]
+        - generic [ref=e196]: Physics
+      - generic [ref=e197]:
+        - generic [ref=e198]:
+          - generic [ref=e199]: "Duration:"
+          - generic [ref=e200]: 30 minutes
+        - generic [ref=e201]:
+          - generic [ref=e202]: "Total Marks:"
+          - generic [ref=e203]: "20"
+        - generic [ref=e204]:
+          - generic [ref=e205]: "Questions:"
+          - generic [ref=e206]: "0"
+      - generic [ref=e207]:
+        - heading "⚠️ Important Instructions:" [level=3] [ref=e208]
+        - list [ref=e209]:
+          - listitem [ref=e210]: Do not switch tabs or minimize the window
+          - listitem [ref=e211]: Multiple violations may result in auto-submission
+          - listitem [ref=e212]: Exam will auto-submit when time runs out
+          - listitem [ref=e213]: Once submitted, you cannot restart the exam
+          - listitem [ref=e214]: Use "Mark for Review" to flag questions you want to revisit
+      - button "Start Exam" [ref=e215] [cursor=pointer]

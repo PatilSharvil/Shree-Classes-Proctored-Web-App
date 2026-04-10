@@ -1,13 +1,113 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 /**
- * Webcam Preview Component
- * Shows live webcam feed in a small corner preview box
+ * Draggable Webcam Preview Component
+ * Shows live webcam feed that can be dragged anywhere on screen
  */
 const WebcamPreview = ({ videoRef, isReady, error, className = '' }) => {
+  const [position, setPosition] = useState({ x: window.innerWidth - 220, y: window.innerHeight - 280 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+  const containerRef = useRef(null);
+
+  const handleMouseDown = (e) => {
+    if (!containerRef.current) return;
+    setIsDragging(true);
+    const rect = containerRef.current.getBoundingClientRect();
+    dragOffset.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDragging) return;
+      
+      const newX = e.clientX - dragOffset.current.x;
+      const newY = e.clientY - dragOffset.current.y;
+      
+      // Keep within viewport bounds
+      const maxX = window.innerWidth - (containerRef.current?.offsetWidth || 192);
+      const maxY = window.innerHeight - (containerRef.current?.offsetHeight || 240);
+      
+      setPosition({
+        x: Math.max(0, Math.min(newX, maxX)),
+        y: Math.max(0, Math.min(newY, maxY))
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  // Touch support for mobile
+  const handleTouchStart = (e) => {
+    if (!containerRef.current || !e.touches[0]) return;
+    setIsDragging(true);
+    const rect = containerRef.current.getBoundingClientRect();
+    dragOffset.current = {
+      x: e.touches[0].clientX - rect.left,
+      y: e.touches[0].clientY - rect.top
+    };
+  };
+
+  useEffect(() => {
+    const handleTouchMove = (e) => {
+      if (!isDragging || !e.touches[0]) return;
+      e.preventDefault();
+      
+      const newX = e.touches[0].clientX - dragOffset.current.x;
+      const newY = e.touches[0].clientY - dragOffset.current.y;
+      
+      const maxX = window.innerWidth - (containerRef.current?.offsetWidth || 192);
+      const maxY = window.innerHeight - (containerRef.current?.offsetHeight || 240);
+      
+      setPosition({
+        x: Math.max(0, Math.min(newX, maxX)),
+        y: Math.max(0, Math.min(newY, maxY))
+      });
+    };
+
+    const handleTouchEnd = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      window.addEventListener('touchmove', handleTouchMove, { passive: false });
+      window.addEventListener('touchend', handleTouchEnd);
+    }
+
+    return () => {
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isDragging]);
+
+  const containerStyle = {
+    left: `${position.x}px`,
+    top: `${position.y}px`,
+    transition: isDragging ? 'none' : 'box-shadow 0.2s'
+  };
+
   if (error) {
     return (
-      <div className={`fixed bottom-4 right-4 w-48 bg-red-900/90 backdrop-blur-sm border-2 border-red-500 rounded-xl overflow-hidden shadow-2xl z-50 ${className}`}>
+      <div 
+        ref={containerRef}
+        className="fixed w-48 bg-red-900/90 backdrop-blur-sm border-2 border-red-500 rounded-xl overflow-hidden shadow-2xl z-50"
+        style={containerStyle}
+      >
         <div className="p-3">
           <div className="flex items-center gap-2 mb-2">
             <i className="fas fa-exclamation-triangle text-red-400"></i>
@@ -20,9 +120,17 @@ const WebcamPreview = ({ videoRef, isReady, error, className = '' }) => {
   }
 
   return (
-    <div className={`fixed bottom-4 right-4 w-48 bg-black/90 backdrop-blur-sm border-2 border-gray-700 rounded-xl overflow-hidden shadow-2xl z-50 ${className}`}>
-      {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-3 py-2 flex items-center justify-between">
+    <div 
+      ref={containerRef}
+      className={`fixed w-48 bg-black/90 backdrop-blur-sm border-2 border-gray-700 rounded-xl overflow-hidden shadow-2xl z-50 ${isDragging ? 'shadow-xl ring-2 ring-blue-500' : ''}`}
+      style={containerStyle}
+    >
+      {/* Draggable Header - Cursor indicates drag capability */}
+      <div 
+        className="bg-gradient-to-r from-blue-600 to-purple-600 px-3 py-2 flex items-center justify-between cursor-move select-none"
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
+      >
         <div className="flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${isReady ? 'bg-green-400 animate-pulse' : 'bg-yellow-400'}`}></div>
           <span className="text-xs font-bold text-white">AI Proctoring</span>
@@ -39,9 +147,9 @@ const WebcamPreview = ({ videoRef, isReady, error, className = '' }) => {
           autoPlay
           playsInline
           muted
-          className="w-full h-full object-cover transform scale-x-[-1]" // Mirror effect
+          className="w-full h-full object-cover transform scale-x-[-1]"
         />
-        
+
         {/* Overlay indicator */}
         {!isReady && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
