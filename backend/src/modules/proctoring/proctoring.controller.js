@@ -299,6 +299,32 @@ const cleanupSnapshots = (req, res) => {
   }
 };
 
+/**
+ * Get cheating detection data for a specific student (Admin)
+ * GET /api/proctoring/cheating/:sessionId
+ */
+const getStudentCheatingData = (req, res) => {
+  try {
+    const data = proctoringService.getStudentCheatingData(req.params.sessionId);
+    return apiResponse(res, 200, data, 'Student cheating data retrieved');
+  } catch (error) {
+    return errorResponse(res, 500, 'Failed to get cheating data.', error.message);
+  }
+};
+
+/**
+ * Get cheating detection summary for all students in an exam (Admin)
+ * GET /api/proctoring/cheating-summary/:examId
+ */
+const getExamCheatingSummary = (req, res) => {
+  try {
+    const summary = proctoringService.getExamCheatingSummary(req.params.examId);
+    return apiResponse(res, 200, summary, 'Exam cheating summary retrieved');
+  } catch (error) {
+    return errorResponse(res, 500, 'Failed to get cheating summary.', error.message);
+  }
+};
+
 module.exports = {
   recordViolation,
   logActivity,
@@ -318,5 +344,7 @@ module.exports = {
   getSessionSnapshots,
   getExamEvidenceGallery,
   getStorageStats,
-  cleanupSnapshots
+  cleanupSnapshots,
+  getStudentCheatingData,
+  getExamCheatingSummary
 };

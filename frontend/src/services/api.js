@@ -203,7 +203,10 @@ export const proctoringAPI = {
   // AI Proctoring endpoints
   saveSnapshot: (data) => api.post('/proctoring/snapshots', data),
   getSessionSnapshots: (sessionId) => api.get(`/proctoring/snapshots/${sessionId}`),
-  getExamEvidenceGallery: (examId, params) => api.get(`/proctoring/evidence/${examId}`, { params })
+  getExamEvidenceGallery: (examId, params) => api.get(`/proctoring/evidence/${examId}`, { params }),
+  // Cheating Detection endpoints
+  getStudentCheatingData: (sessionId) => api.get(`/proctoring/cheating/${sessionId}`),
+  getExamCheatingSummary: (examId) => api.get(`/proctoring/cheating-summary/${examId}`)
 };
 
 export default api;

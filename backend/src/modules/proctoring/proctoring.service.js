@@ -187,6 +187,150 @@ class ProctoringService {
   }
 
   /**
+   * Get cheating detection data for a specific student session
+   * Returns detailed AI violation data with gaze tracking info
+   */
+  getStudentCheatingData(sessionId) {
+    // Get all violations for this session with metadata
+    const violations = db.prepare(`
+      SELECT 
+        v.id,
+        v.type,
+        v.description,
+        v.severity,
+        v.confidence_score,
+        v.timestamp,
+        v.metadata,
+        ps.file_path,
+        ps.file_size,
+        ps.detection_type,
+        ps.confidence as detection_confidence
+      FROM violations v
+      LEFT JOIN proctoring_snapshots ps ON v.id = ps.violation_id
+      WHERE v.session_id = ?
+      ORDER BY v.timestamp ASC
+    `).all(sessionId);
+
+    // Get session info
+    const session = db.prepare(`
+      SELECT 
+        es.id as session_id,
+        es.user_id,
+        es.started_at,
+        es.submitted_at,
+        es.status,
+        es.violation_count as weighted_score,
+        u.name,
+        u.email
+      FROM exam_sessions es
+      JOIN users u ON es.user_id = u.id
+      WHERE es.id = ?
+    `).get(sessionId);
+
+    if (!session) {
+      throw new Error('Session not found');
+    }
+
+    // Calculate cheating risk score
+    const aiViolations = violations.filter(v => {
+      try {
+        const meta = v.metadata ? JSON.parse(v.metadata) : {};
+        return meta.ai_detection === true;
+      } catch (e) {
+        return false;
+      }
+    });
+    
+    const lookingAwayViolations = aiViolations.filter(v => 
+      v.type === 'LOOKING_AWAY'
+    );
+    
+    const noFaceViolations = aiViolations.filter(v => 
+      v.type === 'NO_FACE'
+    );
+
+    const totalAIViolations = aiViolations.length;
+    const maxConfidence = aiViolations.length > 0 
+      ? Math.max(...aiViolations.map(v => v.confidence_score || 0))
+      : 0;
+
+    // Determine cheating risk level
+    let cheatingRisk = 'LOW';
+    let riskScore = 0;
+    
+    // Calculate risk based on violations
+    riskScore += lookingAwayViolations.length * 2;
+    riskScore += noFaceViolations.length * 3;
+    riskScore += maxConfidence * 10;
+
+    if (riskScore >= 50) {
+      cheatingRisk = 'CRITICAL';
+    } else if (riskScore >= 30) {
+      cheatingRisk = 'HIGH';
+    } else if (riskScore >= 15) {
+      cheatingRisk = 'MEDIUM';
+    } else {
+      cheatingRisk = 'LOW';
+    }
+
+    return {
+      session,
+      violations,
+      aiViolations,
+      lookingAwayViolations,
+      noFaceViolations,
+      totalAIViolations,
+      maxConfidence,
+      cheatingRisk,
+      riskScore
+    };
+  }
+
+  /**
+   * Get cheating detection summary for all students in an exam
+   */
+  getExamCheatingSummary(examId) {
+    // Get all sessions for this exam
+    const sessions = db.prepare(`
+      SELECT 
+        es.id as session_id,
+        es.user_id,
+        u.name,
+        u.email,
+        es.status,
+        es.violation_count as weighted_score,
+        es.started_at,
+        es.submitted_at
+      FROM exam_sessions es
+      JOIN users u ON es.user_id = u.id
+      WHERE es.exam_id = ?
+      ORDER BY es.violation_count DESC
+    `).all(examId);
+
+    // Get cheating data for each session
+    return sessions.map(session => {
+      const cheatingData = this.getStudentCheatingData(session.session_id);
+      
+      return {
+        session_id: session.session_id,
+        name: session.name,
+        email: session.email,
+        status: session.status,
+        weighted_score: session.weighted_score,
+        started_at: session.started_at,
+        submitted_at: session.submitted_at,
+        cheatingRisk: cheatingData.cheatingRisk,
+        riskScore: cheatingData.riskScore,
+        totalAIViolations: cheatingData.totalAIViolations,
+        lookingAwayCount: cheatingData.lookingAwayViolations.length,
+        noFaceCount: cheatingData.noFaceViolations.length,
+        maxConfidence: cheatingData.maxConfidence,
+        violations: cheatingData.violations.slice(0, 10) // Last 10 violations
+      };
+    });
+  }
+
+  /**
    * Get activity summary for exam (admin dashboard)
    */
   getExamActivitySummary(examId) {

@@ -19,11 +19,17 @@ const ProctoringDashboardPage = () => {
   const [sessionTimeline, setSessionTimeline] = useState([]);
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [activeTab, setActiveTab] = useState('live'); // 'live', 'cheating', 'summary'
+  const [cheatingSummary, setCheatingSummary] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [studentCheatingData, setStudentCheatingData] = useState(null);
+  const [showStudentDetail, setShowStudentDetail] = useState(false);
 
   // Load data
   const loadData = async () => {
     try {
       setLoading(true);
+      // Load core data first
       const [examRes, liveRes, summaryRes, statsRes] = await Promise.all([
         examsAPI.getById(examId),
         proctoringAPI.getLiveActiveSessions(examId),
@@ -34,6 +40,15 @@ const ProctoringDashboardPage = () => {
       setLiveSessions(liveRes.data.data || []);
       setActivitySummary(summaryRes.data.data || []);
       setViolationStats(statsRes.data.data || []);
+      
+      // Load cheating data separately (may fail)
+      try {
+        const cheatingRes = await proctoringAPI.getExamCheatingSummary(examId);
+        setCheatingSummary(cheatingRes.data.data || []);
+      } catch (cheatingErr) {
+        console.warn('Failed to load cheating summary:', cheatingErr);
+        setCheatingSummary([]);
+      }
     } catch (err) {
       setError('Failed to load proctoring data');
       console.error(err);
@@ -51,6 +66,18 @@ const ProctoringDashboardPage = () => {
       setShowTimelineModal(true);
     } catch (err) {
       console.error('Failed to load timeline:', err);
+    }
+  };
+
+  // Load student cheating details
+  const loadStudentCheatingDetails = async (sessionId) => {
+    try {
+      const res = await proctoringAPI.getStudentCheatingData(sessionId);
+      setStudentCheatingData(res.data.data);
+      setSelectedStudent(sessionId);
+      setShowStudentDetail(true);
+    } catch (err) {
+      console.error('Failed to load student cheating data:', err);
     }
   };
 
@@ -185,8 +212,167 @@ const ProctoringDashboardPage = () => {
           </Card>
         </div>
 
-        {/* Live Sessions */}
-        <Card className="mb-6">
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('live')}
+            className={`px-6 py-3 font-bold text-sm uppercase tracking-wider transition-all ${
+              activeTab === 'live'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            🔴 Live Monitoring
+          </button>
+          <button
+            onClick={() => setActiveTab('cheating')}
+            className={`px-6 py-3 font-bold text-sm uppercase tracking-wider transition-all ${
+              activeTab === 'cheating'
+                ? 'text-red-600 border-b-2 border-red-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            🚨 Cheating Detection
+          </button>
+          <button
+            onClick={() => setActiveTab('summary')}
+            className={`px-6 py-3 font-bold text-sm uppercase tracking-wider transition-all ${
+              activeTab === 'summary'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            📊 All Sessions
+          </button>
+        </div>
+
+        {/* Cheating Detection Tab */}
+        {activeTab === 'cheating' && (
+          <Card className="mb-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">🚨 AI Cheating Detection</h2>
+                <p className="text-sm text-gray-600 mt-1">Monitor gaze tracking, face detection, and suspicious behavior</p>
+              </div>
+              <div className="flex gap-2">
+                <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold">
+                  {cheatingSummary.filter(s => s.cheatingRisk === 'CRITICAL' || s.cheatingRisk === 'HIGH').length} High Risk
+                </span>
+                <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold">
+                  {cheatingSummary.filter(s => s.cheatingRisk === 'MEDIUM').length} Medium Risk
+                </span>
+              </div>
+            </div>
+
+            {cheatingSummary.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <div className="text-4xl mb-4">📊</div>
+                <p className="text-lg font-bold">No student data available</p>
+                <p className="text-sm">Students need to take the exam to generate cheating detection data</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Student</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Risk Level</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Risk Score</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">AI Violations</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Looking Away</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">No Face</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Max Confidence</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Status</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {cheatingSummary.map((student) => {
+                      const riskColor = {
+                        'CRITICAL': 'bg-red-100 text-red-700 border-red-300',
+                        'HIGH': 'bg-orange-100 text-orange-700 border-orange-300',
+                        'MEDIUM': 'bg-yellow-100 text-yellow-700 border-yellow-300',
+                        'LOW': 'bg-green-100 text-green-700 border-green-300'
+                      }[student.cheatingRisk] || 'bg-gray-100 text-gray-700 border-gray-300';
+
+                      return (
+                        <tr key={student.session_id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-gray-900">{student.name || student.email}</div>
+                            <div className="text-sm text-gray-500">{student.email}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold border ${riskColor}`}>
+                              {student.cheatingRisk}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 bg-gray-200 rounded-full h-2">
+                                <div
+                                  className={`h-2 rounded-full ${
+                                    student.riskScore >= 50 ? 'bg-red-500' :
+                                    student.riskScore >= 30 ? 'bg-orange-500' :
+                                    student.riskScore >= 15 ? 'bg-yellow-500' : 'bg-green-500'
+                                  }`}
+                                  style={{ width: `${Math.min(student.riskScore, 100)}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-sm font-bold">{student.riskScore}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-lg font-bold text-gray-900">{student.totalAIViolations}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {student.lookingAwayCount > 0 ? (
+                              <span className="text-orange-600 font-bold">{student.lookingAwayCount}</span>
+                            ) : (
+                              <span className="text-green-600">✓</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {student.noFaceCount > 0 ? (
+                              <span className="text-red-600 font-bold">{student.noFaceCount}</span>
+                            ) : (
+                              <span className="text-green-600">✓</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`text-sm font-bold ${
+                              student.maxConfidence >= 0.8 ? 'text-red-600' :
+                              student.maxConfidence >= 0.5 ? 'text-orange-600' : 'text-green-600'
+                            }`}>
+                              {Math.round(student.maxConfidence * 100)}%
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(student.status)}`}>
+                              {student.status?.replace('_', ' ')}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => loadStudentCheatingDetails(student.session_id)}
+                            >
+                              View Details
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        )}
+
+        {/* Live Sessions Tab */}
+        {activeTab === 'live' && (
+          <Card className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-900">🔴 Live Monitoring</h2>
             <span className="text-sm text-gray-500">{liveSessions.length} active sessions</span>
@@ -260,8 +446,10 @@ const ProctoringDashboardPage = () => {
             </div>
           )}
         </Card>
+        )}
 
-        {/* All Sessions Summary */}
+        {/* All Sessions Summary Tab */}
+        {activeTab === 'summary' && (
         <Card>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-900">📊 All Sessions Summary</h2>
@@ -329,6 +517,147 @@ const ProctoringDashboardPage = () => {
             </table>
           </div>
         </Card>
+        )}
+
+        {/* Student Cheating Detail Modal */}
+        {showStudentDetail && studentCheatingData && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <Card className="max-w-4xl w-full max-h-[90vh] overflow-auto">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">🚨 Student Cheating Analysis</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {studentCheatingData.session?.name} ({studentCheatingData.session?.email})
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowStudentDetail(false)}
+                  className="text-gray-500 hover:text-gray-700 text-3xl font-bold"
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Risk Overview */}
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-gray-900">{studentCheatingData.cheatingRisk}</div>
+                  <div className="text-xs text-gray-600 mt-1">Risk Level</div>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-gray-900">{studentCheatingData.riskScore}</div>
+                  <div className="text-xs text-gray-600 mt-1">Risk Score</div>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-gray-900">{studentCheatingData.totalAIViolations}</div>
+                  <div className="text-xs text-gray-600 mt-1">AI Violations</div>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-gray-900">{Math.round(studentCheatingData.maxConfidence * 100)}%</div>
+                  <div className="text-xs text-gray-600 mt-1">Max Confidence</div>
+                </div>
+              </div>
+
+              {/* Violation Breakdown */}
+              <div className="mb-6">
+                <h4 className="text-lg font-bold text-gray-900 mb-3">Violation Breakdown</h4>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <div className="text-3xl font-bold text-orange-600">{studentCheatingData.lookingAwayViolations?.length || 0}</div>
+                    <div className="text-sm text-orange-700 mt-1">Looking Away</div>
+                    <div className="text-xs text-orange-600 mt-1">Gaze tracking violations</div>
+                  </div>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="text-3xl font-bold text-red-600">{studentCheatingData.noFaceViolations?.length || 0}</div>
+                    <div className="text-sm text-red-700 mt-1">No Face Detected</div>
+                    <div className="text-xs text-red-600 mt-1">Student left camera view</div>
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="text-3xl font-bold text-blue-600">{studentCheatingData.violations?.length || 0}</div>
+                    <div className="text-sm text-blue-700 mt-1">Total Violations</div>
+                    <div className="text-xs text-blue-600 mt-1">All violation types</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Violations */}
+              <div>
+                <h4 className="text-lg font-bold text-gray-900 mb-3">Recent Violations</h4>
+                {studentCheatingData.violations?.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    No violations recorded
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {studentCheatingData.violations.map((violation, idx) => {
+                      const metadata = violation.metadata ? JSON.parse(violation.metadata) : {};
+                      return (
+                        <div
+                          key={idx}
+                          className={`p-3 rounded-lg border-l-4 ${
+                            metadata.ai_detection ? 'border-purple-500 bg-purple-50' :
+                            violation.is_violation ? 'border-red-500 bg-red-50' : 'border-blue-500 bg-blue-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900">
+                                {metadata.ai_detection && '🤖 '}
+                                {violation.type.replace(/_/g, ' ')}
+                              </div>
+                              {violation.description && (
+                                <div className="text-sm text-gray-600 mt-1">
+                                  {violation.description}
+                                </div>
+                              )}
+                              {violation.severity && (
+                                <span className={`inline-block mt-1 px-2 py-0.5 rounded text-xs font-medium ${getSeverityColor(violation.severity)}`}>
+                                  {violation.severity}
+                                </span>
+                              )}
+                              {metadata.ai_detection && (
+                                <span className="inline-block mt-1 ml-2 px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
+                                  AI Detection
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-sm text-gray-500 text-right ml-4">
+                              <div>{formatTime(violation.timestamp)}</div>
+                              {violation.confidence_score && (
+                                <div className="text-xs text-gray-400">
+                                  {Math.round(violation.confidence_score * 100)}% confidence
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 mt-6 pt-4 border-t">
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    // Could add functionality to auto-submit or flag student
+                    alert('Student flagged for review');
+                  }}
+                >
+                  ⚠️ Flag for Review
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => setShowStudentDetail(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
 
         {/* Timeline Modal */}
         {showTimelineModal && (

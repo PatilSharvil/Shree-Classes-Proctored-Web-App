@@ -139,4 +139,18 @@ router.get('/storage-stats', authorize('ADMIN'), proctoringController.getStorage
  */
 router.post('/cleanup', authorize('ADMIN'), proctoringController.cleanupSnapshots);
 
+/**
+ * @route   GET /api/proctoring/cheating/:sessionId
+ * @desc    Get cheating detection data for a specific student (Admin only)
+ * @access  Private/Admin
+ */
+router.get('/cheating/:sessionId', authorize('ADMIN'), proctoringController.getStudentCheatingData);
+
+/**
+ * @route   GET /api/proctoring/cheating-summary/:examId
+ * @desc    Get cheating detection summary for all students in an exam (Admin only)
+ * @access  Private/Admin
+ */
+router.get('/cheating-summary/:examId', authorize('ADMIN'), proctoringController.getExamCheatingSummary);
+
 module.exports = router;
