@@ -9,7 +9,8 @@ const createExam = (req, res) => {
   try {
     const {
       title, description, subject, duration_minutes, total_marks,
-      negative_marks, passing_percentage, scheduled_start, scheduled_end, is_active
+      negative_marks, passing_percentage, scheduled_start, scheduled_end,
+      is_active, tab_switch_threshold
     } = req.body;
 
     // Validation - Required fields
@@ -46,6 +47,11 @@ const createExam = (req, res) => {
       return errorResponse(res, 400, 'Passing percentage must be between 0 and 100.');
     }
 
+    // Validate tab switch threshold
+    if (tab_switch_threshold !== undefined && (Number(tab_switch_threshold) < 1 || Number(tab_switch_threshold) > 100)) {
+      return errorResponse(res, 400, 'Tab switch threshold must be between 1 and 100.');
+    }
+
     // Validate scheduled times
     if (scheduled_start && scheduled_end) {
       const startDate = new Date(scheduled_start);
@@ -58,7 +64,8 @@ const createExam = (req, res) => {
 
     const exam = examService.createExam({
       title, description, subject, duration_minutes, total_marks,
-      negative_marks, passing_percentage, scheduled_start, scheduled_end, is_active
+      negative_marks, passing_percentage, scheduled_start, scheduled_end,
+      is_active, tab_switch_threshold
     }, req.user.id);
 
     return apiResponse(res, 201, exam, 'Exam created successfully');

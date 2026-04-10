@@ -78,6 +78,7 @@ const ExamPage = () => {
   // Proctoring hook with comprehensive monitoring
   const proctoring = useProctoring(session?.id, {
     violationThreshold: 5,
+    tabSwitchThreshold: exam?.tab_switch_threshold || 5,
     onViolationThreshold: (weightedScore) => {
       console.warn(`[Proctoring] Weighted score threshold reached: ${weightedScore}. Auto-submitting...`);
       handleTimeUp();
@@ -482,6 +483,9 @@ const ExamPage = () => {
             <h3 className="font-semibold text-yellow-800 mb-2">⚠️ Important Instructions:</h3>
             <ul className="text-sm text-yellow-700 space-y-1 list-disc list-inside">
               <li>Do not switch tabs or minimize the window</li>
+              <li>
+                <strong>Tab Switch Limit: {exam?.tab_switch_threshold || 5} switches</strong> - You will be auto-submitted and flagged for cheating if you exceed this limit
+              </li>
               <li>Multiple violations may result in auto-submission</li>
               <li>Exam will auto-submit when time runs out</li>
               <li>Once submitted, you cannot restart the exam</li>

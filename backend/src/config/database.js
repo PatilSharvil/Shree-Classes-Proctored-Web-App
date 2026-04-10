@@ -46,12 +46,20 @@ const initializeDatabase = () => {
       scheduled_start TEXT,
       scheduled_end TEXT,
       is_active INTEGER DEFAULT 1,
+      tab_switch_threshold INTEGER DEFAULT 5,
       created_by TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (created_by) REFERENCES users(id)
     )
   `);
+
+  // Add tab_switch_threshold column if it doesn't exist (safe migration)
+  try {
+    db.exec(`ALTER TABLE exams ADD COLUMN tab_switch_threshold INTEGER DEFAULT 5`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
 
   // Questions table
   db.exec(`

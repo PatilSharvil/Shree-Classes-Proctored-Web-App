@@ -12,8 +12,8 @@ class ExamService {
       INSERT INTO exams (
         id, title, description, subject, duration_minutes, total_marks,
         negative_marks, passing_percentage, scheduled_start, scheduled_end,
-        is_active, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        is_active, tab_switch_threshold, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       examId,
       examData.title,
@@ -26,6 +26,7 @@ class ExamService {
       examData.scheduled_start,
       examData.scheduled_end,
       examData.is_active !== false ? 1 : 0,
+      examData.tab_switch_threshold || 5,
       createdBy
     );
 
@@ -113,7 +114,8 @@ class ExamService {
 
     const allowedFields = [
       'title', 'description', 'subject', 'duration_minutes', 'total_marks',
-      'negative_marks', 'passing_percentage', 'scheduled_start', 'scheduled_end', 'is_active'
+      'negative_marks', 'passing_percentage', 'scheduled_start', 'scheduled_end',
+      'is_active', 'tab_switch_threshold'
     ];
 
     for (const field of allowedFields) {

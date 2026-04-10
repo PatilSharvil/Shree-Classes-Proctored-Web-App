@@ -54,7 +54,8 @@ export const useProctoring = (sessionId, config = {}) => {
     enableClipboardMonitor = true,
     enableIdleDetect = true,
     idleTimeoutMs = 10 * 60 * 1000, // Fix #15 — increased to 10 minutes
-    violationThreshold = 5
+    violationThreshold = 5,
+    tabSwitchThreshold = 5 // Custom tab switch threshold from exam settings
   } = config;
 
   // State
@@ -74,6 +75,7 @@ export const useProctoring = (sessionId, config = {}) => {
   const sessionIdRef = useRef(sessionId);
   const activityQueueRef = useRef([]);
   const isSendingRef = useRef(false);
+  const tabSwitchThresholdRef = useRef(tabSwitchThreshold);
   const violationSeverityWeights = useRef({
     LOW: 1,
     MEDIUM: 2,
@@ -81,10 +83,14 @@ export const useProctoring = (sessionId, config = {}) => {
     CRITICAL: 5
   });
 
-  // Update session ID ref
+  // Update session ID and threshold refs
   useEffect(() => {
     sessionIdRef.current = sessionId;
   }, [sessionId]);
+
+  useEffect(() => {
+    tabSwitchThresholdRef.current = tabSwitchThreshold;
+  }, [tabSwitchThreshold]);
 
   // Add warning to local state with auto-dismiss
   const addWarning = useCallback((message, type) => {
@@ -192,13 +198,39 @@ export const useProctoring = (sessionId, config = {}) => {
     if (!enableTabSwitch) return;
 
     const now = Date.now();
-    
+
     if (document.hidden) {
       // Track tab switch times for rapid switching detection
       tabSwitchTimesRef.current.push(now);
       tabSwitchTimesRef.current = tabSwitchTimesRef.current.filter(
         t => now - t < 60000 // Keep switches within last minute
       );
+
+      const currentSwitchCount = tabSwitchTimesRef.current.length;
+
+      // Check if tab switch threshold is exceeded - auto-submit and flag as cheating
+      if (currentSwitchCount >= tabSwitchThresholdRef.current) {
+        await recordViolation(
+          VIOLATION_TYPES.TAB_SWITCH,
+          `Tab switch limit exceeded (${currentSwitchCount}/${tabSwitchThresholdRef.current}) - Auto-submitting exam`,
+          SEVERITY.CRITICAL,
+          { switchCount: currentSwitchCount, threshold: tabSwitchThresholdRef.current, autoSubmit: true }
+        );
+        addWarning(`⚠️ Tab switch limit exceeded! Your exam is being auto-submitted for suspicious activity.`, 'critical');
+
+        // Log as suspicious activity
+        queueActivityLog('SUSPICIOUS_CHEATING', {
+          type: 'TAB_SWITCH_THRESHOLD_EXCEEDED',
+          switchCount: currentSwitchCount,
+          threshold: tabSwitchThresholdRef.current
+        }, true);
+
+        // Trigger auto-submit
+        if (onViolationThreshold) {
+          onViolationThreshold(weightedScoreRef.current);
+        }
+        return;
+      }
 
       // Detect rapid tab switching (3+ times in a minute = HIGH severity)
       if (tabSwitchTimesRef.current.length >= 3) {
@@ -212,11 +244,11 @@ export const useProctoring = (sessionId, config = {}) => {
       } else {
         await recordViolation(
           VIOLATION_TYPES.TAB_SWITCH,
-          'User switched tabs or minimized window',
+          `User switched tabs or minimized window (${currentSwitchCount}/${tabSwitchThresholdRef.current})`,
           SEVERITY.MEDIUM,
-          { switchCount: tabSwitchTimesRef.current.length }
+          { switchCount: currentSwitchCount, threshold: tabSwitchThresholdRef.current }
         );
-        addWarning(`⚠️ Warning ${violationCountRef.current + 1}: Please stay on this page during the exam.`, 'medium');
+        addWarning(`⚠️ Warning ${currentSwitchCount}/${tabSwitchThresholdRef.current}: Please stay on this page during the exam.`, 'medium');
       }
 
       // Log focus lost
@@ -225,7 +257,7 @@ export const useProctoring = (sessionId, config = {}) => {
       // Page is visible again
       queueActivityLog(EVENT_TYPES.FOCUS_GAINED, { timestamp: new Date().toISOString() });
     }
-  }, [enableTabSwitch, recordViolation, addWarning, queueActivityLog]);
+  }, [enableTabSwitch, recordViolation, addWarning, queueActivityLog, onViolationThreshold]);
 
   // Handle window blur
   const handleWindowBlur = useCallback(async () => {
