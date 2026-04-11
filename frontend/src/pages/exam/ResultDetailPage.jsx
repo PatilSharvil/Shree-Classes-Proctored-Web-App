@@ -5,7 +5,8 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { formatTime } from '../../hooks/useExamTimer';
-import { sanitizeText } from '../../utils/sanitizer';
+import RichTextRenderer from '../../components/ui/RichTextRenderer';
+import { getImageUrl } from '../../utils/imageHelper';
 
 const ResultDetailPage = () => {
   const { attemptId } = useParams();
@@ -157,13 +158,47 @@ const ResultDetailPage = () => {
                 </div>
               </div>
 
-              <p className="text-gray-900 font-medium mb-3">{sanitizeText(response.question_text)}</p>
+              <div className="mb-3">
+                {response.question_type === 'IMAGE' ? (
+                  <div className="mb-2 flex justify-center">
+                    <img
+                      src={getImageUrl(response.image_url)}
+                      alt="Question"
+                      className="max-w-full h-auto object-contain rounded-lg border-2 border-gray-200 shadow-sm"
+                      style={{ maxHeight: '500px' }}
+                      loading="lazy"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <RichTextRenderer content={response.question_text} className="text-gray-900 font-medium" />
+                )}
+                {response.question_type === 'TEXT' && response.image_url && (
+                  <div className="mt-2 mb-3 flex justify-center">
+                    <img
+                      src={getImageUrl(response.image_url)}
+                      alt="Question diagram"
+                      className="max-w-full h-auto object-contain rounded-lg border-2 border-gray-200 shadow-sm"
+                      style={{ maxHeight: '400px' }}
+                      loading="lazy"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {['A', 'B', 'C', 'D'].map((option) => {
                   const optionValue = response[`option_${option.toLowerCase()}`];
+                  const optionImage = response[`option_${option.toLowerCase()}_image_url`];
                   const isCorrect = option === response.correct_option;
                   const isSelected = option === response.selected_option;
+                  const hasText = optionValue && optionValue.trim();
+                  const hasImage = optionImage;
 
                   return (
                     <div
@@ -176,20 +211,77 @@ const ResultDetailPage = () => {
                           : 'border-gray-200 bg-white'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-gray-700">{option}.</span>
-                        <span className="text-gray-900">{sanitizeText(optionValue)}</span>
-                        {isCorrect && (
-                          <span className="ml-auto text-green-600">✓</span>
-                        )}
-                        {isSelected && !isCorrect && (
-                          <span className="ml-auto text-red-600">✗</span>
-                        )}
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-start gap-2">
+                          <span className="font-bold text-gray-700 flex-shrink-0">{option}.</span>
+                          <div className="flex-1 flex flex-col gap-2">
+                            {/* Render text if exists */}
+                            {hasText && (
+                              <RichTextRenderer content={optionValue} className="text-gray-900" />
+                            )}
+                            {/* Render image if exists */}
+                            {hasImage && (
+                              <div className="flex justify-center">
+                                <img
+                                  src={getImageUrl(optionImage)}
+                                  alt={`Option ${option}`}
+                                  className="max-w-full h-auto object-contain rounded-lg border-2 border-gray-200 shadow-sm"
+                                  style={{ maxHeight: '200px' }}
+                                  loading="lazy"
+                                  onError={(e) => {
+                                    console.error(`Failed to load option ${option} image in results:`, {
+                                      attemptedUrl: getImageUrl(optionImage),
+                                      originalPath: optionImage
+                                    });
+                                    e.target.style.display = 'none';
+                                  }}
+                                />
+                              </div>
+                            )}
+                            {/* Show placeholder if neither */}
+                            {!hasText && !hasImage && (
+                              <div className="text-gray-400 italic text-sm">No content</div>
+                            )}
+                          </div>
+                          {isCorrect && (
+                            <span className="ml-auto text-green-600 text-lg">✓</span>
+                          )}
+                          {isSelected && !isCorrect && (
+                            <span className="ml-auto text-red-600 text-lg">✗</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
+
+              {/* Explanation Section */}
+              {(response.explanation || response.explanation_image_url) && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <h4 className="text-sm font-bold text-gray-700 mb-1 flex items-center gap-2">
+                    <i className="fas fa-info-circle text-blue-500"></i>
+                    Explanation
+                  </h4>
+                  {response.explanation && (
+                    <RichTextRenderer content={response.explanation} className="text-gray-600 text-sm" />
+                  )}
+                  {response.explanation_image_url && (
+                    <div className="mt-2 text-center sm:text-left">
+                      <img
+                        src={getImageUrl(response.explanation_image_url)}
+                        alt="Explanation diagram"
+                        className="max-w-full h-auto object-contain rounded-lg border-2 border-gray-100 shadow-sm"
+                        style={{ maxHeight: '250px' }}
+                        loading="lazy"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {response.selected_option !== response.correct_option && (
                 <div className="mt-3 text-sm text-gray-600">

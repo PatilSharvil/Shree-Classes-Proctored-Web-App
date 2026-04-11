@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { questionsAPI } from '../../services/api';
+import { questionsAPI, uploadAPI } from '../../services/api';
 import { sanitizeText } from '../../utils/sanitizer';
+import MathEquationEditor from '../../components/ui/MathEquationEditor';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import AdminSidebar from '../../components/layout/AdminSidebar';
@@ -13,10 +14,13 @@ const AddQuestionPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showEquationEditor, setShowEquationEditor] = useState(false);
+  const [equationTargetField, setEquationTargetField] = useState('question_text');
   const [importFile, setImportFile] = useState(null);
   const [importResult, setImportResult] = useState(null);
   const [importLoading, setImportLoading] = useState(false);
   const [formData, setFormData] = useState({
+    question_type: 'TEXT', // 'TEXT' or 'IMAGE'
     question_text: '',
     option_a: '',
     option_b: '',
@@ -28,6 +32,14 @@ const AddQuestionPage = () => {
     difficulty: 'MEDIUM',
     explanation: ''
   });
+  const [images, setImages] = useState({
+    image_url: null,
+    option_a_image_url: null,
+    option_b_image_url: null,
+    option_c_image_url: null,
+    option_d_image_url: null,
+    explanation_image_url: null
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -37,22 +49,110 @@ const AddQuestionPage = () => {
     }));
   };
 
+  const handleImageChange = (e, fieldName) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Image size must be less than 5MB');
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError('Please select a valid image file');
+        return;
+      }
+
+      setImages(prev => ({ ...prev, [fieldName]: file }));
+    }
+  };
+
+  const openEquationEditor = (fieldName) => {
+    setEquationTargetField(fieldName);
+    setShowEquationEditor(true);
+  };
+
+  const handleEquationInsert = (latex, targetField) => {
+    setFormData(prev => {
+      const currentValue = prev[targetField] || '';
+      // Insert LaTeX at cursor position or append
+      const newValue = currentValue + (currentValue ? ' ' : '') + latex;
+      return {
+        ...prev,
+        [targetField]: newValue
+      };
+    });
+  };
+
+  const getImagePreviewUrl = (imageFile) => {
+    if (!imageFile) return null;
+    return URL.createObjectURL(imageFile);
+  };
+
+  const uploadImages = async () => {
+    const uploadedUrls = {};
+    for (const [key, file] of Object.entries(images)) {
+      if (file) {
+        const response = await uploadAPI.uploadImage(file);
+        uploadedUrls[key] = response.data.url;
+      }
+    }
+    return uploadedUrls;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    // Validate: if question_type is TEXT, question_text is required
+    if (formData.question_type === 'TEXT' && !formData.question_text.trim()) {
+      setError('Question text is required for text-based questions');
+      return;
+    }
+
+    // Validate: if question_type is IMAGE, image is required
+    if (formData.question_type === 'IMAGE' && !images.image_url) {
+      setError('Question image is required for image-based questions');
+      return;
+    }
+
+    // Validate: each option must have either text OR image
+    const optionFields = ['option_a', 'option_b', 'option_c', 'option_d'];
+    for (const field of optionFields) {
+      const hasText = formData[field] && formData[field].trim();
+      const hasImage = images[`${field}_image_url`];
+      
+      if (!hasText && !hasImage) {
+        const optionLabel = field.replace('option_', '').toUpperCase();
+        setError(`Option ${optionLabel} must have either text or an image`);
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
+      const uploadedImageUrls = await uploadImages();
+
       const payload = {
         ...formData,
+        ...uploadedImageUrls,
         marks: parseInt(formData.marks),
         negative_marks: parseFloat(formData.negative_marks) || 0
       };
 
+      console.log('📤 Sending payload:', JSON.stringify(payload, null, 2));
+
       await questionsAPI.add(examId, payload);
       navigate(`/admin/exams/${examId}`);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add question');
+      console.error('❌ Error adding question:', err);
+      console.error('Response data:', err.response?.data);
+      
+      // Get the detailed error message from the backend
+      const detailedError = err.response?.data?.error || err.response?.data?.message || 'Failed to add question';
+      setError(detailedError);
     } finally {
       setLoading(false);
     }
@@ -101,14 +201,20 @@ const AddQuestionPage = () => {
         Marks: 1,
         NegativeMarks: 0,
         Difficulty: 'EASY',
-        Explanation: 'Basic arithmetic: 2 + 2 = 4'
+        Explanation: 'Basic arithmetic: 2 + 2 = 4',
+        ImageUrl: '',
+        OptionAImageUrl: '',
+        OptionBImageUrl: '',
+        OptionCImageUrl: '',
+        OptionDImageUrl: '',
+        ExplanationImageUrl: ''
       }
     ];
     
     const csvContent = [
-      'Question,OptionA,OptionB,OptionC,OptionD,CorrectOption,Marks,NegativeMarks,Difficulty,Explanation',
+      'Question,OptionA,OptionB,OptionC,OptionD,CorrectOption,Marks,NegativeMarks,Difficulty,Explanation,ImageUrl,OptionAImageUrl,OptionBImageUrl,OptionCImageUrl,OptionDImageUrl,ExplanationImageUrl',
       ...templateData.map(row => 
-        `"${row.Question}","${row.OptionA}","${row.OptionB}","${row.OptionC}","${row.OptionD}","${row.CorrectOption}",${row.Marks},${row.NegativeMarks},"${row.Difficulty}","${row.Explanation}"`
+        `"${row.Question}","${row.OptionA}","${row.OptionB}","${row.OptionC}","${row.OptionD}","${row.CorrectOption}",${row.Marks},${row.NegativeMarks},"${row.Difficulty}","${row.Explanation}","${row.ImageUrl}","${row.OptionAImageUrl}","${row.OptionBImageUrl}","${row.OptionCImageUrl}","${row.OptionDImageUrl}","${row.ExplanationImageUrl}"`
       )
     ].join('\n');
 
@@ -156,22 +262,126 @@ const AddQuestionPage = () => {
 
       <Card>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Question Text */}
+          {/* Question Type Selector */}
           <div>
-            <label htmlFor="question_text" className="block text-sm font-medium text-gray-700 mb-1">
-              Question *
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Question Type *
             </label>
-            <textarea
-              id="question_text"
-              name="question_text"
-              value={formData.question_text}
-              onChange={handleChange}
-              required
-              rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent touch-target"
-              placeholder="Enter your question here..."
-            />
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, question_type: 'TEXT', question_text: prev.question_text }))}
+                className={`flex-1 p-4 rounded-lg border-2 transition-all ${
+                  formData.question_type === 'TEXT'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                }`}
+              >
+                <i className="fas fa-font text-2xl mb-2"></i>
+                <div className="font-semibold">Text-Based Question</div>
+                <div className="text-xs opacity-75">Type your question using text</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, question_type: 'IMAGE' }))}
+                className={`flex-1 p-4 rounded-lg border-2 transition-all ${
+                  formData.question_type === 'IMAGE'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 hover:border-gray-300 text-gray-600'
+                }`}
+              >
+                <i className="fas fa-image text-2xl mb-2"></i>
+                <div className="font-semibold">Image-Based Question</div>
+                <div className="text-xs opacity-75">Upload an image of the question</div>
+              </button>
+            </div>
           </div>
+
+          {/* Question Text - Only show for TEXT type */}
+          {formData.question_type === 'TEXT' && (
+            <div>
+              <label htmlFor="question_text" className="block text-sm font-medium text-gray-700 mb-1">
+                Question Text *
+              </label>
+              <div className="relative">
+                <textarea
+                  id="question_text"
+                  name="question_text"
+                  value={formData.question_text}
+                  onChange={handleChange}
+                  required
+                  rows={4}
+                  className="w-full px-4 py-2 pr-24 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent touch-target"
+                  placeholder="Enter your question here... Use $$ for math equations"
+                />
+                {/* Insert Equation Button */}
+                <button
+                  type="button"
+                  onClick={() => openEquationEditor('question_text')}
+                  className="absolute right-2 top-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-all hover:scale-105 shadow-md hover:shadow-lg flex items-center gap-1"
+                  title="Insert mathematical equation"
+                >
+                  <i className="fas fa-square-root-alt"></i>
+                  <span className="hidden sm:inline">Insert Equation</span>
+                </button>
+              </div>
+              {/* Syntax Help */}
+              <p className="text-[10px] text-gray-400 mt-2">
+                <i className="fas fa-info-circle mr-1"></i>
+                Tip: Use <code className="bg-gray-100 px-1 rounded">$$ x^2 $$</code> for inline math equations
+              </p>
+            </div>
+          )}
+
+          {/* Question Image Upload - Only show for IMAGE type */}
+          {formData.question_type === 'IMAGE' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Question Image *
+              </label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-all">
+                <input
+                  type="file"
+                  accept="image/*"
+                  id="question_image_input"
+                  className="hidden"
+                  onChange={(e) => handleImageChange(e, 'image_url')}
+                />
+                {!images.image_url ? (
+                  <label htmlFor="question_image_input" className="cursor-pointer">
+                    <i className="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-3 block"></i>
+                    <p className="text-gray-600 font-medium">Click to upload question image</p>
+                    <p className="text-xs text-gray-400 mt-1">PNG, JPG, JPEG supported (Max 5MB)</p>
+                  </label>
+                ) : (
+                  <div className="space-y-3">
+                    {/* Image Preview */}
+                    <div className="relative inline-block">
+                      <img
+                        src={getImagePreviewUrl(images.image_url)}
+                        alt="Question preview"
+                        className="max-h-64 max-w-full rounded-lg border-2 border-green-300 shadow-md"
+                        onLoad={(e) => {
+                          // Clean up the object URL after image loads
+                          URL.revokeObjectURL(e.target.src);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setImages(prev => ({ ...prev, image_url: null }))}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow-lg"
+                        title="Remove image"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <p className="text-green-600 font-medium text-sm">{images.image_url.name}</p>
+                    <p className="text-xs text-gray-500">{(images.image_url.size / 1024).toFixed(2)} KB</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Options with inline correct answer radio */}
           <div className="space-y-3">
@@ -184,50 +394,121 @@ const AddQuestionPage = () => {
 
             {options.map(({ key, field, label }) => {
               const isCorrect = formData.correct_option === key;
+              const hasText = formData[field] && formData[field].trim();
+              const hasImage = images[`${field}_image_url`];
+              
               return (
-                <div
-                  key={key}
-                  className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all cursor-pointer ${
-                    isCorrect
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  onClick={() => setFormData(prev => ({ ...prev, correct_option: key }))}
-                >
-                  {/* Radio indicator */}
-                  <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
-                    isCorrect
-                      ? 'border-green-500 bg-green-500'
-                      : 'border-gray-400'
-                  }`}>
+                <React.Fragment key={key}>
+                  <div
+                    className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-all cursor-pointer ${
+                      isCorrect
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => setFormData(prev => ({ ...prev, correct_option: key }))}
+                  >
+                    {/* Radio indicator */}
+                    <div className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                      isCorrect
+                        ? 'border-green-500 bg-green-500'
+                        : 'border-gray-400'
+                    }`}>
+                      {isCorrect && (
+                        <span className="text-white text-xs font-bold">✓</span>
+                      )}
+                    </div>
+
+                    {/* Option label badge */}
+                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                      isCorrect ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {key}
+                    </span>
+
+                    {/* Text input with equation editor - NOT required if image is present */}
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        name={field}
+                        value={formData[field]}
+                        onChange={handleChange}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full px-3 py-1.5 pr-16 border border-gray-200 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
+                        placeholder={`Enter ${label}...`}
+                      />
+                      {/* Insert Equation Button for Option */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEquationEditor(field);
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-md transition-all hover:scale-105 shadow-md flex items-center gap-1"
+                        title="Insert equation"
+                      >
+                        <i className="fas fa-square-root-alt text-xs"></i>
+                        <span className="hidden lg:inline text-[10px]">Equation</span>
+                      </button>
+                    </div>
+
+                    {/* Option Image Upload */}
+                    <label className="cursor-pointer text-gray-400 hover:text-blue-500 relative" title="Attach Image">
+                      <i className={`fas fa-image ${hasImage ? 'text-green-500' : ''}`}></i>
+                      {hasImage && (
+                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleImageChange(e, `${field}_image_url`)}
+                      />
+                    </label>
+
+                    {/* Show which content is present */}
+                    <div className="flex-shrink-0 flex gap-1 text-xs">
+                      {hasText && !hasImage && (
+                        <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded">Text</span>
+                      )}
+                      {!hasText && hasImage && (
+                        <span className="text-purple-600 bg-purple-50 px-2 py-0.5 rounded">Image</span>
+                      )}
+                      {hasText && hasImage && (
+                        <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">Both</span>
+                      )}
+                    </div>
+
                     {isCorrect && (
-                      <span className="text-white text-xs font-bold">✓</span>
+                      <span className="text-xs font-semibold text-green-600 flex-shrink-0">✓ Correct</span>
                     )}
                   </div>
-
-                  {/* Option label badge */}
-                  <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
-                    isCorrect ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    {key}
-                  </span>
-
-                  {/* Text input */}
-                  <input
-                    type="text"
-                    name={field}
-                    value={formData[field]}
-                    onChange={handleChange}
-                    required
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex-1 px-3 py-1.5 border border-gray-200 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-white"
-                    placeholder={`Enter ${label}...`}
-                  />
-
-                  {isCorrect && (
-                    <span className="text-xs font-semibold text-green-600 flex-shrink-0">✓ Correct</span>
+                  {/* Image Preview for Option */}
+                  {images[`${field}_image_url`] && (
+                    <div className="mt-2 ml-14 mb-2">
+                      <div className="relative inline-block">
+                        <img
+                          src={getImagePreviewUrl(images[`${field}_image_url`])}
+                          alt={`Option ${key} preview`}
+                          className="h-20 rounded border border-gray-200 shadow-sm"
+                          onLoad={(e) => {
+                            URL.revokeObjectURL(e.target.src);
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setImages(prev => ({ ...prev, [`${field}_image_url`]: null }))}
+                          className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow-lg text-xs"
+                          title="Remove image"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <p className="text-xs text-green-600 mt-1">
+                        <i className="fas fa-paperclip"></i> {images[`${field}_image_url`].name}
+                      </p>
+                    </div>
                   )}
-                </div>
+                </React.Fragment>
               );
             })}
           </div>
@@ -290,15 +571,64 @@ const AddQuestionPage = () => {
             <label htmlFor="explanation" className="block text-sm font-medium text-gray-700 mb-1">
               Explanation <span className="text-gray-400 font-normal">(optional — shown after exam)</span>
             </label>
-            <textarea
-              id="explanation"
-              name="explanation"
-              value={formData.explanation}
-              onChange={handleChange}
-              rows={2}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Briefly explain why this answer is correct..."
-            />
+            <div className="relative">
+              <textarea
+                id="explanation"
+                name="explanation"
+                value={formData.explanation}
+                onChange={handleChange}
+                rows={2}
+                className="w-full px-4 py-2 pr-24 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                placeholder="Briefly explain why this answer is correct..."
+              />
+              {/* Insert Equation Button for Explanation */}
+              <button
+                type="button"
+                onClick={() => openEquationEditor('explanation')}
+                className="absolute right-2 top-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-all hover:scale-105 shadow-md hover:shadow-lg flex items-center gap-1"
+                title="Insert mathematical equation"
+              >
+                <i className="fas fa-square-root-alt"></i>
+                <span className="hidden sm:inline">Equation</span>
+              </button>
+            </div>
+            {/* Image Upload for Explanation */}
+            <div className="mt-2">
+              <label className="text-xs text-gray-500 font-bold flex items-center gap-2 cursor-pointer hover:text-blue-600">
+                <i className="fas fa-image"></i> Attach Explanation Image (Optional)
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleImageChange(e, 'explanation_image_url')}
+                />
+              </label>
+              {images.explanation_image_url && (
+                <div className="mt-2 ml-4">
+                  <div className="relative inline-block">
+                    <img
+                      src={getImagePreviewUrl(images.explanation_image_url)}
+                      alt="Explanation preview"
+                      className="h-20 rounded border border-gray-200 shadow-sm"
+                      onLoad={(e) => {
+                        URL.revokeObjectURL(e.target.src);
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setImages(prev => ({ ...prev, explanation_image_url: null }))}
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow-lg text-xs"
+                      title="Remove image"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <p className="text-xs text-green-600 mt-1 ml-0">
+                    <i className="fas fa-check-circle"></i> {images.explanation_image_url.name}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Actions */}
@@ -335,7 +665,7 @@ const AddQuestionPage = () => {
                   <i className="fas fa-info-circle text-blue-600 text-xl mt-0.5"></i>
                   <div className="flex-1">
                     <p className="text-sm font-bold text-blue-900 mb-2">Excel Format Required</p>
-                    <p className="text-xs text-blue-700 mb-3">Your Excel file should have these columns: <strong>Question</strong>, <strong>OptionA</strong>, <strong>OptionB</strong>, <strong>OptionC</strong>, <strong>OptionD</strong>, <strong>CorrectOption</strong> (A/B/C/D), <strong>Marks</strong>, <strong>NegativeMarks</strong>, <strong>Difficulty</strong> (EASY/MEDIUM/HARD), <strong>Explanation</strong></p>
+                    <p className="text-xs text-blue-700 mb-3">Your Excel file should have these columns: <strong>Question</strong>, <strong>OptionA</strong>, <strong>OptionB</strong>, <strong>OptionC</strong>, <strong>OptionD</strong>, <strong>CorrectOption</strong> (A/B/C/D), <strong>Marks</strong>, <strong>NegativeMarks</strong>, <strong>Difficulty</strong>, <strong>Explanation</strong>, <strong>ImageUrl</strong>, etc.</p>
                     <button
                       type="button"
                       onClick={downloadTemplate}
@@ -422,6 +752,15 @@ const AddQuestionPage = () => {
           </div>
         </div>
       )}
+
+      {/* Math Equation Editor Modal */}
+      <MathEquationEditor
+        isOpen={showEquationEditor}
+        onClose={() => setShowEquationEditor(false)}
+        onInsert={handleEquationInsert}
+        targetField={equationTargetField}
+        initialValue=""
+      />
     </div>
   );
 };

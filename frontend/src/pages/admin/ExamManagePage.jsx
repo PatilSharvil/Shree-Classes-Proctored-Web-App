@@ -5,6 +5,8 @@ import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import AdminSidebar from '../../components/layout/AdminSidebar';
+import RichTextRenderer from '../../components/ui/RichTextRenderer';
+import { getImageUrl } from '../../utils/imageHelper';
 import './AdminDashboard.css';
 
 const ExamManagePage = () => {
@@ -176,19 +178,78 @@ const ExamManagePage = () => {
                         </span>
                         <span className="text-xs text-gray-500">{q.marks} marks</span>
                       </div>
-                      <p className="text-gray-900 mb-3">{q.question_text}</p>
+                      {q.question_type === 'IMAGE' ? (
+                        <div className="mb-3 flex justify-center">
+                          <img
+                            src={getImageUrl(q.image_url)}
+                            alt="Question"
+                            className="max-w-full h-auto object-contain rounded-lg border-2 border-gray-200 shadow-sm"
+                            style={{ maxHeight: '350px' }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <RichTextRenderer content={q.question_text} className="text-gray-900 mb-3" />
+                      )}
+                      {q.question_type === 'TEXT' && q.image_url && (
+                        <div className="mb-3 flex justify-center">
+                          <img
+                            src={getImageUrl(q.image_url)}
+                            alt="Question diagram"
+                            className="max-w-full h-auto object-contain rounded-lg border-2 border-gray-100 shadow-sm"
+                            style={{ maxHeight: '250px' }}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      )}
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div className={`p-2 rounded ${q.correct_option === 'A' ? 'bg-green-100 text-green-700' : 'bg-gray-50'}`}>
-                          <span className="font-medium">A.</span> {q.option_a}
+                          <div className="flex gap-2">
+                            <span className="font-medium">A.</span>
+                            <div className="flex-1">
+                              <RichTextRenderer content={q.option_a} />
+                              {q.option_a_image_url && (
+                                <img src={getImageUrl(q.option_a_image_url)} alt="A" className="h-12 mt-1 rounded border border-gray-200 object-contain" />
+                              )}
+                            </div>
+                          </div>
                         </div>
                         <div className={`p-2 rounded ${q.correct_option === 'B' ? 'bg-green-100 text-green-700' : 'bg-gray-50'}`}>
-                          <span className="font-medium">B.</span> {q.option_b}
+                          <div className="flex gap-2">
+                            <span className="font-medium">B.</span>
+                            <div className="flex-1">
+                              <RichTextRenderer content={q.option_b} />
+                              {q.option_b_image_url && (
+                                <img src={getImageUrl(q.option_b_image_url)} alt="B" className="h-12 mt-1 rounded border border-gray-200 object-contain" />
+                              )}
+                            </div>
+                          </div>
                         </div>
                         <div className={`p-2 rounded ${q.correct_option === 'C' ? 'bg-green-100 text-green-700' : 'bg-gray-50'}`}>
-                          <span className="font-medium">C.</span> {q.option_c}
+                          <div className="flex gap-2">
+                            <span className="font-medium">C.</span>
+                            <div className="flex-1">
+                              <RichTextRenderer content={q.option_c} />
+                              {q.option_c_image_url && (
+                                <img src={getImageUrl(q.option_c_image_url)} alt="C" className="h-12 mt-1 rounded border border-gray-200 object-contain" />
+                              )}
+                            </div>
+                          </div>
                         </div>
                         <div className={`p-2 rounded ${q.correct_option === 'D' ? 'bg-green-100 text-green-700' : 'bg-gray-50'}`}>
-                          <span className="font-medium">D.</span> {q.option_d}
+                          <div className="flex gap-2">
+                            <span className="font-medium">D.</span>
+                            <div className="flex-1">
+                              <RichTextRenderer content={q.option_d} />
+                              {q.option_d_image_url && (
+                                <img src={getImageUrl(q.option_d_image_url)} alt="D" className="h-12 mt-1 rounded border border-gray-200 object-contain" />
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>

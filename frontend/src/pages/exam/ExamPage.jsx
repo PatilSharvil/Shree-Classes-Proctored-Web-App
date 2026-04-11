@@ -9,7 +9,8 @@ import AIProctoringWrapper from '../../components/proctoring/AIProctoringWrapper
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
-import { sanitizeText } from '../../utils/sanitizer';
+import RichTextRenderer from '../../components/ui/RichTextRenderer';
+import { getImageUrl } from '../../utils/imageHelper';
 
 // Detect mobile device
 const isMobile = /Mobi|Android/i.test(navigator.userAgent);
@@ -630,9 +631,57 @@ const ExamPage = () => {
             {/* Fix #14 — userSelect none on question content */}
             <div className="space-y-6" style={{ userSelect: 'none', WebkitUserSelect: 'none' }}>
               <div>
-                <p className="text-lg text-gray-900 font-medium">
-                  {currentQuestionIndex + 1}. {sanitizeText(question?.question_text)}
-                </p>
+                <div className="text-lg text-gray-900 font-medium flex items-start gap-2">
+                  <span>{currentQuestionIndex + 1}.</span>
+                  {question?.question_type === 'IMAGE' ? (
+                    <div className="w-full flex flex-col items-center gap-2">
+                      <img
+                        src={getImageUrl(question.image_url)}
+                        alt="Question"
+                        className="max-w-full h-auto object-contain rounded-lg border-2 border-gray-200 shadow-sm"
+                        style={{ maxHeight: '500px' }}
+                        loading="lazy"
+                        onError={(e) => {
+                          console.error('Failed to load image:', {
+                            attemptedUrl: getImageUrl(question.image_url),
+                            originalPath: question.image_url,
+                            baseUrl: window.location.origin
+                          });
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'block';
+                        }}
+                      />
+                      <div className="hidden p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg text-yellow-800 text-center w-full">
+                        <div className="font-semibold mb-2">
+                          <i className="fas fa-exclamation-triangle mr-2"></i>
+                          Unable to load question image
+                        </div>
+                        <div className="text-xs text-yellow-700 break-all">
+                          URL: {getImageUrl(question.image_url)}
+                        </div>
+                        <div className="text-xs text-yellow-600 mt-1">
+                          Please check: 1) Backend is running 2) Image exists on server 3) Check browser console for details
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <RichTextRenderer content={question?.question_text} />
+                  )}
+                </div>
+                {question?.question_type === 'TEXT' && question?.image_url && (
+                  <div className="mt-4 mb-4 flex justify-center">
+                    <img
+                      src={getImageUrl(question.image_url)}
+                      alt="Question diagram"
+                      className="max-w-full h-auto object-contain rounded-lg border-2 border-gray-200 shadow-sm"
+                      style={{ maxHeight: '400px' }}
+                      loading="lazy"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                )}
                 {question?.marks > 1 && (
                   <span className="text-sm text-gray-500">({question.marks} marks)</span>
                 )}
@@ -640,21 +689,63 @@ const ExamPage = () => {
 
               {/* Fix #4 — Touch targets increased to p-5 min-h-[52px] */}
               <div className="space-y-3">
-                {['A', 'B', 'C', 'D'].map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => handleOptionSelect(option)}
-                    disabled={submitting}
-                    className={`w-full text-left p-5 min-h-[52px] rounded-lg border-2 transition-all ${
-                      currentResponse === option
-                        ? 'border-primary-600 bg-primary-50'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100'
-                    }`}
-                  >
-                    <span className="font-medium mr-3">{option}.</span>
-                    {sanitizeText(question?.[`option_${option.toLowerCase()}`])}
-                  </button>
-                ))}
+                {['A', 'B', 'C', 'D'].map((option) => {
+                  const optionText = question?.[`option_${option.toLowerCase()}`];
+                  const optionImage = question?.[`option_${option.toLowerCase()}_image_url`];
+                  const hasText = optionText && optionText.trim();
+                  const hasImage = optionImage;
+
+                  return (
+                    <button
+                      key={option}
+                      onClick={() => handleOptionSelect(option)}
+                      disabled={submitting}
+                      className={`w-full text-left p-5 min-h-[52px] rounded-lg border-2 transition-all ${
+                        currentResponse === option
+                          ? 'border-primary-600 bg-primary-50'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="font-medium mt-0.5 flex-shrink-0">{option}.</span>
+                        <div className="flex-1 flex flex-col gap-2">
+                          {/* Render text if exists */}
+                          {hasText && (
+                            <RichTextRenderer content={optionText} />
+                          )}
+                          {/* Render image if exists */}
+                          {hasImage && (
+                            <div className="flex justify-center">
+                              <img
+                                src={getImageUrl(optionImage)}
+                                alt={`Option ${option}`}
+                                className="max-w-full h-auto object-contain rounded-lg border-2 border-gray-200 shadow-sm"
+                                style={{ maxHeight: '250px' }}
+                                loading="lazy"
+                                onError={(e) => {
+                                  console.error(`Failed to load option ${option} image:`, {
+                                    attemptedUrl: getImageUrl(optionImage),
+                                    originalPath: optionImage
+                                  });
+                                  e.target.style.display = 'none';
+                                  // Show fallback text if image fails
+                                  const fallback = document.createElement('div');
+                                  fallback.className = 'p-3 bg-yellow-50 border border-yellow-400 rounded text-yellow-800 text-sm text-center';
+                                  fallback.innerHTML = `<i class="fas fa-image mr-2"></i>Image not available`;
+                                  e.target.parentNode.appendChild(fallback);
+                                }}
+                              />
+                            </div>
+                          )}
+                          {/* Show placeholder if neither text nor image */}
+                          {!hasText && !hasImage && (
+                            <div className="text-gray-400 italic">No content</div>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Mark for Review */}
