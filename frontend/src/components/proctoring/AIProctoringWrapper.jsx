@@ -8,10 +8,11 @@ import { proctoringAPI } from '../../services/api';
  * AI Proctoring Wrapper Component
  * Simplified for free-tier deployment - text-only violations, no image storage
  */
-const AIProctoringWrapper = ({ sessionId, enabled = true }) => {
+const AIProctoringWrapper = ({ sessionId, enabled = true, lookingAwayThreshold = 5 }) => {
   const [showStatus, setShowStatus] = useState(false);
   const [aiStatus, setAiStatus] = useState('Initializing...');
   const [lastViolation, setLastViolation] = useState(null);
+  const [lookingAwayCount, setLookingAwayCount] = useState(0);
   const violationCooldownRef = useRef({});
 
   // Initialize webcam
@@ -40,12 +41,17 @@ const AIProctoringWrapper = ({ sessionId, enabled = true }) => {
     // Cooldown: only record same violation type once per 60 seconds
     const now = Date.now();
     const cooldownMs = 60000;
-    if (violationCooldownRef.current[detection.type] && 
+    if (violationCooldownRef.current[detection.type] &&
         now - violationCooldownRef.current[detection.type] < cooldownMs) {
       return;
     }
 
     violationCooldownRef.current[detection.type] = now;
+
+    // Track looking away count
+    if (detection.type === 'LOOKING_AWAY' || detection.type === 'NO_FACE') {
+      setLookingAwayCount(prev => prev + 1);
+    }
 
     setLastViolation({
       type: detection.type,
@@ -141,6 +147,7 @@ const AIProctoringWrapper = ({ sessionId, enabled = true }) => {
             {/* Face Detection Info */}
             <div className="space-y-1 text-[10px] text-gray-600 mb-2">
               <p>👤 Faces: {aiDetection.detections.faceCount}</p>
+              <p> Looking Away: {lookingAwayCount}/{lookingAwayThreshold}</p>
               <p>🎯 Detection Rate: 2 FPS</p>
               <p>⏱️ Cooldown: 60s per violation type</p>
             </div>

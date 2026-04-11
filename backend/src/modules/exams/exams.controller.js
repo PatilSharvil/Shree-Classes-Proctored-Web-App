@@ -10,7 +10,7 @@ const createExam = (req, res) => {
     const {
       title, description, subject, duration_minutes, total_marks,
       negative_marks, passing_percentage, scheduled_start, scheduled_end,
-      is_active, tab_switch_threshold
+      is_active, tab_switch_threshold, looking_away_threshold
     } = req.body;
 
     // Validation - Required fields
@@ -52,6 +52,11 @@ const createExam = (req, res) => {
       return errorResponse(res, 400, 'Tab switch threshold must be between 1 and 100.');
     }
 
+    // Validate looking away threshold
+    if (looking_away_threshold !== undefined && (Number(looking_away_threshold) < 1 || Number(looking_away_threshold) > 100)) {
+      return errorResponse(res, 400, 'Looking away threshold must be between 1 and 100.');
+    }
+
     // Validate scheduled times
     if (scheduled_start && scheduled_end) {
       const startDate = new Date(scheduled_start);
@@ -65,7 +70,7 @@ const createExam = (req, res) => {
     const exam = examService.createExam({
       title, description, subject, duration_minutes, total_marks,
       negative_marks, passing_percentage, scheduled_start, scheduled_end,
-      is_active, tab_switch_threshold
+      is_active, tab_switch_threshold, looking_away_threshold
     }, req.user.id);
 
     return apiResponse(res, 201, exam, 'Exam created successfully');

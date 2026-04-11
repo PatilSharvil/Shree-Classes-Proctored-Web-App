@@ -1,0 +1,206 @@
+- generic [ref=e5]:
+  - banner [ref=e6]:
+    - generic [ref=e7]:
+      - link " Shree Science Academy" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: 
+        - generic [ref=e10]: Shree Science Academy
+      - navigation [ref=e11]:
+        - button "Dashboard" [ref=e12] [cursor=pointer]
+        - generic [ref=e13]: admin@example.com
+        - button "Logout" [ref=e14] [cursor=pointer]
+  - main [ref=e15]:
+    - generic [ref=e356]:
+      - text: 
+      - complementary [ref=e357]:
+        - link "" [ref=e358] [cursor=pointer]:
+          - /url: /admin
+          - generic [ref=e359]: 
+        - link "" [ref=e360] [cursor=pointer]:
+          - /url: /admin/exams
+          - generic [ref=e361]: 
+        - link "" [ref=e362] [cursor=pointer]:
+          - /url: /admin/analytics
+          - generic [ref=e363]: 
+        - link "" [ref=e364] [cursor=pointer]:
+          - /url: /admin/students
+          - generic [ref=e365]: 
+      - main [ref=e366]:
+        - generic [ref=e367]:
+          - generic [ref=e368]:
+            - link "" [ref=e369] [cursor=pointer]:
+              - /url: /admin/exams
+              - generic [ref=e370]: 
+            - generic [ref=e371]:
+              - heading "Math Equation Test" [level=1] [ref=e372]
+              - paragraph [ref=e373]: Mathematics • 30 minutes • 1 questions
+          - generic [ref=e374]:
+            - link "📊 Proctoring" [ref=e375] [cursor=pointer]:
+              - /url: /admin/exams/d95a338d-e7cf-4f80-96f4-6085dbaeb0aa/proctoring
+              - button "📊 Proctoring" [ref=e376]
+            - link "Edit Exam" [ref=e377] [cursor=pointer]:
+              - /url: /admin/exams/d95a338d-e7cf-4f80-96f4-6085dbaeb0aa/edit
+              - button "Edit Exam" [ref=e378]
+            - link "+ Add Question" [ref=e379] [cursor=pointer]:
+              - /url: /admin/exams/d95a338d-e7cf-4f80-96f4-6085dbaeb0aa/questions/new
+              - button "+ Add Question" [ref=e380]
+        - generic [ref=e381]:
+          - generic [ref=e382]:
+            - generic [ref=e383]:
+              - generic [ref=e384]: "1"
+              - generic [ref=e385]: Questions
+            - generic [ref=e386]:
+              - generic [ref=e387]: "0"
+              - generic [ref=e388]: Attempts
+            - generic [ref=e389]:
+              - generic [ref=e390]: 0%
+              - generic [ref=e391]: Avg Score
+            - generic [ref=e392]:
+              - generic [ref=e393]: Active
+              - generic [ref=e394]: Status
+          - navigation [ref=e396]:
+            - button "Questions (1)" [ref=e397] [cursor=pointer]
+            - button "Attempts (0)" [ref=e398] [cursor=pointer]
+          - generic [ref=e402]:
+            - generic [ref=e403]:
+              - generic [ref=e404]:
+                - generic [ref=e405]: Q1
+                - generic [ref=e406]: MEDIUM
+                - generic [ref=e407]: 1 marks
+              - generic [ref=e410]:
+                - math [ref=e412]:
+                  - generic [ref=e414]:
+                    - generic [ref=e415]:
+                      - generic [ref=e416]: a
+                      - generic [ref=e417]: b
+                    - generic [ref=e418]: +
+                    - generic [ref=e419]:
+                      - generic [ref=e420]:
+                        - generic [ref=e421]: a
+                        - generic [ref=e422]: +
+                        - generic [ref=e423]: b
+                      - generic [ref=e424]: "3"
+                    - generic [ref=e425]: +
+                    - generic [ref=e426]:
+                      - generic [ref=e427]: ∫
+                      - generic [ref=e428]: b
+                      - generic [ref=e429]: a
+                    - generic [ref=e430]: d
+                    - generic [ref=e431]: x
+                    - generic [ref=e432]: +
+                    - generic [ref=e433]:
+                      - generic [ref=e434]:
+                        - generic [ref=e435]:
+                          - generic [ref=e436]: a
+                          - generic [ref=e437]: c
+                          - generic [ref=e438]: +
+                          - generic [ref=e439]: c
+                          - generic [ref=e440]: e
+                        - generic [ref=e441]: ⏞
+                      - generic [ref=e442]:
+                        - generic [ref=e443]: "n"
+                        - generic [ref=e444]: +
+                        - generic [ref=e445]: "1"
+                    - generic [ref=e446]: +
+                    - generic [ref=e447]:
+                      - generic [ref=e448]:
+                        - generic [ref=e449]: A
+                        - generic [ref=e450]: B
+                        - generic [ref=e451]: C
+                      - generic [ref=e452]: ^
+                    - generic [ref=e453]: +
+                    - generic [ref=e454]:
+                      - generic [ref=e455]:
+                        - generic [ref=e456]: A
+                        - generic [ref=e457]: B
+                        - generic [ref=e458]: C
+                      - generic [ref=e459]: ^
+                    - generic [ref=e460]: +
+                    - generic [ref=e461]: ↑
+                    - generic [ref=e462]: ↑
+                    - generic [ref=e463]:
+                      - generic [ref=e464]: H
+                      - generic [ref=e465]: "2"
+                    - generic [ref=e466]: O
+                    - generic [ref=e467]: ↑
+                    - generic [ref=e468]: ↑
+                    - generic [ref=e469]: +
+                    - generic [ref=e470]:
+                      - generic [ref=e471]:
+                        - generic [ref=e472]:
+                          - generic [ref=e473]: a
+                          - generic [ref=e474]: +
+                          - generic [ref=e475]: b
+                        - generic [ref=e476]: ⏟
+                      - generic [ref=e477]: "n"
+                - generic [ref=e478]:
+                  - generic [ref=e479]:
+                    - generic [ref=e484]:
+                      - generic [ref=e486]: b
+                      - generic [ref=e489]: a
+                    - text: +
+                  - generic [ref=e493]:
+                    - generic [ref=e494]:
+                      - generic [ref=e500]: "3"
+                      - generic [ref=e503]:
+                        - generic [ref=e504]: a + b
+                        - img [ref=e506]
+                    - text: +
+                  - generic [ref=e511]:
+                    - generic [ref=e512]:
+                      - text: ∫
+                      - generic [ref=e516]:
+                        - generic [ref=e518]: b
+                        - generic [ref=e520]: a
+                    - text: dx +
+                  - generic [ref=e524]:
+                    - generic [ref=e528]:
+                      - generic [ref=e532]:
+                        - generic [ref=e533]: ac + ce
+                        - generic [ref=e534]:
+                          - img [ref=e536]
+                          - img [ref=e539]
+                          - img [ref=e542]
+                      - generic [ref=e548]: n+1
+                    - text: +
+                  - generic [ref=e552]:
+                    - generic [ref=e556]:
+                      - generic [ref=e557]: ABC
+                      - img [ref=e558]
+                    - text: +
+                  - generic [ref=e560]:
+                    - generic [ref=e564]:
+                      - generic [ref=e565]: ABC
+                      - img [ref=e566]
+                    - text: + ↑↑
+                  - generic [ref=e568]:
+                    - generic [ref=e569]:
+                      - text: H
+                      - generic [ref=e574]: "2"
+                    - text: O ↑↑
+                  - generic [ref=e578]:
+                    - text: +
+                    - generic [ref=e582]:
+                      - generic [ref=e584]: "n"
+                      - generic [ref=e588]:
+                        - generic [ref=e589]:
+                          - img [ref=e591]
+                          - img [ref=e594]
+                          - img [ref=e597]
+                        - generic [ref=e599]: a + b
+              - generic [ref=e606]:
+                - generic [ref=e608]:
+                  - generic [ref=e609]: A.
+                  - generic [ref=e612]: Correct Answer
+                - generic [ref=e614]:
+                  - generic [ref=e615]: B.
+                  - generic [ref=e618]: Wrong Answer 1
+                - generic [ref=e620]:
+                  - generic [ref=e621]: C.
+                  - generic [ref=e624]: Wrong Answer 2
+                - generic [ref=e626]:
+                  - generic [ref=e627]: D.
+                  - generic [ref=e630]: Wrong Answer 3
+            - link "Edit" [ref=e632] [cursor=pointer]:
+              - /url: /admin/questions/a4b0f715-edf3-40a6-b0f2-4e290d8c1df6/edit?examId=d95a338d-e7cf-4f80-96f4-6085dbaeb0aa
+              - button "Edit" [ref=e633]

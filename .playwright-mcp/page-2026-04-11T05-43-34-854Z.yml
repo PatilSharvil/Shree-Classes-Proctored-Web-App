@@ -1,0 +1,213 @@
+- generic [ref=e5]:
+  - banner [ref=e6]:
+    - generic [ref=e7]:
+      - link " Shree Science Academy" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: 
+        - generic [ref=e10]: Shree Science Academy
+      - navigation [ref=e11]:
+        - button "Dashboard" [ref=e12] [cursor=pointer]
+        - generic [ref=e13]: admin@example.com
+        - button "Logout" [ref=e14] [cursor=pointer]
+  - main [ref=e15]:
+    - generic [ref=e16]:
+      - text: 
+      - complementary [ref=e17]:
+        - link "" [ref=e18] [cursor=pointer]:
+          - /url: /admin
+          - generic [ref=e19]: 
+        - link "" [ref=e20] [cursor=pointer]:
+          - /url: /admin/exams
+          - generic [ref=e21]: 
+        - link "" [ref=e22] [cursor=pointer]:
+          - /url: /admin/analytics
+          - generic [ref=e23]: 
+        - link "" [ref=e24] [cursor=pointer]:
+          - /url: /admin/students
+          - generic [ref=e25]: 
+      - main [ref=e26]:
+        - generic [ref=e27]:
+          - link "" [ref=e28] [cursor=pointer]:
+            - /url: /admin/exams/246addd8-ec72-4ee1-b40e-37477ed4007d
+            - generic [ref=e29]: 
+          - generic [ref=e30]:
+            - heading "Add Question" [level=1] [ref=e31]
+            - paragraph [ref=e32]: Content Creation
+          - button " Bulk Import" [ref=e33] [cursor=pointer]:
+            - generic [ref=e34]: 
+            - text: Bulk Import
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - generic [ref=e39]: Question Type *
+            - generic [ref=e40]:
+              - button " Text-Based Question Type your question using text" [ref=e41] [cursor=pointer]:
+                - generic [ref=e42]: 
+                - generic [ref=e43]: Text-Based Question
+                - generic [ref=e44]: Type your question using text
+              - button " Image-Based Question Upload an image of the question" [ref=e45] [cursor=pointer]:
+                - generic [ref=e46]: 
+                - generic [ref=e47]: Image-Based Question
+                - generic [ref=e48]: Upload an image of the question
+          - generic [ref=e49]:
+            - generic [ref=e50]: Question Text *
+            - generic [ref=e51]:
+              - textbox "Question Text *" [ref=e52]:
+                - /placeholder: Enter your question here... Use $$ for math equations
+              - button " Insert Equation" [ref=e53] [cursor=pointer]:
+                - generic [ref=e54]: 
+                - generic [ref=e55]: Insert Equation
+            - paragraph [ref=e56]:
+              - generic [ref=e57]: 
+              - text: "Tip: Use"
+              - code [ref=e58]: $$ x^2 $$
+              - text: for inline math equations
+          - generic [ref=e59]:
+            - generic [ref=e60]:
+              - heading "Answer Options" [level=3] [ref=e61]
+              - generic [ref=e62]: ✓ Click the circle to mark the correct answer
+            - generic [ref=e63] [cursor=pointer]:
+              - generic [ref=e65]: ✓
+              - generic [ref=e66]: A
+              - generic [ref=e67]:
+                - textbox "Enter Option A..." [ref=e68]
+                - button " Equation" [ref=e69]:
+                  - generic [ref=e70]: 
+                  - generic [ref=e71]: Equation
+              - generic "Attach Image" [ref=e72]:
+                - generic [ref=e73]: 
+              - generic [ref=e74]: ✓ Correct
+            - generic [ref=e75] [cursor=pointer]:
+              - generic [ref=e77]: B
+              - generic [ref=e78]:
+                - textbox "Enter Option B..." [ref=e79]
+                - button " Equation" [ref=e80]:
+                  - generic [ref=e81]: 
+                  - generic [ref=e82]: Equation
+              - generic "Attach Image" [ref=e83]:
+                - generic [ref=e84]: 
+            - generic [ref=e85] [cursor=pointer]:
+              - generic [ref=e87]: C
+              - generic [ref=e88]:
+                - textbox "Enter Option C..." [ref=e89]
+                - button " Equation" [ref=e90]:
+                  - generic [ref=e91]: 
+                  - generic [ref=e92]: Equation
+              - generic "Attach Image" [ref=e93]:
+                - generic [ref=e94]: 
+            - generic [ref=e95] [cursor=pointer]:
+              - generic [ref=e97]: D
+              - generic [ref=e98]:
+                - textbox "Enter Option D..." [ref=e99]
+                - button " Equation" [ref=e100]:
+                  - generic [ref=e101]: 
+                  - generic [ref=e102]: Equation
+              - generic "Attach Image" [ref=e103]:
+                - generic [ref=e104]: 
+          - generic [ref=e105]:
+            - generic [ref=e106]:
+              - generic [ref=e107]: Marks *
+              - spinbutton "Marks *" [ref=e108]: "1"
+            - generic [ref=e109]:
+              - generic [ref=e110]: Negative Marks
+              - spinbutton "Negative Marks" [ref=e111]: "0"
+            - generic [ref=e112]:
+              - generic [ref=e113]: Difficulty *
+              - combobox "Difficulty *" [ref=e114]:
+                - option "Easy"
+                - option "Medium" [selected]
+                - option "Hard"
+          - generic [ref=e115]:
+            - generic [ref=e116]: Explanation (optional — shown after exam)
+            - generic [ref=e117]:
+              - textbox "Explanation (optional — shown after exam)" [ref=e118]:
+                - /placeholder: Briefly explain why this answer is correct...
+              - button " Equation" [ref=e119] [cursor=pointer]:
+                - generic [ref=e120]: 
+                - generic [ref=e121]: Equation
+            - generic [ref=e123] [cursor=pointer]:
+              - generic [ref=e124]: 
+              - text: Attach Explanation Image (Optional)
+          - generic [ref=e125]:
+            - button "Add Question" [ref=e126] [cursor=pointer]
+            - button "Cancel" [ref=e127] [cursor=pointer]
+      - dialog " Equation Editor" [ref=e128]:
+        - generic [ref=e129]:
+          - generic [ref=e130]:
+            - generic [ref=e131]:
+              - heading " Equation Editor" [level=2] [ref=e132]:
+                - generic [ref=e133]: 
+                - text: Equation Editor
+              - paragraph [ref=e134]: "Editing: Question Text"
+            - button "✕" [ref=e135] [cursor=pointer]
+          - generic [ref=e136]:
+            - generic [ref=e137]:
+              - paragraph [ref=e138]: Calculus & Limits
+              - generic [ref=e139]:
+                - button "∫" [ref=e140] [cursor=pointer]
+                - button "∫₀¹" [ref=e141] [cursor=pointer]
+                - button "d/dx" [ref=e142] [cursor=pointer]
+                - button "∂/∂x" [ref=e143] [cursor=pointer]
+                - button "lim" [ref=e144] [cursor=pointer]
+                - button "limₓ→₀" [ref=e145] [cursor=pointer]
+                - button "limₓ→∞" [ref=e146] [cursor=pointer]
+                - button "∑" [ref=e147] [cursor=pointer]
+                - button "∑ᵢ₌₁ⁿ" [ref=e148] [cursor=pointer]
+                - button "∏" [ref=e149] [cursor=pointer]
+                - button "√" [ref=e150] [cursor=pointer]
+                - button "∛" [ref=e151] [cursor=pointer]
+                - button "∞" [ref=e152] [cursor=pointer]
+                - button "≠" [ref=e153] [cursor=pointer]
+                - button "≤" [ref=e154] [cursor=pointer]
+                - button "≥" [ref=e155] [cursor=pointer]
+                - button "±" [ref=e156] [cursor=pointer]
+                - button "Δ" [ref=e157] [cursor=pointer]
+                - button "θ" [ref=e158] [cursor=pointer]
+                - button "π" [active] [ref=e159] [cursor=pointer]
+                - button "α" [ref=e160] [cursor=pointer]
+                - button "β" [ref=e161] [cursor=pointer]
+                - button "γ" [ref=e162] [cursor=pointer]
+                - button "∇" [ref=e163] [cursor=pointer]
+            - generic [ref=e164]:
+              - paragraph [ref=e165]: Fractions
+              - generic [ref=e166]:
+                - button "a/b" [ref=e167] [cursor=pointer]
+                - button "½" [ref=e168] [cursor=pointer]
+                - button "⅓" [ref=e169] [cursor=pointer]
+                - button "¼" [ref=e170] [cursor=pointer]
+            - generic [ref=e171]:
+              - paragraph [ref=e172]: Powers & Roots
+              - generic [ref=e173]:
+                - button "x²" [ref=e174] [cursor=pointer]
+                - button "x³" [ref=e175] [cursor=pointer]
+                - button "xⁿ" [ref=e176] [cursor=pointer]
+                - button "eˣ" [ref=e177] [cursor=pointer]
+                - button "x₁" [ref=e178] [cursor=pointer]
+                - button "x₂" [ref=e179] [cursor=pointer]
+                - button "xₙ" [ref=e180] [cursor=pointer]
+                - button "aₙ" [ref=e181] [cursor=pointer]
+            - generic [ref=e182]:
+              - paragraph [ref=e183]: Matrices
+              - generic [ref=e184]:
+                - button "2×2 Matrix" [ref=e185] [cursor=pointer]
+                - button "3×3 Matrix" [ref=e186] [cursor=pointer]
+                - button "Determinant" [ref=e187] [cursor=pointer]
+          - generic [ref=e188]:
+            - generic [ref=e189]:
+              - generic [ref=e190]:
+                - generic [ref=e191]: 
+                - text: Equation Input
+              - paragraph [ref=e195]: Loading equation editor...
+            - generic [ref=e196]:
+              - generic [ref=e197]:
+                - generic [ref=e198]: 
+                - text: LaTeX Output
+              - code [ref=e200]: Equation will appear here...
+          - generic [ref=e201]:
+            - button " Clear" [ref=e202] [cursor=pointer]:
+              - generic [ref=e203]: 
+              - text: Clear
+            - generic [ref=e204]:
+              - button "Cancel" [ref=e205] [cursor=pointer]
+              - button " Insert Equation" [disabled] [ref=e206]:
+                - generic [ref=e207]: 
+                - text: Insert Equation

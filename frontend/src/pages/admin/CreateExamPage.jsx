@@ -22,7 +22,8 @@ const CreateExamPage = () => {
     scheduled_start: '',
     scheduled_end: '',
     is_active: true,
-    tab_switch_threshold: 5
+    tab_switch_threshold: 5,
+    looking_away_threshold: 5
   });
 
   const handleChange = (e) => {
@@ -114,6 +115,7 @@ const CreateExamPage = () => {
         negative_marks: parseFloat(formData.negative_marks),
         passing_percentage: parseFloat(formData.passing_percentage),
         tab_switch_threshold: parseInt(formData.tab_switch_threshold),
+        looking_away_threshold: parseInt(formData.looking_away_threshold),
         // Ensure dates are stored in UTC format
         scheduled_start: formData.scheduled_start ? new Date(formData.scheduled_start).toISOString() : null,
         scheduled_end: formData.scheduled_end ? new Date(formData.scheduled_end).toISOString() : null
@@ -348,6 +350,49 @@ const CreateExamPage = () => {
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, tab_switch_threshold: 10 }))}
+                  className="px-3 py-1 text-xs bg-green-50 text-green-700 rounded hover:bg-green-100 border border-green-200"
+                >
+                  Lenient (10)
+                </button>
+              </div>
+            </div>
+
+            {/* Looking Away Threshold */}
+            <div>
+              <label htmlFor="looking_away_threshold" className="block text-sm font-medium text-gray-700 mb-1">
+                Looking Away Limit (Auto-Submit)
+              </label>
+              <input
+                type="number"
+                id="looking_away_threshold"
+                name="looking_away_threshold"
+                value={formData.looking_away_threshold}
+                onChange={handleChange}
+                min="1"
+                max="100"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent touch-target"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Student will be auto-submitted and flagged for cheating after looking away from screen this many times (any direction). Default: 5
+              </p>
+              <div className="flex gap-2 mt-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, looking_away_threshold: 3 }))}
+                  className="px-3 py-1 text-xs bg-red-50 text-red-700 rounded hover:bg-red-100 border border-red-200"
+                >
+                  Strict (3)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, looking_away_threshold: 5 }))}
+                  className="px-3 py-1 text-xs bg-yellow-50 text-yellow-700 rounded hover:bg-yellow-100 border border-yellow-200"
+                >
+                  Normal (5)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, looking_away_threshold: 10 }))}
                   className="px-3 py-1 text-xs bg-green-50 text-green-700 rounded hover:bg-green-100 border border-green-200"
                 >
                   Lenient (10)

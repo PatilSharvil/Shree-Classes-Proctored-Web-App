@@ -1,0 +1,38 @@
+- generic [ref=e657]:
+  - banner [ref=e658]:
+    - generic [ref=e659]:
+      - link " Shree Science Academy" [ref=e660] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e661]: 
+        - generic [ref=e662]: Shree Science Academy
+      - navigation [ref=e663]:
+        - button "Dashboard" [ref=e664] [cursor=pointer]
+        - generic [ref=e665]: test1@example.com
+        - button "Logout" [ref=e666] [cursor=pointer]
+  - main [ref=e667]:
+    - generic [ref=e907]:
+      - generic [ref=e908]:
+        - heading "Math Equation Test" [level=1] [ref=e909]
+        - generic [ref=e910]: Mathematics
+      - generic [ref=e911]:
+        - generic [ref=e912]:
+          - generic [ref=e913]: "Duration:"
+          - generic [ref=e914]: 30 minutes
+        - generic [ref=e915]:
+          - generic [ref=e916]: "Total Marks:"
+          - generic [ref=e917]: "10"
+        - generic [ref=e918]:
+          - generic [ref=e919]: "Questions:"
+          - generic [ref=e920]: "0"
+      - generic [ref=e921]:
+        - heading "⚠️ Important Instructions:" [level=3] [ref=e922]
+        - list [ref=e923]:
+          - listitem [ref=e924]: Do not switch tabs or minimize the window
+          - listitem [ref=e925]:
+            - strong [ref=e926]: "Tab Switch Limit: 5 switches"
+            - text: "- You will be auto-submitted and flagged for cheating if you exceed this limit"
+          - listitem [ref=e927]: Multiple violations may result in auto-submission
+          - listitem [ref=e928]: Exam will auto-submit when time runs out
+          - listitem [ref=e929]: Once submitted, you cannot restart the exam
+          - listitem [ref=e930]: Use "Mark for Review" to flag questions you want to revisit
+      - button "Start Exam" [ref=e931] [cursor=pointer]

@@ -278,7 +278,7 @@ const ProctoringDashboardPage = () => {
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Student</th>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Risk Level</th>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Risk Score</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">AI Violations</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Tab Switches</th>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Looking Away</th>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">No Face</th>
                       <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Max Confidence</th>
@@ -320,6 +320,9 @@ const ProctoringDashboardPage = () => {
                               </div>
                               <span className="text-sm font-bold">{student.riskScore}</span>
                             </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-lg font-bold text-gray-900">{student.tabSwitchCount || 0}</span>
                           </td>
                           <td className="px-4 py-3">
                             <span className="text-lg font-bold text-gray-900">{student.totalAIViolations}</span>

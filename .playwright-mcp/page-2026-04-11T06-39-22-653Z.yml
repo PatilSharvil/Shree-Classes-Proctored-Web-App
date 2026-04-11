@@ -1,0 +1,132 @@
+- generic [ref=e5]:
+  - banner [ref=e6]:
+    - generic [ref=e7]:
+      - link " Shree Science Academy" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: 
+        - generic [ref=e10]: Shree Science Academy
+      - navigation [ref=e11]:
+        - button "Dashboard" [ref=e12] [cursor=pointer]
+        - generic [ref=e13]: admin@example.com
+        - button "Logout" [ref=e14] [cursor=pointer]
+  - main [ref=e15]:
+    - generic [ref=e236]:
+      - text: 
+      - complementary [ref=e237]:
+        - link "" [ref=e238] [cursor=pointer]:
+          - /url: /admin
+          - generic [ref=e239]: 
+        - link "" [ref=e240] [cursor=pointer]:
+          - /url: /admin/exams
+          - generic [ref=e241]: 
+        - link "" [ref=e242] [cursor=pointer]:
+          - /url: /admin/analytics
+          - generic [ref=e243]: 
+        - link "" [ref=e244] [cursor=pointer]:
+          - /url: /admin/students
+          - generic [ref=e245]: 
+      - main [ref=e246]:
+        - generic [ref=e247]:
+          - link "" [ref=e248] [cursor=pointer]:
+            - /url: /admin/exams/d95a338d-e7cf-4f80-96f4-6085dbaeb0aa
+            - generic [ref=e249]: 
+          - generic [ref=e250]:
+            - heading "Add Question" [level=1] [ref=e251]
+            - paragraph [ref=e252]: Content Creation
+          - button " Bulk Import" [ref=e253] [cursor=pointer]:
+            - generic [ref=e254]: 
+            - text: Bulk Import
+        - generic [ref=e257]:
+          - generic [ref=e258]:
+            - generic [ref=e259]: Question Type *
+            - generic [ref=e260]:
+              - button " Text-Based Question Type your question using text" [ref=e261] [cursor=pointer]:
+                - generic [ref=e262]: 
+                - generic [ref=e263]: Text-Based Question
+                - generic [ref=e264]: Type your question using text
+              - button " Image-Based Question Upload an image of the question" [ref=e265] [cursor=pointer]:
+                - generic [ref=e266]: 
+                - generic [ref=e267]: Image-Based Question
+                - generic [ref=e268]: Upload an image of the question
+          - generic [ref=e269]:
+            - generic [ref=e270]: Question Text *
+            - generic [ref=e271]:
+              - textbox "Question Text *" [ref=e272]:
+                - /placeholder: Enter your question here... Use $$ for math equations
+              - button " Insert Equation" [ref=e273] [cursor=pointer]:
+                - generic [ref=e274]: 
+                - generic [ref=e275]: Insert Equation
+            - paragraph [ref=e276]:
+              - generic [ref=e277]: 
+              - text: "Tip: Use"
+              - code [ref=e278]: $$ x^2 $$
+              - text: for inline math equations
+          - generic [ref=e279]:
+            - generic [ref=e280]:
+              - heading "Answer Options" [level=3] [ref=e281]
+              - generic [ref=e282]: ✓ Click the circle to mark the correct answer
+            - generic [ref=e283] [cursor=pointer]:
+              - generic [ref=e285]: ✓
+              - generic [ref=e286]: A
+              - generic [ref=e287]:
+                - textbox "Enter Option A..." [ref=e288]
+                - button " Equation" [ref=e289]:
+                  - generic [ref=e290]: 
+                  - generic [ref=e291]: Equation
+              - generic "Attach Image" [ref=e292]:
+                - generic [ref=e293]: 
+              - generic [ref=e294]: ✓ Correct
+            - generic [ref=e295] [cursor=pointer]:
+              - generic [ref=e297]: B
+              - generic [ref=e298]:
+                - textbox "Enter Option B..." [ref=e299]
+                - button " Equation" [ref=e300]:
+                  - generic [ref=e301]: 
+                  - generic [ref=e302]: Equation
+              - generic "Attach Image" [ref=e303]:
+                - generic [ref=e304]: 
+            - generic [ref=e305] [cursor=pointer]:
+              - generic [ref=e307]: C
+              - generic [ref=e308]:
+                - textbox "Enter Option C..." [ref=e309]
+                - button " Equation" [ref=e310]:
+                  - generic [ref=e311]: 
+                  - generic [ref=e312]: Equation
+              - generic "Attach Image" [ref=e313]:
+                - generic [ref=e314]: 
+            - generic [ref=e315] [cursor=pointer]:
+              - generic [ref=e317]: D
+              - generic [ref=e318]:
+                - textbox "Enter Option D..." [ref=e319]
+                - button " Equation" [ref=e320]:
+                  - generic [ref=e321]: 
+                  - generic [ref=e322]: Equation
+              - generic "Attach Image" [ref=e323]:
+                - generic [ref=e324]: 
+          - generic [ref=e325]:
+            - generic [ref=e326]:
+              - generic [ref=e327]: Marks *
+              - spinbutton "Marks *" [ref=e328]: "1"
+            - generic [ref=e329]:
+              - generic [ref=e330]: Negative Marks
+              - spinbutton "Negative Marks" [ref=e331]: "0"
+            - generic [ref=e332]:
+              - generic [ref=e333]: Difficulty *
+              - combobox "Difficulty *" [ref=e334]:
+                - option "Easy"
+                - option "Medium" [selected]
+                - option "Hard"
+          - generic [ref=e335]:
+            - generic [ref=e336]: Explanation (optional — shown after exam)
+            - generic [ref=e337]:
+              - textbox "Explanation (optional — shown after exam)" [ref=e338]:
+                - /placeholder: Briefly explain why this answer is correct...
+              - button " Equation" [ref=e339] [cursor=pointer]:
+                - generic [ref=e340]: 
+                - generic [ref=e341]: Equation
+            - generic [ref=e343] [cursor=pointer]:
+              - generic [ref=e344]: 
+              - text: Attach Explanation Image (Optional)
+          - generic [ref=e345]:
+            - button "Add Question" [ref=e346] [cursor=pointer]
+            - button "Cancel" [ref=e347] [cursor=pointer]

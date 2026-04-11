@@ -1,0 +1,115 @@
+- generic [ref=e5]:
+  - banner [ref=e6]:
+    - generic [ref=e7]:
+      - link " Shree Science Academy" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e9]: 
+        - generic [ref=e10]: Shree Science Academy
+      - navigation [ref=e11]:
+        - button "Dashboard" [ref=e12] [cursor=pointer]
+        - generic [ref=e13]: admin@example.com
+        - button "Logout" [ref=e14] [cursor=pointer]
+  - main [ref=e15]:
+    - generic [ref=e94]:
+      - text: 
+      - complementary [ref=e95]:
+        - link "" [ref=e96] [cursor=pointer]:
+          - /url: /admin
+          - generic [ref=e97]: 
+        - link "" [ref=e98] [cursor=pointer]:
+          - /url: /admin/exams
+          - generic [ref=e99]: 
+        - link "" [ref=e100] [cursor=pointer]:
+          - /url: /admin/analytics
+          - generic [ref=e101]: 
+        - link "" [ref=e102] [cursor=pointer]:
+          - /url: /admin/students
+          - generic [ref=e103]: 
+      - main [ref=e104]:
+        - generic [ref=e105]:
+          - generic [ref=e106]:
+            - link "" [ref=e107] [cursor=pointer]:
+              - /url: /admin
+              - generic [ref=e108]: 
+            - generic [ref=e109]:
+              - heading "Assessments" [level=1] [ref=e110]
+              - paragraph [ref=e111]: Examination Hub
+          - link " Create New Exam" [ref=e112] [cursor=pointer]:
+            - /url: /admin/exams/new
+            - button " Create New Exam" [ref=e113]:
+              - generic [ref=e114]: 
+              - text: Create New Exam
+        - generic [ref=e115]:
+          - button "All Tracks (2)" [ref=e116] [cursor=pointer]:
+            - text: All Tracks
+            - generic [ref=e117]: (2)
+          - button "Live Exams (2)" [ref=e118] [cursor=pointer]:
+            - text: Live Exams
+            - generic [ref=e119]: (2)
+          - button "Drafts / Hidden (0)" [ref=e120] [cursor=pointer]:
+            - text: Drafts / Hidden
+            - generic [ref=e121]: (0)
+        - table [ref=e123]:
+          - rowgroup [ref=e124]:
+            - row "Exam Blueprint Domain Metrics Timeline Status Control" [ref=e125]:
+              - columnheader "Exam Blueprint" [ref=e126]
+              - columnheader "Domain" [ref=e127]
+              - columnheader "Metrics" [ref=e128]
+              - columnheader "Timeline" [ref=e129]
+              - columnheader "Status" [ref=e130]
+              - columnheader "Control" [ref=e131]
+          - rowgroup [ref=e132]:
+            - 'row " Math Equation Test ID: #b0aa • Updated 4/11/2026 Mathematics  30m Duration  0 Questions Anytime Public  " [ref=e133]':
+              - 'cell " Math Equation Test ID: #b0aa • Updated 4/11/2026" [ref=e134]':
+                - generic [ref=e135]:
+                  - generic [ref=e137]: 
+                  - generic [ref=e138]:
+                    - generic [ref=e139]: Math Equation Test
+                    - generic [ref=e140]: "ID: #b0aa • Updated 4/11/2026"
+              - cell "Mathematics" [ref=e141]
+              - cell " 30m Duration  0 Questions" [ref=e142]:
+                - generic [ref=e143]:
+                  - generic [ref=e144]:
+                    - generic [ref=e145]: 
+                    - text: 30m Duration
+                  - generic [ref=e146]:
+                    - generic [ref=e147]: 
+                    - text: 0 Questions
+              - cell "Anytime" [ref=e148]
+              - cell "Public" [ref=e149]:
+                - generic [ref=e152]: Public
+              - cell " " [ref=e153]:
+                - generic [ref=e154]:
+                  - link "" [ref=e155] [cursor=pointer]:
+                    - /url: /admin/exams/d95a338d-e7cf-4f80-96f4-6085dbaeb0aa
+                    - button "" [ref=e156]:
+                      - generic [ref=e157]: 
+                  - button "" [ref=e158] [cursor=pointer]:
+                    - generic [ref=e159]: 
+            - 'row " Test Exam - Browser Test ID: #007d • Updated 4/11/2026 Physics  30m Duration  8 Questions Anytime Public  " [ref=e160]':
+              - 'cell " Test Exam - Browser Test ID: #007d • Updated 4/11/2026" [ref=e161]':
+                - generic [ref=e162]:
+                  - generic [ref=e164]: 
+                  - generic [ref=e165]:
+                    - generic [ref=e166]: Test Exam - Browser Test
+                    - generic [ref=e167]: "ID: #007d • Updated 4/11/2026"
+              - cell "Physics" [ref=e168]
+              - cell " 30m Duration  8 Questions" [ref=e169]:
+                - generic [ref=e170]:
+                  - generic [ref=e171]:
+                    - generic [ref=e172]: 
+                    - text: 30m Duration
+                  - generic [ref=e173]:
+                    - generic [ref=e174]: 
+                    - text: 8 Questions
+              - cell "Anytime" [ref=e175]
+              - cell "Public" [ref=e176]:
+                - generic [ref=e179]: Public
+              - cell " " [ref=e180]:
+                - generic [ref=e181]:
+                  - link "" [ref=e182] [cursor=pointer]:
+                    - /url: /admin/exams/246addd8-ec72-4ee1-b40e-37477ed4007d
+                    - button "" [ref=e183]:
+                      - generic [ref=e184]: 
+                  - button "" [ref=e185] [cursor=pointer]:
+                    - generic [ref=e186]: 

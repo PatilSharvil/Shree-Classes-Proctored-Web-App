@@ -241,12 +241,16 @@ class ProctoringService {
       }
     });
     
-    const lookingAwayViolations = aiViolations.filter(v => 
+    const lookingAwayViolations = aiViolations.filter(v =>
       v.type === 'LOOKING_AWAY'
     );
-    
-    const noFaceViolations = aiViolations.filter(v => 
+
+    const noFaceViolations = aiViolations.filter(v =>
       v.type === 'NO_FACE'
+    );
+
+    const tabSwitchViolations = aiViolations.filter(v =>
+      v.type === 'TAB_SWITCH' || v.type === 'RAPID_TAB_SWITCH'
     );
 
     const totalAIViolations = aiViolations.length;
@@ -279,6 +283,8 @@ class ProctoringService {
       aiViolations,
       lookingAwayViolations,
       noFaceViolations,
+      tabSwitchViolations,
+      tabSwitchCount: tabSwitchViolations.length,
       totalAIViolations,
       maxConfidence,
       cheatingRisk,
@@ -310,7 +316,12 @@ class ProctoringService {
     // Get cheating data for each session
     return sessions.map(session => {
       const cheatingData = this.getStudentCheatingData(session.session_id);
-      
+
+      // Count tab switch violations
+      const tabSwitchViolations = cheatingData.violations.filter(v =>
+        v.type === 'TAB_SWITCH' || v.type === 'RAPID_TAB_SWITCH'
+      );
+
       return {
         session_id: session.session_id,
         name: session.name,
@@ -321,6 +332,7 @@ class ProctoringService {
         submitted_at: session.submitted_at,
         cheatingRisk: cheatingData.cheatingRisk,
         riskScore: cheatingData.riskScore,
+        tabSwitchCount: tabSwitchViolations.length,
         totalAIViolations: cheatingData.totalAIViolations,
         lookingAwayCount: cheatingData.lookingAwayViolations.length,
         noFaceCount: cheatingData.noFaceViolations.length,

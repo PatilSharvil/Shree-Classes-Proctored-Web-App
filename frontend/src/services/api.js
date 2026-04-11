@@ -209,4 +209,20 @@ export const proctoringAPI = {
   getExamCheatingSummary: (examId) => api.get(`/proctoring/cheating-summary/${examId}`)
 };
 
+// Upload API for images (questions, options, etc.)
+export const uploadAPI = {
+  uploadImage: async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    // Note: Backend upload endpoint needs to be implemented
+    // For now, this returns a local URL for preview
+    return {
+      data: {
+        url: URL.createObjectURL(file),
+        filename: file.name
+      }
+    };
+  }
+};
+
 export default api;

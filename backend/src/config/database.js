@@ -47,6 +47,7 @@ const initializeDatabase = () => {
       scheduled_end TEXT,
       is_active INTEGER DEFAULT 1,
       tab_switch_threshold INTEGER DEFAULT 5,
+      looking_away_threshold INTEGER DEFAULT 5,
       created_by TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now')),
@@ -58,6 +59,15 @@ const initializeDatabase = () => {
   try {
     db.exec(`ALTER TABLE exams ADD COLUMN tab_switch_threshold INTEGER DEFAULT 5`);
   } catch (e) {
+    // Column already exists, ignore
+  }
+
+  // Add looking_away_threshold column if it doesn't exist (safe migration)
+  try {
+    db.exec(`ALTER TABLE exams ADD COLUMN looking_away_threshold INTEGER DEFAULT 5`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
     // Column already exists, ignore
   }
 

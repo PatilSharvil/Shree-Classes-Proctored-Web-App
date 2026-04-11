@@ -55,7 +55,8 @@ export const useProctoring = (sessionId, config = {}) => {
     enableIdleDetect = true,
     idleTimeoutMs = 10 * 60 * 1000, // Fix #15 — increased to 10 minutes
     violationThreshold = 5,
-    tabSwitchThreshold = 5 // Custom tab switch threshold from exam settings
+    tabSwitchThreshold = 5, // Custom tab switch threshold from exam settings
+    lookingAwayThreshold = 5 // Custom looking away threshold from exam settings
   } = config;
 
   // State
@@ -76,6 +77,8 @@ export const useProctoring = (sessionId, config = {}) => {
   const activityQueueRef = useRef([]);
   const isSendingRef = useRef(false);
   const tabSwitchThresholdRef = useRef(tabSwitchThreshold);
+  const lookingAwayThresholdRef = useRef(lookingAwayThreshold);
+  const lookingAwayCountRef = useRef(0);
   const violationSeverityWeights = useRef({
     LOW: 1,
     MEDIUM: 2,
@@ -91,6 +94,10 @@ export const useProctoring = (sessionId, config = {}) => {
   useEffect(() => {
     tabSwitchThresholdRef.current = tabSwitchThreshold;
   }, [tabSwitchThreshold]);
+
+  useEffect(() => {
+    lookingAwayThresholdRef.current = lookingAwayThreshold;
+  }, [lookingAwayThreshold]);
 
   // Add warning to local state with auto-dismiss
   const addWarning = useCallback((message, type) => {
@@ -207,6 +214,32 @@ export const useProctoring = (sessionId, config = {}) => {
       );
 
       const currentSwitchCount = tabSwitchTimesRef.current.length;
+      lookingAwayCountRef.current += 1;
+      const currentLookingAwayCount = lookingAwayCountRef.current;
+
+      // Check if looking away threshold is exceeded - auto-submit and flag as cheating
+      if (currentLookingAwayCount >= lookingAwayThresholdRef.current) {
+        await recordViolation(
+          VIOLATION_TYPES.TAB_SWITCH,
+          `Looking away limit exceeded (${currentLookingAwayCount}/${lookingAwayThresholdRef.current}) - Auto-submitting exam`,
+          SEVERITY.CRITICAL,
+          { lookingAwayCount: currentLookingAwayCount, threshold: lookingAwayThresholdRef.current, autoSubmit: true }
+        );
+        addWarning(`⚠️ Looking away limit exceeded! Your exam is being auto-submitted for suspicious activity.`, 'critical');
+
+        // Log as suspicious activity
+        queueActivityLog('SUSPICIOUS_CHEATING', {
+          type: 'LOOKING_AWAY_THRESHOLD_EXCEEDED',
+          lookingAwayCount: currentLookingAwayCount,
+          threshold: lookingAwayThresholdRef.current
+        }, true);
+
+        // Trigger auto-submit
+        if (onViolationThreshold) {
+          onViolationThreshold(weightedScoreRef.current);
+        }
+        return;
+      }
 
       // Check if tab switch threshold is exceeded - auto-submit and flag as cheating
       if (currentSwitchCount >= tabSwitchThresholdRef.current) {
@@ -244,11 +277,11 @@ export const useProctoring = (sessionId, config = {}) => {
       } else {
         await recordViolation(
           VIOLATION_TYPES.TAB_SWITCH,
-          `User switched tabs or minimized window (${currentSwitchCount}/${tabSwitchThresholdRef.current})`,
+          `User switched tabs or minimized window (${currentSwitchCount}/${tabSwitchThresholdRef.current}) - Looking away: ${currentLookingAwayCount}/${lookingAwayThresholdRef.current}`,
           SEVERITY.MEDIUM,
-          { switchCount: currentSwitchCount, threshold: tabSwitchThresholdRef.current }
+          { switchCount: currentSwitchCount, threshold: tabSwitchThresholdRef.current, lookingAwayCount: currentLookingAwayCount, lookingAwayThreshold: lookingAwayThresholdRef.current }
         );
-        addWarning(`⚠️ Warning ${currentSwitchCount}/${tabSwitchThresholdRef.current}: Please stay on this page during the exam.`, 'medium');
+        addWarning(`⚠️ Warning ${currentSwitchCount}/${tabSwitchThresholdRef.current} (Looking away: ${currentLookingAwayCount}/${lookingAwayThresholdRef.current}): Please stay on this page during the exam.`, 'medium');
       }
 
       // Log focus lost

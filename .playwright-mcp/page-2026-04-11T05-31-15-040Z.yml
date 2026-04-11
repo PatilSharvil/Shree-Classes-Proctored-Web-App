@@ -1,0 +1,10 @@
+- generic [ref=e5]:
+  - generic [ref=e6]: 😕
+  - heading "Oops! Something went wrong" [level=1] [ref=e7]
+  - paragraph [ref=e8]: We're sorry for the inconvenience. Please try refreshing the page.
+  - generic [ref=e9]:
+    - heading "Error Details:" [level=3] [ref=e10]
+    - generic [ref=e11]: "SyntaxError: The requested module '/src/services/api.js' does not provide an export named 'uploadAPI' at Lazy at main at div at Layout (http://localhost:5173/src/layouts/MainLayout.jsx:21:19) at ProtectedRoute (http://localhost:5173/src/App.jsx:68:27) at RenderedRoute (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=c0870969:4131:5) at Routes (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=c0870969:4601:5) at Suspense at Router (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=c0870969:4544:15) at BrowserRouter (http://localhost:5173/node_modules/.vite/deps/react-router-dom.js?v=c0870969:5290:5) at ErrorBoundary (http://localhost:5173/src/components/ErrorBoundary.jsx:9:5) at App"
+  - generic [ref=e12]:
+    - button "Go Back" [ref=e13] [cursor=pointer]
+    - button "Go Home" [ref=e14] [cursor=pointer]

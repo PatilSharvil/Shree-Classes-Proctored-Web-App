@@ -80,6 +80,7 @@ const ExamPage = () => {
   const proctoring = useProctoring(session?.id, {
     violationThreshold: 5,
     tabSwitchThreshold: exam?.tab_switch_threshold || 5,
+    lookingAwayThreshold: exam?.looking_away_threshold || 5,
     onViolationThreshold: (weightedScore) => {
       console.warn(`[Proctoring] Weighted score threshold reached: ${weightedScore}. Auto-submitting...`);
       handleTimeUp();
@@ -486,6 +487,9 @@ const ExamPage = () => {
               <li>Do not switch tabs or minimize the window</li>
               <li>
                 <strong>Tab Switch Limit: {exam?.tab_switch_threshold || 5} switches</strong> - You will be auto-submitted and flagged for cheating if you exceed this limit
+              </li>
+              <li>
+                <strong>Looking Away Limit: {exam?.looking_away_threshold || 5} times</strong> - You will be auto-submitted and flagged for cheating if you look away from screen (any direction) this many times
               </li>
               <li>Multiple violations may result in auto-submission</li>
               <li>Exam will auto-submit when time runs out</li>
@@ -993,6 +997,7 @@ const ExamPage = () => {
         <AIProctoringWrapper
           sessionId={session.id}
           enabled={true}
+          lookingAwayThreshold={exam?.looking_away_threshold || 5}
         />
       )}
     </div>

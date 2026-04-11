@@ -1,0 +1,99 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - link " Shree Science Academy" [ref=e6] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e7]: 
+        - generic [ref=e8]: Shree Science Academy
+      - navigation [ref=e9]:
+        - button "Dashboard" [ref=e10] [cursor=pointer]
+        - generic [ref=e11]: test1@example.com
+        - button "Logout" [ref=e12] [cursor=pointer]
+  - main [ref=e13]:
+    - generic [ref=e14]:
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - heading "Test Exam - Browser Test" [level=2] [ref=e43]
+          - paragraph [ref=e44]: Q 1/8
+        - generic [ref=e45]:
+          - generic "Online" [ref=e46]:
+            - generic [ref=e47]: 📶
+            - generic [ref=e48]: Online
+          - generic "Windowed" [ref=e49]:
+            - generic [ref=e50]: ⚠️
+            - generic [ref=e51]: Windowed
+          - 'generic "Violations: 2" [ref=e52]':
+            - generic [ref=e53]: ⚠️
+            - generic [ref=e54]: "2"
+        - generic [ref=e55]: 29:57
+        - button "Submit" [ref=e57] [cursor=pointer]
+      - generic [ref=e61]: ⚠️ Full-screen mode is required for this exam.
+      - generic [ref=e62]:
+        - generic [ref=e63]:
+          - generic [ref=e65]:
+            - generic [ref=e66]:
+              - generic [ref=e67]:
+                - generic [ref=e68]: "1."
+                - generic [ref=e70]: Which planet is known as the Red Planet?
+              - generic [ref=e71]: (2 marks)
+            - generic [ref=e72]:
+              - button "A. Venus" [ref=e73] [cursor=pointer]:
+                - generic [ref=e74]:
+                  - generic [ref=e75]: A.
+                  - generic [ref=e78]: Venus
+              - button "B. Mars" [ref=e79] [cursor=pointer]:
+                - generic [ref=e80]:
+                  - generic [ref=e81]: B.
+                  - generic [ref=e84]: Mars
+              - button "C. Jupiter" [ref=e85] [cursor=pointer]:
+                - generic [ref=e86]:
+                  - generic [ref=e87]: C.
+                  - generic [ref=e90]: Jupiter
+              - button "D. Saturn" [ref=e91] [cursor=pointer]:
+                - generic [ref=e92]:
+                  - generic [ref=e93]: D.
+                  - generic [ref=e96]: Saturn
+            - button "Mark for Review" [ref=e98] [cursor=pointer]:
+              - generic [ref=e100]: Mark for Review
+          - generic [ref=e101]:
+            - button "⬅ Previous" [disabled] [ref=e102]
+            - button "Next ➡" [ref=e103] [cursor=pointer]
+        - generic [ref=e105]:
+          - heading "Question Palette" [level=3] [ref=e106]
+          - generic [ref=e107]:
+            - generic [ref=e108]:
+              - generic [ref=e109]:
+                - generic [ref=e110]: ✓
+                - generic [ref=e111]: Answered
+              - generic [ref=e114]: Not Answered
+              - generic [ref=e115]:
+                - generic [ref=e116]: ✓
+                - generic [ref=e117]: Answered + Review
+              - generic [ref=e120]: Marked for Review
+              - generic [ref=e123]: Current
+            - generic [ref=e124]:
+              - generic [ref=e125]:
+                - generic [ref=e126]: "0"
+                - generic [ref=e127]: Answered
+              - generic [ref=e128]:
+                - generic [ref=e129]: "7"
+                - generic [ref=e130]: Not Answered
+              - generic [ref=e131]:
+                - generic [ref=e132]: "0"
+                - generic [ref=e133]: Marked for Review
+            - generic [ref=e134]:
+              - button "1" [ref=e135] [cursor=pointer]
+              - button "2" [ref=e136] [cursor=pointer]
+              - button "3" [ref=e137] [cursor=pointer]
+              - button "4" [ref=e138] [cursor=pointer]
+              - button "5" [ref=e139] [cursor=pointer]
+              - button "6" [ref=e140] [cursor=pointer]
+              - button "7" [ref=e141] [cursor=pointer]
+              - button "8" [ref=e142] [cursor=pointer]
+      - generic [ref=e143]:
+        - generic [ref=e147]: AI Proctoring
+        - generic [ref=e151]:
+          - generic [ref=e152]: 
+          - paragraph [ref=e153]: Initializing Camera...
+      - button "" [ref=e154] [cursor=pointer]:
+        - generic [ref=e155]: 
