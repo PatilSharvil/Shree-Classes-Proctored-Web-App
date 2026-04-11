@@ -10,9 +10,19 @@ const { apiResponse, errorResponse } = require('../../utils/apiResponse');
 const addQuestion = (req, res) => {
   try {
     const { examId } = req.params;
-    
+
     // Verify exam exists
     examService.getExamById(examId);
+
+    // Validate image sizes (max 500KB base64)
+    const maxImageSize = 500 * 1024; // 500KB
+    const imageFields = ['question_image', 'option_a_image', 'option_b_image', 'option_c_image', 'option_d_image', 'explanation_image'];
+    
+    for (const field of imageFields) {
+      if (req.body[field] && req.body[field].length > maxImageSize) {
+        return errorResponse(res, 400, `Image ${field} exceeds 500KB limit. Please compress the image.`);
+      }
+    }
 
     const question = questionService.addQuestion(examId, req.body);
     return apiResponse(res, 201, question, 'Question added successfully');

@@ -87,15 +87,44 @@ const AddQuestionPage = () => {
 
   const getImagePreviewUrl = (imageFile) => {
     if (!imageFile) return null;
+    if (typeof imageFile === 'string') return imageFile; // Already base64
     return URL.createObjectURL(imageFile);
+  };
+
+  // Convert image file to base64 with compression
+  const compressImageToBase64 = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          // Resize to max 800px width
+          const maxWidth = 800;
+          const scale = Math.min(1, maxWidth / img.width);
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          // Compress to 80% quality
+          const base64 = canvas.toDataURL('image/jpeg', 0.8);
+          resolve(base64);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const uploadImages = async () => {
     const uploadedUrls = {};
     for (const [key, file] of Object.entries(images)) {
       if (file) {
-        const response = await uploadAPI.uploadImage(file);
-        uploadedUrls[key] = response.data.url;
+        // Convert to base64 with compression
+        const base64 = await compressImageToBase64(file);
+        uploadedUrls[key] = base64;
       }
     }
     return uploadedUrls;

@@ -77,19 +77,62 @@ const initializeDatabase = () => {
       id TEXT PRIMARY KEY,
       exam_id TEXT NOT NULL,
       question_text TEXT NOT NULL,
+      question_image TEXT,
       option_a TEXT NOT NULL,
+      option_a_image TEXT,
       option_b TEXT NOT NULL,
+      option_b_image TEXT,
       option_c TEXT NOT NULL,
+      option_c_image TEXT,
       option_d TEXT NOT NULL,
+      option_d_image TEXT,
       correct_option TEXT NOT NULL CHECK(correct_option IN ('A', 'B', 'C', 'D')),
       marks INTEGER DEFAULT 1,
       negative_marks REAL DEFAULT 0,
       difficulty TEXT DEFAULT 'MEDIUM' CHECK(difficulty IN ('EASY', 'MEDIUM', 'HARD')),
       explanation TEXT,
+      explanation_image TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE
     )
   `);
+
+  // Add question_image and option_image columns if they don't exist (safe migration)
+  try {
+    db.exec(`ALTER TABLE questions ADD COLUMN question_image TEXT`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
+  try {
+    db.exec(`ALTER TABLE questions ADD COLUMN option_a_image TEXT`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
+  try {
+    db.exec(`ALTER TABLE questions ADD COLUMN option_b_image TEXT`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
+  try {
+    db.exec(`ALTER TABLE questions ADD COLUMN option_c_image TEXT`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
+  try {
+    db.exec(`ALTER TABLE questions ADD COLUMN option_d_image TEXT`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
+  try {
+    db.exec(`ALTER TABLE questions ADD COLUMN explanation_image TEXT`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
 
   // Exam sessions table (active exams)
   db.exec(`

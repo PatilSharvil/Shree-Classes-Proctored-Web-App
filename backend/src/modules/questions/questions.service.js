@@ -10,22 +10,29 @@ class QuestionService {
 
     db.prepare(`
       INSERT INTO questions (
-        id, exam_id, question_text, option_a, option_b, option_c, option_d,
-        correct_option, marks, negative_marks, difficulty, explanation
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, exam_id, question_text, question_image, option_a, option_a_image,
+        option_b, option_b_image, option_c, option_c_image, option_d, option_d_image,
+        correct_option, marks, negative_marks, difficulty, explanation, explanation_image
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       questionId,
       examId,
       questionData.question_text,
+      questionData.question_image || null,
       questionData.option_a,
+      questionData.option_a_image || null,
       questionData.option_b,
+      questionData.option_b_image || null,
       questionData.option_c,
+      questionData.option_c_image || null,
       questionData.option_d,
+      questionData.option_d_image || null,
       questionData.correct_option,
       questionData.marks || 1,
       questionData.negative_marks || 0,
       questionData.difficulty || 'MEDIUM',
-      questionData.explanation
+      questionData.explanation || null,
+      questionData.explanation_image || null
     );
 
     return this.getQuestionById(questionId);
@@ -37,9 +44,10 @@ class QuestionService {
   addQuestionsBulk(examId, questions) {
     const insertStmt = db.prepare(`
       INSERT INTO questions (
-        id, exam_id, question_text, option_a, option_b, option_c, option_d,
-        correct_option, marks, negative_marks, difficulty, explanation
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, exam_id, question_text, question_image, option_a, option_a_image,
+        option_b, option_b_image, option_c, option_c_image, option_d, option_d_image,
+        correct_option, marks, negative_marks, difficulty, explanation, explanation_image
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const insertMany = db.transaction((questions) => {
@@ -49,15 +57,21 @@ class QuestionService {
           questionId,
           examId,
           q.question_text,
+          q.question_image || null,
           q.option_a,
+          q.option_a_image || null,
           q.option_b,
+          q.option_b_image || null,
           q.option_c,
+          q.option_c_image || null,
           q.option_d,
+          q.option_d_image || null,
           q.correct_option,
           q.marks || 1,
           q.negative_marks || 0,
           q.difficulty || 'MEDIUM',
-          q.explanation
+          q.explanation || null,
+          q.explanation_image || null
         );
       }
     });
@@ -176,8 +190,9 @@ class QuestionService {
     const values = [];
 
     const allowedFields = [
-      'question_text', 'option_a', 'option_b', 'option_c', 'option_d',
-      'correct_option', 'marks', 'negative_marks', 'difficulty', 'explanation'
+      'question_text', 'question_image', 'option_a', 'option_a_image', 'option_b', 'option_b_image',
+      'option_c', 'option_c_image', 'option_d', 'option_d_image',
+      'correct_option', 'marks', 'negative_marks', 'difficulty', 'explanation', 'explanation_image'
     ];
 
     for (const field of allowedFields) {
