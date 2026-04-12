@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { examsAPI, proctoringAPI } from '../../services/api';
+import useAuthStore from '../../store/authStore';
+import useAdminWebSocket from '../../hooks/useAdminWebSocket';
 import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -9,6 +11,12 @@ import './AdminDashboard.css';
 
 const ProctoringDashboardPage = () => {
   const { examId } = useParams();
+  const authToken = localStorage.getItem('token');
+  const user = useAuthStore((state) => state.user);
+
+  // WebSocket for real-time updates
+  const adminWS = useAdminWebSocket(examId, authToken);
+
   const [exam, setExam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -90,6 +98,36 @@ const ProctoringDashboardPage = () => {
       return () => clearInterval(interval);
     }
   }, [examId, autoRefresh]);
+
+  // Merge WebSocket updates with polling data
+  useEffect(() => {
+    if (Object.keys(adminWS.studentUpdates).length === 0) {
+      return;
+    }
+
+    // Update live sessions with WebSocket data
+    setLiveSessions((prev) =>
+      prev.map((session) => {
+        const wsUpdate = adminWS.studentUpdates[session.session_id];
+        if (!wsUpdate) return session;
+
+        return {
+          ...session,
+          ...wsUpdate,
+          lastUpdate: wsUpdate.lastUpdate || session.last_activity,
+        };
+      })
+    );
+  }, [adminWS.studentUpdates]);
+
+  // Show WebSocket connection status
+  useEffect(() => {
+    if (adminWS.isConnected) {
+      console.log('[Proctoring Dashboard] WebSocket connected - real-time updates enabled');
+    } else {
+      console.log('[Proctoring Dashboard] WebSocket disconnected - falling back to polling');
+    }
+  }, [adminWS.isConnected]);
 
   if (loading && !exam) {
     return (
@@ -177,6 +215,20 @@ const ProctoringDashboardPage = () => {
           </div>
           
           <div className="flex items-center gap-3">
+            {/* WebSocket Status Indicator */}
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm" style={{
+              backgroundColor: adminWS.isConnected ? '#ecfdf5' : '#fef3c7',
+              color: adminWS.isConnected ? '#065f46' : '#92400e',
+            }}>
+              <span className={`w-2 h-2 rounded-full ${adminWS.isConnected ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`}></span>
+              <span>{adminWS.isConnected ? 'Live' : 'Polling'}</span>
+              {adminWS.unreadCount > 0 && (
+                <span className="ml-1 px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">
+                  {adminWS.unreadCount}
+                </span>
+              )}
+            </div>
+
             <label className="flex items-center gap-2 text-sm text-gray-600">
               <input
                 type="checkbox"

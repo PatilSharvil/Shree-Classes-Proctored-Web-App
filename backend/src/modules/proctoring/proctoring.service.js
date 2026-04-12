@@ -605,6 +605,43 @@ class ProctoringService {
   }
 
   /**
+   * Get active sessions for an exam (for WebSocket)
+   * Alias for getLiveActiveSessions with simpler response
+   */
+  getActiveSessionsForExam(examId) {
+    return db.prepare(`
+      SELECT
+        es.id,
+        es.user_id,
+        u.name as user_name,
+        u.email as user_email,
+        es.started_at,
+        es.violation_count,
+        es.status,
+        es.last_activity_at
+      FROM exam_sessions es
+      JOIN users u ON es.user_id = u.id
+      WHERE es.exam_id = ? AND es.status IN ('IN_PROGRESS', 'PAUSED')
+      ORDER BY es.started_at DESC
+    `).all(examId);
+  }
+
+  /**
+   * Get session by ID with user details
+   */
+  getSessionById(sessionId) {
+    return db.prepare(`
+      SELECT
+        es.*,
+        u.name as user_name,
+        u.email as user_email
+      FROM exam_sessions es
+      JOIN users u ON es.user_id = u.id
+      WHERE es.id = ?
+    `).get(sessionId);
+  }
+
+  /**
    * Get storage statistics
    */
   getStorageStats() {

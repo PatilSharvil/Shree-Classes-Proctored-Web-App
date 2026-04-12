@@ -5,6 +5,7 @@ import useExamStore from '../../store/examStore';
 import useAuthStore from '../../store/authStore';
 import { formatTime } from '../../hooks/useExamTimer';
 import { useProctoring, isMobileDevice } from '../../hooks/useProctoring';
+import useWebSocket from '../../hooks/useWebSocket';
 import AIProctoringWrapper from '../../components/proctoring/AIProctoringWrapper';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
@@ -56,8 +57,21 @@ const ExamPage = () => {
     setSubmitting(true);
     setAutoSubmitError(false);
 
+    const isAutoSubmit = proctoring.weightedScore >= 5;
+
     try {
       await attemptsAPI.submit(session.id);
+
+      // Emit exam submitted via WebSocket
+      if (webSocket.emitExamSubmitted) {
+        webSocket.emitExamSubmitted(new Date().toISOString());
+      }
+
+      // Emit auto-submitted if threshold was reached
+      if (isAutoSubmit && webSocket.emitAutoSubmitted) {
+        webSocket.emitAutoSubmitted('violation_threshold_exceeded');
+      }
+
       clearExamState();
       localStorage.removeItem('examOfflineQueue');
       navigate('/dashboard', { state: { message: 'Exam auto-submitted due to timeout' } });
@@ -66,6 +80,15 @@ const ExamPage = () => {
       // If already submitted, just redirect to dashboard
       if (msg.includes('not in progress') || msg.includes('already submitted') || msg.includes('Exam is not in progress')) {
         clearExamState();
+
+        // Still emit WebSocket event even if already submitted
+        if (webSocket.emitExamSubmitted) {
+          webSocket.emitExamSubmitted(new Date().toISOString());
+        }
+        if (isAutoSubmit && webSocket.emitAutoSubmitted) {
+          webSocket.emitAutoSubmitted('violation_threshold_exceeded');
+        }
+
         navigate('/dashboard', { state: { message: 'Your exam has already been submitted.' } });
         return;
       }
@@ -74,7 +97,7 @@ const ExamPage = () => {
       setSubmitting(false);
       isSubmittingRef.current = false;
     }
-  }, [session, navigate, clearExamState]);
+  }, [session, navigate, clearExamState, proctoring.weightedScore, webSocket]);
 
   // Proctoring hook with comprehensive monitoring and device-aware thresholds
   const proctoring = useProctoring(session?.id, {
@@ -100,6 +123,40 @@ const ExamPage = () => {
     enableIdleDetect: true,
     idleTimeoutMs: 10 * 60 * 1000  // 10 minutes
   });
+
+  // WebSocket hook for real-time proctoring updates
+  const authToken = localStorage.getItem('token');
+  const webSocket = useWebSocket({
+    sessionId: session?.id,
+    examId: exam?.id,
+    authToken,
+  });
+
+  // Emit violations via WebSocket when they occur
+  const lastViolationRef = useRef(0);
+  useEffect(() => {
+    if (!webSocket.emitViolation || proctoring.violationCount <= lastViolationRef.current) {
+      return;
+    }
+
+    // Emit the latest violation via WebSocket
+    lastViolationRef.current = proctoring.violationCount;
+
+    // Get the most recent violation type from warnings
+    const latestWarning = proctoring.warnings?.[proctoring.warnings.length - 1];
+    if (latestWarning) {
+      webSocket.emitViolation({
+        type: latestWarning.type || 'UNKNOWN',
+        severity: latestWarning.severity || 'MEDIUM',
+        metadata: {
+          description: latestWarning.message || '',
+          violationCount: proctoring.violationCount,
+          weightedScore: proctoring.weightedScore,
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }
+  }, [proctoring.violationCount, proctoring.warnings, webSocket.emitViolation]);
 
   // Fix #18 — Sync offline queue when back online
   useEffect(() => {
@@ -275,6 +332,11 @@ const ExamPage = () => {
       setTotalDuration(examDuration * 60);
 
       setExamStarted(true);
+
+      // Emit exam started via WebSocket
+      if (webSocket.emitExamStarted) {
+        webSocket.emitExamStarted();
+      }
 
       // Fix #19 — only request fullscreen on non-mobile devices
       if (!isMobile) {

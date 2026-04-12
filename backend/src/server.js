@@ -1,10 +1,18 @@
+const http = require('http');
 const app = require('./app');
 const env = require('./config/env');
 const logger = require('./utils/logger');
 const authService = require('./modules/auth/auth.service');
 const scheduledTaskService = require('./services/scheduledTaskService');
+const { initializeSocket } = require('./services/websocket.service');
 
 const PORT = env.port;
+
+// Create HTTP server
+const server = http.createServer(app);
+
+// Initialize WebSocket
+const io = initializeSocket(server, app);
 
 // Create default admin user
 authService.createAdminIfNotExists()
@@ -12,8 +20,8 @@ authService.createAdminIfNotExists()
     // Start scheduled tasks
     scheduledTaskService.start();
 
-    // Start server
-    app.listen(PORT, () => {
+    // Start server with WebSocket
+    server.listen(PORT, () => {
       logger.info(`Server running in ${env.nodeEnv} mode on port ${PORT}`);
       console.log(`
 ╔══════════════════════════════════════════════════════════╗
@@ -22,6 +30,7 @@ authService.createAdminIfNotExists()
 ║  Server: http://localhost:${PORT}                          ║
 ║  Health: http://localhost:${PORT}/health                   ║
 ║  Mode:   ${env.nodeEnv}                                        ║
+║  WebSocket: Enabled ✓                                      ║
 ╠══════════════════════════════════════════════════════════╣
 ║  Default Admin:                                          ║
 ║  Email: ${env.adminEmail.padEnd(42)}║
@@ -45,11 +54,21 @@ authService.createAdminIfNotExists()
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received. Shutting down gracefully...');
   scheduledTaskService.stop();
-  process.exit(0);
+  if (io) {
+    io.close();
+  }
+  server.close(() => {
+    process.exit(0);
+  });
 });
 
 process.on('SIGINT', () => {
   logger.info('SIGINT received. Shutting down gracefully...');
   scheduledTaskService.stop();
-  process.exit(0);
+  if (io) {
+    io.close();
+  }
+  server.close(() => {
+    process.exit(0);
+  });
 });
