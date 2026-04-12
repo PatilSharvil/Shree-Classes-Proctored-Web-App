@@ -1,6 +1,9 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { proctoringAPI } from '../services/api';
 
+// Detect mobile device
+const isMobileDevice = typeof navigator !== 'undefined' && /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
 // Violation severity levels
 const SEVERITY = {
   LOW: 'LOW',
@@ -53,10 +56,15 @@ export const useProctoring = (sessionId, config = {}) => {
     enableNetworkMonitor = true,
     enableClipboardMonitor = true,
     enableIdleDetect = true,
-    idleTimeoutMs = 10 * 60 * 1000, // Fix #15 — increased to 10 minutes
+    idleTimeoutMs = 10 * 60 * 1000,
     violationThreshold = 5,
-    tabSwitchThreshold = 5, // Custom tab switch threshold from exam settings
-    lookingAwayThreshold = 5 // Custom looking away threshold from exam settings
+    // Device-aware thresholds
+    tabSwitchThreshold = isMobileDevice ? 8 : 5, // More lenient on mobile
+    lookingAwayThreshold = isMobileDevice ? 10 : 5, // More lenient on mobile
+    // Cooldown period between violations (ms) - prevent rapid-fire
+    violationCooldownMs = isMobileDevice ? 5000 : 3000,
+    // Decay factor for violation counts over time (ms)
+    violationDecayMs = 120000 // 2 minutes
   } = config;
 
   // State
@@ -79,6 +87,8 @@ export const useProctoring = (sessionId, config = {}) => {
   const tabSwitchThresholdRef = useRef(tabSwitchThreshold);
   const lookingAwayThresholdRef = useRef(lookingAwayThreshold);
   const lookingAwayCountRef = useRef(0);
+  const lastViolationTimeRef = useRef(0); // Track last violation time for cooldown
+  const violationDecayTimerRef = useRef(null); // Timer for periodic decay
   const violationSeverityWeights = useRef({
     LOW: 1,
     MEDIUM: 2,
@@ -98,6 +108,18 @@ export const useProctoring = (sessionId, config = {}) => {
   useEffect(() => {
     lookingAwayThresholdRef.current = lookingAwayThreshold;
   }, [lookingAwayThreshold]);
+
+  // Store cooldown and decay refs
+  const violationCooldownMsRef = useRef(violationCooldownMs);
+  const violationDecayMsRef = useRef(violationDecayMs);
+
+  useEffect(() => {
+    violationCooldownMsRef.current = violationCooldownMs;
+  }, [violationCooldownMs]);
+
+  useEffect(() => {
+    violationDecayMsRef.current = violationDecayMs;
+  }, [violationDecayMs]);
 
   // Add warning to local state with auto-dismiss
   const addWarning = useCallback((message, type) => {
@@ -121,6 +143,31 @@ export const useProctoring = (sessionId, config = {}) => {
   // Remove warning after timeout
   const removeWarning = useCallback((id) => {
     setWarnings(prev => prev.filter(w => w.id !== id));
+  }, []);
+
+  // Check if enough time has passed since last violation (cooldown)
+  const isInCooldown = useCallback(() => {
+    const now = Date.now();
+    const timeSinceLastViolation = now - lastViolationTimeRef.current;
+    return timeSinceLastViolation < violationCooldownMsRef.current;
+  }, []);
+
+  // Apply decay to violation counts over time
+  const applyDecay = useCallback(() => {
+    const now = Date.now();
+    const decayMs = violationDecayMsRef.current;
+    
+    // Decay tab switch times - remove old entries
+    tabSwitchTimesRef.current = tabSwitchTimesRef.current.filter(
+      t => now - t < decayMs
+    );
+    
+    // Decay looking away count gradually
+    if (lookingAwayCountRef.current > 0) {
+      // Reduce by 1 every decay period if no new violations
+      const decayAmount = Math.floor(now / decayMs);
+      lookingAwayCountRef.current = Math.max(0, lookingAwayCountRef.current - decayAmount);
+    }
   }, []);
 
   // Send queued activity logs
@@ -206,11 +253,15 @@ export const useProctoring = (sessionId, config = {}) => {
 
     const now = Date.now();
 
+    // Apply decay to old violations
+    applyDecay();
+
     if (document.hidden) {
       // Track tab switch times for rapid switching detection
       tabSwitchTimesRef.current.push(now);
+      // Keep only recent switches (within decay window)
       tabSwitchTimesRef.current = tabSwitchTimesRef.current.filter(
-        t => now - t < 60000 // Keep switches within last minute
+        t => now - t < violationDecayMsRef.current
       );
 
       const currentSwitchCount = tabSwitchTimesRef.current.length;
@@ -225,6 +276,7 @@ export const useProctoring = (sessionId, config = {}) => {
           SEVERITY.CRITICAL,
           { lookingAwayCount: currentLookingAwayCount, threshold: lookingAwayThresholdRef.current, autoSubmit: true }
         );
+        lastViolationTimeRef.current = now;
         addWarning(`⚠️ Looking away limit exceeded! Your exam is being auto-submitted for suspicious activity.`, 'critical');
 
         // Log as suspicious activity
@@ -249,6 +301,7 @@ export const useProctoring = (sessionId, config = {}) => {
           SEVERITY.CRITICAL,
           { switchCount: currentSwitchCount, threshold: tabSwitchThresholdRef.current, autoSubmit: true }
         );
+        lastViolationTimeRef.current = now;
         addWarning(`⚠️ Tab switch limit exceeded! Your exam is being auto-submitted for suspicious activity.`, 'critical');
 
         // Log as suspicious activity
@@ -265,49 +318,75 @@ export const useProctoring = (sessionId, config = {}) => {
         return;
       }
 
-      // Detect rapid tab switching (3+ times in a minute = HIGH severity)
+      // Check cooldown - skip violation if still in cooldown period
+      if (isInCooldown()) {
+        console.log('[Proctoring] Skipping violation - still in cooldown period');
+        return;
+      }
+
+      // Detect rapid tab switching (3+ times in decay window = HIGH severity)
       if (tabSwitchTimesRef.current.length >= 3) {
         await recordViolation(
           VIOLATION_TYPES.RAPID_TAB_SWITCH,
-          'Rapid tab switching detected (3+ times in 1 minute)',
+          `Rapid tab switching detected (${tabSwitchTimesRef.current.length} times in ${violationDecayMsRef.current / 1000}s)`,
           SEVERITY.HIGH,
-          { switchCount: tabSwitchTimesRef.current.length }
+          { switchCount: tabSwitchTimesRef.current.length, device: isMobileDevice ? 'mobile' : 'desktop' }
         );
+        lastViolationTimeRef.current = now;
         addWarning('⚠️ Rapid tab switching detected! This is a serious violation.', 'high');
       } else {
+        // Normal tab switch violation
+        const deviceType = isMobileDevice ? 'mobile' : 'desktop';
         await recordViolation(
           VIOLATION_TYPES.TAB_SWITCH,
-          `User switched tabs or minimized window (${currentSwitchCount}/${tabSwitchThresholdRef.current}) - Looking away: ${currentLookingAwayCount}/${lookingAwayThresholdRef.current}`,
+          `Tab switch detected on ${deviceType} (${currentSwitchCount}/${tabSwitchThresholdRef.current}) - Looking away: ${currentLookingAwayCount}/${lookingAwayThresholdRef.current}`,
           SEVERITY.MEDIUM,
-          { switchCount: currentSwitchCount, threshold: tabSwitchThresholdRef.current, lookingAwayCount: currentLookingAwayCount, lookingAwayThreshold: lookingAwayThresholdRef.current }
+          { 
+            switchCount: currentSwitchCount, 
+            threshold: tabSwitchThresholdRef.current, 
+            lookingAwayCount: currentLookingAwayCount, 
+            lookingAwayThreshold: lookingAwayThresholdRef.current,
+            device: deviceType
+          }
         );
+        lastViolationTimeRef.current = now;
         addWarning(`⚠️ Warning ${currentSwitchCount}/${tabSwitchThresholdRef.current} (Looking away: ${currentLookingAwayCount}/${lookingAwayThresholdRef.current}): Please stay on this page during the exam.`, 'medium');
       }
 
       // Log focus lost
-      queueActivityLog(EVENT_TYPES.FOCUS_LOST, { reason: 'visibility_change' });
+      queueActivityLog(EVENT_TYPES.FOCUS_LOST, { reason: 'visibility_change', device: isMobileDevice ? 'mobile' : 'desktop' });
     } else {
       // Page is visible again
-      queueActivityLog(EVENT_TYPES.FOCUS_GAINED, { timestamp: new Date().toISOString() });
+      queueActivityLog(EVENT_TYPES.FOCUS_GAINED, { 
+        timestamp: new Date().toISOString(),
+        device: isMobileDevice ? 'mobile' : 'desktop'
+      });
     }
-  }, [enableTabSwitch, recordViolation, addWarning, queueActivityLog, onViolationThreshold]);
+  }, [enableTabSwitch, recordViolation, addWarning, queueActivityLog, onViolationThreshold, applyDecay, isInCooldown]);
 
   // Handle window blur
   const handleWindowBlur = useCallback(async () => {
     if (!enableTabSwitch) return;
-    
-    queueActivityLog(EVENT_TYPES.FOCUS_LOST, { reason: 'window_blur' });
-    
+
+    queueActivityLog(EVENT_TYPES.FOCUS_LOST, { reason: 'window_blur', device: isMobileDevice ? 'mobile' : 'desktop' });
+
     // Only record as violation if not already hidden (avoid double counting)
     if (!document.hidden) {
+      // Check cooldown
+      if (isInCooldown()) {
+        console.log('[Proctoring] Skipping window blur violation - still in cooldown');
+        return;
+      }
+
       await recordViolation(
         VIOLATION_TYPES.WINDOW_BLUR,
-        'Exam window lost focus',
+        `Exam window lost focus on ${isMobileDevice ? 'mobile' : 'desktop'}`,
         SEVERITY.LOW,
-        { timestamp: new Date().toISOString() }
+        { timestamp: new Date().toISOString(), device: isMobileDevice ? 'mobile' : 'desktop' }
       );
+      lastViolationTimeRef.current = Date.now();
     }
-  }, [enableTabSwitch, recordViolation, queueActivityLog]);
+  }, [enableTabSwitch, recordViolation, queueActivityLog, isInCooldown]);
 
   // Handle fullscreen change
   const handleFullscreenChange = useCallback(async () => {
@@ -414,6 +493,94 @@ export const useProctoring = (sessionId, config = {}) => {
     return e.returnValue;
   }, []);
 
+  // Handle page hide (mobile-specific - fires when app is backgrounded)
+  const handlePageHide = useCallback(async (event) => {
+    if (!enableTabSwitch || !isMobileDevice) return;
+
+    const now = Date.now();
+    
+    // pagehide fires when page is being hidden (mobile app switch, home button, etc.)
+    // This is more reliable than visibilitychange on mobile
+    if (event.persisted) {
+      // Page is being cached in back/forward cache - not a violation
+      return;
+    }
+
+    // Apply decay
+    applyDecay();
+
+    // Check cooldown
+    if (isInCooldown()) {
+      console.log('[Proctoring] Skipping pagehide violation - still in cooldown');
+      return;
+    }
+
+    tabSwitchTimesRef.current.push(now);
+    tabSwitchTimesRef.current = tabSwitchTimesRef.current.filter(
+      t => now - t < violationDecayMsRef.current
+    );
+
+    lookingAwayCountRef.current += 1;
+    const currentLookingAwayCount = lookingAwayCountRef.current;
+    const currentSwitchCount = tabSwitchTimesRef.current.length;
+
+    // Check thresholds
+    if (currentLookingAwayCount >= lookingAwayThresholdRef.current) {
+      await recordViolation(
+        VIOLATION_TYPES.MOBILE_APP_SWITCH,
+        `Mobile app switch limit exceeded (${currentLookingAwayCount}/${lookingAwayThresholdRef.current}) - Auto-submitting exam`,
+        SEVERITY.CRITICAL,
+        { lookingAwayCount: currentLookingAwayCount, threshold: lookingAwayThresholdRef.current, autoSubmit: true, device: 'mobile' }
+      );
+      lastViolationTimeRef.current = now;
+      addWarning(`⚠️ Too many app switches detected! Your exam is being auto-submitted.`, 'critical');
+
+      if (onViolationThreshold) {
+        onViolationThreshold(weightedScoreRef.current);
+      }
+      return;
+    }
+
+    if (currentSwitchCount >= tabSwitchThresholdRef.current) {
+      await recordViolation(
+        VIOLATION_TYPES.MOBILE_APP_SWITCH,
+        `Mobile app switch limit exceeded (${currentSwitchCount}/${tabSwitchThresholdRef.current}) - Auto-submitting exam`,
+        SEVERITY.CRITICAL,
+        { switchCount: currentSwitchCount, threshold: tabSwitchThresholdRef.current, autoSubmit: true, device: 'mobile' }
+      );
+      lastViolationTimeRef.current = now;
+      addWarning(`⚠️ Too many app switches! Your exam is being auto-submitted.`, 'critical');
+
+      if (onViolationThreshold) {
+        onViolationThreshold(weightedScoreRef.current);
+      }
+      return;
+    }
+
+    // Record normal violation
+    await recordViolation(
+      VIOLATION_TYPES.MOBILE_APP_SWITCH,
+      `Mobile app switch detected (${currentSwitchCount}/${tabSwitchThresholdRef.current}) - Looking away: ${currentLookingAwayCount}/${lookingAwayThresholdRef.current}`,
+      SEVERITY.MEDIUM,
+      { switchCount: currentSwitchCount, threshold: tabSwitchThresholdRef.current, lookingAwayCount: currentLookingAwayCount, lookingAwayThreshold: lookingAwayThresholdRef.current, device: 'mobile' }
+    );
+    lastViolationTimeRef.current = now;
+    addWarning(`⚠️ Warning ${currentSwitchCount}/${tabSwitchThresholdRef.current}: Please don't switch apps during the exam.`, 'medium');
+
+    queueActivityLog(EVENT_TYPES.FOCUS_LOST, { reason: 'pagehide', device: 'mobile' });
+  }, [enableTabSwitch, recordViolation, addWarning, queueActivityLog, onViolationThreshold, applyDecay, isInCooldown]);
+
+  // Handle page show (mobile-specific - fires when app returns to foreground)
+  const handlePageShow = useCallback((event) => {
+    if (!enableTabSwitch || !isMobileDevice) return;
+
+    queueActivityLog(EVENT_TYPES.FOCUS_GAINED, { 
+      timestamp: new Date().toISOString(),
+      device: 'mobile',
+      persisted: event.persisted
+    });
+  }, [enableTabSwitch, queueActivityLog]);
+
   // Request fullscreen
   const requestFullscreen = useCallback(async () => {
     if (!enableFullscreen) return false;
@@ -484,11 +651,22 @@ export const useProctoring = (sessionId, config = {}) => {
     window.addEventListener('paste', handleClipboardEvent);
     window.addEventListener('print', handlePrintAttempt);
 
+    // Mobile-specific event listeners
+    if (isMobileDevice) {
+      window.addEventListener('pagehide', handlePageHide);
+      window.addEventListener('pageshow', handlePageShow);
+    }
+
     // Initial idle timer setup
     resetIdleTimer();
 
     // Periodic activity queue flush
     const flushInterval = setInterval(flushActivityQueue, 10000); // Every 10 seconds
+    
+    // Periodic decay timer
+    const decayInterval = setInterval(() => {
+      applyDecay();
+    }, 30000); // Apply decay every 30 seconds
 
     // Cleanup
     return () => {
@@ -509,11 +687,18 @@ export const useProctoring = (sessionId, config = {}) => {
       window.removeEventListener('paste', handleClipboardEvent);
       window.removeEventListener('print', handlePrintAttempt);
 
+      // Mobile-specific cleanup
+      if (isMobileDevice) {
+        window.removeEventListener('pagehide', handlePageHide);
+        window.removeEventListener('pageshow', handlePageShow);
+      }
+
       if (idleTimerRef.current) {
         clearTimeout(idleTimerRef.current);
       }
 
       clearInterval(flushInterval);
+      clearInterval(decayInterval);
       flushActivityQueue(); // Flush remaining logs
 
       if (document.fullscreenElement && document.exitFullscreen) {
@@ -529,9 +714,12 @@ export const useProctoring = (sessionId, config = {}) => {
     handleClipboardEvent,
     handlePrintAttempt,
     handleBeforeUnload,
+    handlePageHide,
+    handlePageShow,
     resetIdleTimer,
     queueActivityLog,
-    flushActivityQueue
+    flushActivityQueue,
+    applyDecay
   ]);
 
   // Log exam submission
@@ -569,4 +757,4 @@ export const useProctoring = (sessionId, config = {}) => {
   };
 };
 
-export { EVENT_TYPES, VIOLATION_TYPES, SEVERITY };
+export { EVENT_TYPES, VIOLATION_TYPES, SEVERITY, isMobileDevice };

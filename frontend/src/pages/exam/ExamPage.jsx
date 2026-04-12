@@ -4,7 +4,7 @@ import { examsAPI, questionsAPI, attemptsAPI } from '../../services/api';
 import useExamStore from '../../store/examStore';
 import useAuthStore from '../../store/authStore';
 import { formatTime } from '../../hooks/useExamTimer';
-import { useProctoring } from '../../hooks/useProctoring';
+import { useProctoring, isMobileDevice } from '../../hooks/useProctoring';
 import AIProctoringWrapper from '../../components/proctoring/AIProctoringWrapper';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
@@ -12,8 +12,8 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import RichTextRenderer from '../../components/ui/RichTextRenderer';
 import { getImageUrl } from '../../utils/imageHelper';
 
-// Detect mobile device
-const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+// Detect mobile device (using the shared utility)
+const isMobile = isMobileDevice;
 
 const ExamPage = () => {
   const { examId } = useParams();
@@ -76,24 +76,29 @@ const ExamPage = () => {
     }
   }, [session, navigate, clearExamState]);
 
-  // Proctoring hook with comprehensive monitoring
+  // Proctoring hook with comprehensive monitoring and device-aware thresholds
   const proctoring = useProctoring(session?.id, {
     violationThreshold: 5,
-    tabSwitchThreshold: exam?.tab_switch_threshold || 5,
-    lookingAwayThreshold: exam?.looking_away_threshold || 5,
+    // Use exam-specific thresholds, with device-specific defaults
+    tabSwitchThreshold: exam?.tab_switch_threshold || (isMobile ? 8 : 5),
+    lookingAwayThreshold: exam?.looking_away_threshold || (isMobile ? 10 : 5),
+    // Device-specific cooldown to prevent rapid-fire violations
+    violationCooldownMs: isMobile ? 5000 : 3000,
+    // Violation decay window - violations lose weight after this period
+    violationDecayMs: 120000, // 2 minutes
     onViolationThreshold: (weightedScore) => {
       console.warn(`[Proctoring] Weighted score threshold reached: ${weightedScore}. Auto-submitting...`);
       handleTimeUp();
     },
     onViolation: (violation) => {
-      console.log(`[Proctoring] Violation: ${violation.type} | Severity: ${violation.severity} | Count: ${violation.totalViolations} | Weighted: ${violation.weightedScore}`);
+      console.log(`[Proctoring] Violation: ${violation.type} | Severity: ${violation.severity} | Count: ${violation.totalViolations} | Weighted: ${violation.weightedScore} | Device: ${isMobile ? 'mobile' : 'desktop'}`);
     },
-    enableFullscreen: !isMobile, // Fix #19 — skip fullscreen enforcement on mobile
+    enableFullscreen: !isMobile, // Skip fullscreen enforcement on mobile
     enableTabSwitch: true,
     enableNetworkMonitor: true,
     enableClipboardMonitor: true,
     enableIdleDetect: true,
-    idleTimeoutMs: 10 * 60 * 1000  // Fix #15 — increased to 10 minutes
+    idleTimeoutMs: 10 * 60 * 1000  // 10 minutes
   });
 
   // Fix #18 — Sync offline queue when back online
