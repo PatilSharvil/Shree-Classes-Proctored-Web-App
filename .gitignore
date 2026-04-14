@@ -138,6 +138,9 @@ secrets/
 # Keep specific documentation images
 !proctoring-dashboard.png
 !proctoring-button-location.png
+!frontend/public/assets/*.png
+!frontend/public/assets/*.jpg
+!frontend/public/assets/*.jpeg
 
 # =====================
 # DOCUMENTATION (Keep Essential Only)
