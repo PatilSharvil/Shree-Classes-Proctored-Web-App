@@ -15,6 +15,9 @@ const AdminDashboard = () => {
   const [exams, setExams] = useState([]);
   const [stats, setStats] = useState({ totalExams: 0, totalStudents: 0, activeExams: 0, totalMinutes: 0 });
   const [loading, setLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
   const { logout } = useAuthStore();
   const navigate = useNavigate();
 
@@ -52,6 +55,47 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleToast = (msg, type = 'success') => {
+    setToastMessage({ msg, type });
+    setTimeout(() => setToastMessage(null), 5000);
+  };
+
+  const handleSyncBackup = async () => {
+    try {
+      setIsSyncing(true);
+      const res = await examsAPI.syncToGithub();
+      handleToast(res.data?.message || 'Backup synced successfully to GitHub!');
+    } catch (error) {
+      if (error.response?.status === 429) {
+        handleToast(error.response.data.message || 'Please wait 1 minute between backups.', 'error');
+      } else {
+        handleToast('Failed to sync backup.', 'error');
+      }
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleRestoreBackup = async () => {
+    if (!window.confirm('Are you sure you want to load data from the cloud? This will overwrite the local database with the CSV backup.')) {
+      return;
+    }
+    try {
+      setIsRestoring(true);
+      const res = await examsAPI.restoreFromGithub();
+      handleToast(res.data?.message || 'Backup restored successfully!');
+      loadData(); // Reload UI data
+    } catch (error) {
+      if (error.response?.status === 429) {
+        handleToast(error.response.data.message || 'Please wait 1 minute between restores.', 'error');
+      } else {
+        handleToast(error.response?.data?.message || 'Failed to restore backup.', 'error');
+      }
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
   // Calculate duration analytics (histogram)
   const getDurationAnalytics = () => {
     const buckets = [0, 0, 0, 0, 0, 0]; // 0-30, 31-60, 61-90, 91-120, 121-150, 151+
@@ -79,7 +123,14 @@ const AdminDashboard = () => {
   const durationData = getDurationAnalytics();
 
   return (
-    <div className="admin-dashboard-container">
+    <div className="admin-dashboard-container relative">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 9999, padding: '15px 25px', borderRadius: '8px', color: 'white', fontWeight: 'bold', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', background: toastMessage.type === 'error' ? '#ef4444' : '#10b981', transition: 'all 0.3s ease' }}>
+          {toastMessage.msg}
+        </div>
+      )}
+
       {/* Sidebar */}
       <AdminSidebar />
 
@@ -88,6 +139,26 @@ const AdminDashboard = () => {
         <header className="dashboard-header">
           <h1>Dashboard</h1>
         </header>
+
+        {/* Data Management Section */}
+        <section style={{ backgroundColor: 'white', borderRadius: '24px', padding: '1.5rem 2rem', marginBottom: '2.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: '1px solid rgba(241, 245, 249, 1)' }}>
+          <div>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+               <i className="fas fa-database text-blue-500"></i> Cloud Data Management
+            </h2>
+            <p style={{ color: '#64748b', fontSize: '0.875rem' }}>Sync your SQLite data to GitHub or restore following a server reboot.</p>
+          </div>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+             <button onClick={handleSyncBackup} disabled={isSyncing} style={{ padding: '0.75rem 1.5rem', borderRadius: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#eff6ff', border: 'none', color: '#3b82f6', cursor: isSyncing ? 'not-allowed' : 'pointer', opacity: isSyncing ? 0.7 : 1 }}>
+                 {isSyncing ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-cloud-upload-alt"></i>}
+                 Take Backup (Push)
+             </button>
+             <button onClick={handleRestoreBackup} disabled={isRestoring} style={{ padding: '0.75rem 1.5rem', borderRadius: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#0f172a', border: 'none', color: 'white', cursor: isRestoring ? 'not-allowed' : 'pointer', opacity: isRestoring ? 0.7 : 1 }}>
+                 {isRestoring ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-cloud-download-alt"></i>}
+                 Load Backup (Pull)
+             </button>
+          </div>
+        </section>
 
         {/* Analytics Section */}
         <section className="analytics-grid">

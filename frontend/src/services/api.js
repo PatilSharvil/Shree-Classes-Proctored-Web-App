@@ -166,7 +166,10 @@ export const examsAPI = {
   create: (data) => api.post('/exams', data),
   update: (id, data) => api.put(`/exams/${id}`, data),
   delete: (id) => api.delete(`/exams/${id}`),
-  checkAvailability: (id) => api.get(`/exams/${id}/availability`)
+  checkAvailability: (id) => api.get(`/exams/${id}/availability`),
+  syncToGithub: () => api.post('/exams/sync-to-github'),
+  restoreFromGithub: () => api.post('/exams/restore-from-github'),
+  getSyncStatus: () => api.get('/exams/sync-status')
 };
 
 // Questions API
