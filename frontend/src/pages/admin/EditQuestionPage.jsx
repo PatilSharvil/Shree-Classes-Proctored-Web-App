@@ -700,6 +700,34 @@ const EditQuestionPage = () => {
               {images.explanation_image_url && <span className="text-xs text-green-600 font-bold"><i className="fas fa-check-circle"></i> {images.explanation_image_url.name} selected</span>}
             </div>
           </div>
+
+          {/* Submit Button */}
+          <div className="flex items-center gap-4 pt-6 border-t border-gray-200">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3 text-lg"
+            >
+              {submitting ? (
+                <>
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <span>Updating Question...</span>
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-save"></i>
+                  <span>Update Question</span>
+                </>
+              )}
+            </button>
+            <Link
+              to={`/admin/exams/${examId}`}
+              className="px-8 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
+            >
+              <i className="fas fa-times"></i>
+              <span>Cancel</span>
+            </Link>
+          </div>
         </form>
       </Card>
         </div>
