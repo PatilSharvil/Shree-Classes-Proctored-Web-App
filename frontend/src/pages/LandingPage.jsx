@@ -162,7 +162,6 @@ const LandingPage = () => {
                   <div className="news-card-content">
                     <h3>MHT CET 2026 Registration Opens</h3>
                     <p>State Common Entrance Test Cell announces registration dates for PCM/PCB groups. Apply before deadline.</p>
-                    <a href="#" className="read-more">Read More <i className="fas fa-arrow-right"></i></a>
                   </div>
                 </div>
                 <div className="news-card">
@@ -170,15 +169,13 @@ const LandingPage = () => {
                   <div className="news-card-content">
                     <h3>MHT CET Syllabus 2026 Released</h3>
                     <p>Complete syllabus for Physics, Chemistry, Mathematics & Biology now available. Download from official website.</p>
-                    <a href="#" className="read-more">Read More <i className="fas fa-arrow-right"></i></a>
                   </div>
                 </div>
                 <div className="news-card">
-                  <img src="/assets/news1.png" alt="News 3" />
+                  <img src="/assets/news3.png" alt="News 3" />
                   <div className="news-card-content">
                     <h3>New Batch Starting for Class 12th CET</h3>
                     <p>Join our upcoming batch for MHT CET preparation. Limited seats available. Register now!</p>
-                    <a href="#" className="read-more">Read More <i className="fas fa-arrow-right"></i></a>
                   </div>
                 </div>
               </div>
