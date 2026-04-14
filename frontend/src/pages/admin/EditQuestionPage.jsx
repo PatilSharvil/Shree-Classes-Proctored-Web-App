@@ -672,6 +672,7 @@ const EditQuestionPage = () => {
                         name={field}
                         value={formData[field]}
                         onChange={handleChange}
+                        onPaste={(e) => handlePaste(e, field)}
                         onClick={(e) => e.stopPropagation()}
                         className="w-full px-3 py-1.5 pr-16 border border-gray-200 rounded-md focus:ring-2 focus:ring-primary-500 bg-white"
                         placeholder={`Enter ${label}...`}
@@ -856,6 +857,7 @@ const EditQuestionPage = () => {
                 name="explanation"
                 value={formData.explanation}
                 onChange={handleChange}
+                onPaste={(e) => handlePaste(e, 'explanation')}
                 rows={2}
                 className="w-full px-4 py-2 pr-24 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                 placeholder="Briefly explain why this answer is correct..."
