@@ -5,17 +5,13 @@ import './LandingPage.css';
 const LandingPage = () => {
   const navigate = useNavigate();
 
-  const [currentTextIndex, setCurrentTextIndex] = useState(0);
-  const rotatingTexts = [
-    "Boost your Physics score 📈",
-    "Master Chemistry concepts 🧪",
-    "Crack Maths with practice ➗"
-  ];
+  const [currentSubjectIndex, setCurrentSubjectIndex] = useState(0);
+  const subjects = ['Physics', 'Chemistry', 'Maths'];
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentTextIndex((prevIndex) => (prevIndex + 1) % rotatingTexts.length);
-    }, 2500); // changes every 2.5 seconds
+      setCurrentSubjectIndex((prevIndex) => (prevIndex + 1) % subjects.length);
+    }, 2500);
     return () => clearInterval(interval);
   }, []);
 
@@ -139,11 +135,12 @@ const LandingPage = () => {
           <div className="hero-text">
             <h1>Best Coaching for <span>MHT CET</span> Success</h1>
             <p>Expert guidance for Class 12th students preparing for MHT CET PCM & PCB. Comprehensive study material, mock tests, and personalized mentorship for engineering & medical aspirants.</p>
-            <div className="rotating-text-container">
-              <h2 key={currentTextIndex} className="rotating-text fade-animation">
-                {rotatingTexts[currentTextIndex]}
+            <div className="modern-hero-text">
+              <span className="top-label">Smart PCM Practice Platform</span>
+              <h2 className="main-heading">
+                Boost your <span className="rotating-subject fade-animation" key={currentSubjectIndex}>{subjects[currentSubjectIndex]}</span> score
               </h2>
-              <p className="rotating-subtitle">Practice smarter. Score higher.</p>
+              <p className="sub-label">Practice smarter. Score higher.</p>
             </div>
           </div>
           <div className="hero-image">
