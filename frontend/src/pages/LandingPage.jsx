@@ -1,9 +1,23 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './LandingPage.css';
 
 const LandingPage = () => {
   const navigate = useNavigate();
+
+  const [currentTextIndex, setCurrentTextIndex] = useState(0);
+  const rotatingTexts = [
+    "Boost your Physics score 📈",
+    "Master Chemistry concepts 🧪",
+    "Crack Maths with practice ➗"
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTextIndex((prevIndex) => (prevIndex + 1) % rotatingTexts.length);
+    }, 2500); // changes every 2.5 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     // Mobile Menu Toggle logic
@@ -125,9 +139,11 @@ const LandingPage = () => {
           <div className="hero-text">
             <h1>Best Coaching for <span>MHT CET</span> Success</h1>
             <p>Expert guidance for Class 12th students preparing for MHT CET PCM & PCB. Comprehensive study material, mock tests, and personalized mentorship for engineering & medical aspirants.</p>
-            <div className="search-box">
-              <input type="text" placeholder="Search for PCM/PCB courses, mock tests..." />
-              <button className="btn btn-primary">Search</button>
+            <div className="rotating-text-container">
+              <h2 key={currentTextIndex} className="rotating-text fade-animation">
+                {rotatingTexts[currentTextIndex]}
+              </h2>
+              <p className="rotating-subtitle">Practice smarter. Score higher.</p>
             </div>
           </div>
           <div className="hero-image">
