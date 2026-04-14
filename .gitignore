@@ -129,7 +129,7 @@ secrets/
 # =====================
 # SCREENSHOTS & IMAGES (Generated)
 # =====================
-*.png
+
 *.jpg
 *.jpeg
 *.gif
