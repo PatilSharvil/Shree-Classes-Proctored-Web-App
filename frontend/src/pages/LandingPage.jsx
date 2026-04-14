@@ -255,75 +255,115 @@ const LandingPage = () => {
       </section>
 
       {/* Statistics Section */}
-      <section className="statistics container" id="results">
-        <h2>Our Success Record</h2>
-        <div className="grid stats-grid">
-          {[
-            { icon: 'fas fa-user-graduate', num: '500+', label: 'Students Trained' },
-            { icon: 'fas fa-university', num: '150+', label: 'Top Colleges' },
-            { icon: 'fas fa-medal', num: '50+', label: 'Top 100 Ranks' }
-          ].map((stat, idx) => (
-            <div key={idx} className="stats-card">
-              <i className={stat.icon}></i>
-              <span className="number">{stat.num}</span>
-              <span className="label">{stat.label}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="online-courses">
+      <section className="statistics" id="results">
         <div className="container">
-          <div className="cta-card">
-            <h2>Start Your CET Preparation Today!</h2>
-            <p>Join Shree Science Academy for expert coaching, mock tests, and personalized mentorship.</p>
+          <h2>Our Success Record</h2>
+          <div className="grid stats-grid">
+            {[
+              { icon: 'fas fa-user-graduate', num: '500+', label: 'Students Trained' },
+              { icon: 'fas fa-university', num: '150+', label: 'Top Colleges' },
+              { icon: 'fas fa-medal', num: '50+', label: 'Top 100 Ranks' }
+            ].map((stat, idx) => (
+              <div key={idx} className="stats-card">
+                <i className={stat.icon}></i>
+                <span className="number">{stat.num}</span>
+                <span className="label">{stat.label}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="footer" id="contact">
-        <div className="container footer-content">
-          <div className="footer-about">
-            <h3>About Shree Science Academy</h3>
-            <p>We are dedicated to providing quality education to Class 12th students preparing for MHT CET PCM & PCB. Our expert faculty, comprehensive study material, and online mock tests ensure complete preparation for engineering & medical entrance exams.</p>
-          </div>
-          <div className="footer-links">
-            <h4>Quick Links</h4>
-            <ul>
-              <li><Link to="/">Home</Link></li>
-              <li><Link to="/login">Login</Link></li>
-              <li><Link to="/register">Register</Link></li>
-              <li><Link to="/dashboard">Dashboard</Link></li>
-            </ul>
-          </div>
-          <div className="footer-links">
-            <h4>Our Courses</h4>
-            <ul>
-              <li><a href="#">MHT CET PCM</a></li>
-              <li><a href="#">MHT CET PCB</a></li>
-              <li><a href="#">Mock Test Series</a></li>
-              <li><a href="#">Study Material</a></li>
-            </ul>
-          </div>
-          <div className="footer-contact">
-            <h4>Contact Us</h4>
-            <p><i className="fas fa-envelope"></i> info@shreescienceacademy.com</p>
-            <p><i className="fas fa-phone"></i> +91 98765 43210</p>
-            <p><i className="fas fa-map-marker-alt"></i> Maharashtra, India</p>
+      {/* Combined Footer Wrapper */}
+      <div className="footer-wrapper">
+        <div className="container relative-wrapper">
+          {/* Overlapped CTA / Newsletter Card */}
+          <div className="cta-newsletter-card">
+            <div className="cta-left">
+              <div className="cta-icon-placeholder">
+                  <i className="fas fa-graduation-cap"></i>
+              </div>
+            </div>
+            <div className="cta-right">
+              <h2>Start Your CET Preparation Today!</h2>
+              <p>Join Shree Science Academy for expert coaching, mock tests, and personalized mentorship.</p>
+              <div style={{ marginBottom: '20px' }}>
+                  <Link to="/register">
+                    <button className="btn-subscribe" style={{ padding: '15px 35px', fontSize: '16px' }}>Get Started</button>
+                  </Link>
+              </div>
+              <p className="cta-policy">Secure your future with the best coaching in Maharashtra.</p>
+            </div>
           </div>
         </div>
-        <div className="footer-bottom">
-          <p>&copy; 2026 Shree Science Academy. All Rights Reserved.</p>
-          <div className="social-icons">
-            <a href="#"><i className="fab fa-facebook-f"></i></a>
-            <a href="#"><i className="fab fa-instagram"></i></a>
-            <a href="#"><i className="fab fa-youtube"></i></a>
-            <a href="#"><i className="fab fa-telegram"></i></a>
+
+        <footer className="footer-modern" id="contact">
+          <div className="container">
+             <div className="footer-grid">
+               <div className="footer-brand">
+                 <div className="brand-logo text-primary-600">
+                   <i className="fas fa-graduation-cap text-primary-600"></i>
+                   <span>Shree Science Academy</span>
+                 </div>
+                 <p className="brand-desc">We are dedicated to providing quality education to Class 12th students preparing for MHT CET PCM & PCB. Our expert faculty, comprehensive study material, and online mock tests ensure complete preparation for engineering & medical entrance exams.</p>
+                 <div className="social-icons-modern">
+                   <a href="#"><i className="fab fa-facebook-f"></i></a>
+                   <a href="#"><i className="fab fa-twitter"></i></a>
+                   <a href="#"><i className="fab fa-instagram"></i></a>
+                   <a href="#"><i className="fab fa-linkedin-in"></i></a>
+                   <a href="#"><i className="fab fa-youtube"></i></a>
+                 </div>
+               </div>
+
+               <div className="footer-links-col">
+                 <h4>Quick Links</h4>
+                 <ul>
+                   <li><Link to="/">Home</Link></li>
+                   <li><Link to="/login">Login</Link></li>
+                   <li><Link to="/register">Register</Link></li>
+                   <li><Link to="/dashboard">Dashboard</Link></li>
+                 </ul>
+               </div>
+
+               <div className="footer-links-col">
+                 <h4>Our Courses</h4>
+                 <ul>
+                   <li><a href="#">MHT CET PCM</a></li>
+                   <li><a href="#">MHT CET PCB</a></li>
+                   <li><a href="#">Mock Test Series</a></li>
+                   <li><a href="#">Study Material</a></li>
+                 </ul>
+               </div>
+
+               <div className="footer-contact-col">
+                 <h4>Contact Us</h4>
+                 <div className="contact-item">
+                   <i className="fas fa-phone"></i>
+                   <span>+91 98765 43210</span>
+                 </div>
+                 <div className="contact-item">
+                   <i className="fas fa-envelope"></i>
+                   <span>info@shreescienceacademy.com</span>
+                 </div>
+                 <div className="contact-item">
+                   <i className="fas fa-map-marker-alt"></i>
+                   <span>Maharashtra, India</span>
+                 </div>
+               </div>
+             </div>
+             
+             <div className="footer-bottom-bar">
+                <p className="copyright">&copy; {new Date().getFullYear()} Shree Science Academy. All rights reserved.</p>
+                <div className="bottom-links">
+                  <a href="#">Privacy Policy</a>
+                  <a href="#">Terms of Use</a>
+                  <a href="#">Legal</a>
+                  <a href="#">Site Map</a>
+                </div>
+             </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   );
 };
