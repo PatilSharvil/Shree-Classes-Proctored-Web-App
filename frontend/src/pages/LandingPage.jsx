@@ -1,12 +1,73 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './LandingPage.css';
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const statsRef = useRef(null);
+  const animatedRef = useRef(false);
 
   const [currentSubjectIndex, setCurrentSubjectIndex] = useState(0);
   const subjects = ['Physics', 'Chemistry', 'Maths'];
+
+  // Stats data
+  const statsData = [
+    { icon: 'fas fa-user-graduate', num: '500+', label: 'Students Trained' },
+    { icon: 'fas fa-university', num: '150+', label: 'Top Colleges' },
+    { icon: 'fas fa-medal', num: '50+', label: 'Top 100 Ranks' }
+  ];
+
+  const [displayedStats, setDisplayedStats] = useState(statsData.map(s => ({ ...s, animatedNum: 0 })));
+
+  // Counting animation triggered by IntersectionObserver
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && !animatedRef.current) {
+          animatedRef.current = true;
+          animateCounters();
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    if (statsRef.current) {
+      observer.observe(statsRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const animateCounters = () => {
+    const duration = 2000; // 2 seconds
+    const startTime = Date.now();
+
+    const easeOutExpo = (t) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t));
+
+    const step = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const easedProgress = easeOutExpo(progress);
+
+      setDisplayedStats(
+        statsData.map((stat) => {
+          const targetNum = parseInt(stat.num.replace('+', ''), 10);
+          const currentNum = Math.floor(easedProgress * targetNum);
+          return { ...stat, animatedNum: currentNum };
+        })
+      );
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        // Set final values
+        setDisplayedStats(statsData.map((stat) => ({ ...stat, animatedNum: parseInt(stat.num.replace('+', ''), 10) })));
+      }
+    };
+
+    requestAnimationFrame(step);
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -255,18 +316,16 @@ const LandingPage = () => {
       </section>
 
       {/* Statistics Section */}
-      <section className="statistics" id="results">
+      <section className="statistics" id="results" ref={statsRef}>
         <div className="container">
           <h2>Our Success Record</h2>
           <div className="grid stats-grid">
-            {[
-              { icon: 'fas fa-user-graduate', num: '500+', label: 'Students Trained' },
-              { icon: 'fas fa-university', num: '150+', label: 'Top Colleges' },
-              { icon: 'fas fa-medal', num: '50+', label: 'Top 100 Ranks' }
-            ].map((stat, idx) => (
+            {displayedStats.map((stat, idx) => (
               <div key={idx} className="stats-card">
                 <i className={stat.icon}></i>
-                <span className="number">{stat.num}</span>
+                <span className="number">
+                  {stat.animatedNum}{stat.num.includes('+') ? '+' : ''}
+                </span>
                 <span className="label">{stat.label}</span>
               </div>
             ))}
