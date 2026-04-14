@@ -4,6 +4,7 @@ import { questionsAPI, uploadAPI } from '../../services/api';
 import { sanitizeText } from '../../utils/sanitizer';
 import { getImageUrl } from '../../utils/imageHelper';
 import MathEquationEditor from '../../components/ui/MathEquationEditor';
+import RichTextRenderer from '../../components/ui/RichTextRenderer';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -95,6 +96,176 @@ const EditQuestionPage = () => {
       ...prev,
       [name]: value
     }));
+  };
+
+  /**
+   * Sanitize and fix malformed LaTeX in form fields
+   */
+  const sanitizeLaTeX = (text) => {
+    if (!text || !text.trim()) return text;
+
+    let sanitized = text.trim();
+
+    // Fix 1: If text ends with $$ but doesn't start with $$, add $$ at beginning
+    if (sanitized.endsWith('$$') && !sanitized.startsWith('$$')) {
+      sanitized = `$$ ${sanitized.replace(/\s*\$\$\s*$/, '').trim()} $$`;
+    }
+
+    // Fix 2: If text has $$ only at start but not at end, add $$ at end
+    if (sanitized.startsWith('$$') && !sanitized.endsWith('$$')) {
+      sanitized = `${sanitized.replace(/^\$\$\s*/, '').trim()} $$`;
+    }
+
+    // Fix 3: Remove double $$ like $$$$ or $$ $$
+    sanitized = sanitized.replace(/\$\$\s*\$\$/g, '$$');
+
+    // Fix 4: If has LaTeX commands but no $$ wrappers, add them
+    const hasLatexCommands = /\\(lim|frac|sqrt|sin|cos|tan|ln|log|to|infty|pi|times|int|sum|prod|div|pm)/.test(sanitized);
+    if (hasLatexCommands && !sanitized.includes('$$')) {
+      sanitized = `$$ ${sanitized} $$`;
+    }
+
+    // Fix 5: Fix unbalanced parentheses
+    const openParenCount = (sanitized.match(/\(/g) || []).length;
+    const closeParenCount = (sanitized.match(/\)/g) || []).length;
+    if (openParenCount > closeParenCount) {
+      sanitized += ')'.repeat(openParenCount - closeParenCount);
+    }
+
+    return sanitized;
+  };
+
+  /**
+   * Auto-format pasted math text into LaTeX
+   */
+  const formatMathToLatex = (text) => {
+    if (!text || !text.trim()) return text;
+
+    const trimmed = text.trim();
+
+    // If already properly formatted LaTeX, return as-is
+    if (trimmed.startsWith('$$') && trimmed.endsWith('$$')) {
+      return trimmed;
+    }
+
+    // If text already contains LaTeX commands (has backslashes), just wrap in $$ if needed
+    if (trimmed.includes('\\')) {
+      if (!trimmed.includes('$$')) {
+        return `$$ ${trimmed} $$`;
+      }
+      return sanitizeLaTeX(trimmed);
+    }
+
+    let formatted = trimmed;
+
+    // Fix spaced letters: "s i n" → "sin", "l i m" → "lim"
+    formatted = formatted.replace(/\b([a-zA-Z])\s+([a-zA-Z])\s+([a-zA-Z])\b/g, '$1$2$3');
+    formatted = formatted.replace(/\b([a-zA-Z])\s+([a-zA-Z])\b/g, '$1$2');
+
+    // Unicode superscripts → LaTeX exponents
+    formatted = formatted.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g, (match) => {
+      const map = {'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9'};
+      return `^${map[match]}`;
+    });
+
+    // Unicode subscripts → LaTeX subscripts
+    formatted = formatted.replace(/[₀₁₂₃₄₅₆₇₈₉]/g, (match) => {
+      const map = {'₀':'0','₁':'1','₂':'2','₃':'3','₄':'4','₅':'5','₆':'6','₇':'7','₈':'8','₉':'9'};
+      return `_${map[match]}`;
+    });
+
+    // Superscript plus/minus for one-sided limits: 0⁺ → 0^+
+    formatted = formatted.replace(/⁺/g, '^+');
+    formatted = formatted.replace(/⁻/g, '^-');
+
+    // ∞ BEFORE limit regex so it gets captured as \infty in $3
+    formatted = formatted.replace(/∞/g, '\\infty');
+
+    // Limits: lim x→0 or lim x->0 or limx→∞ → \lim_{x \to 0}
+    // Must run BEFORE → is converted to \to below
+    // /gi flag: case-insensitive, global (multiple limits)
+    formatted = formatted.replace(/lim\s*([a-zA-Z])\s*(→|->|⟶|⇒)\s*([^\s\)\},]+)/gi, '\\lim_{$1 \\to $3}');
+
+    // Unicode math symbols → LaTeX
+    formatted = formatted.replace(/√/g, '\\sqrt');
+    formatted = formatted.replace(/∫/g, '\\int');
+    formatted = formatted.replace(/∑/g, '\\sum');
+    formatted = formatted.replace(/∏/g, '\\prod');
+    // ∞ already handled before limit regex
+    formatted = formatted.replace(/π/g, '\\pi');
+    formatted = formatted.replace(/→/g, '\\to');
+    formatted = formatted.replace(/⟶/g, '\\to');
+    formatted = formatted.replace(/≠/g, '\\neq');
+    formatted = formatted.replace(/≤/g, '\\leq');
+    formatted = formatted.replace(/≥/g, '\\geq');
+    formatted = formatted.replace(/±/g, '\\pm');
+    formatted = formatted.replace(/×/g, '\\times');
+    formatted = formatted.replace(/÷/g, '\\div');
+
+    // Exponential notation: ex → e^{x}
+    formatted = formatted.replace(/\be([a-zA-Z])\b/g, 'e^{$1}');
+
+    // Logarithms & Trig functions
+    formatted = formatted.replace(/\bl\s*n\s*\(/gi, '\\ln(');
+    formatted = formatted.replace(/\blog\s*\(/g, '\\log(');
+    formatted = formatted.replace(/\blogₑ\s*/g, '\\ln ');
+    formatted = formatted.replace(/\bsin\s*\(/g, '\\sin(');
+    formatted = formatted.replace(/\bcos\s*\(/g, '\\cos(');
+    formatted = formatted.replace(/\btan\s*\(/g, '\\tan(');
+
+    // Fractions: (expr)/x or a/b → \frac{a}{b}
+    formatted = formatted.replace(/\(([^)]+)\)\s*\/\s*([a-zA-Z0-9^{}]+)/g, '\\frac{$1}{$2}');
+    formatted = formatted.replace(/([a-zA-Z0-9^{}]+)\s*\/\s*([a-zA-Z0-9^{}]+)/g, '\\frac{$1}{$2}');
+
+    // Square roots: sqrt(x) → \sqrt{x}
+    formatted = formatted.replace(/\bsqrt\s*\(([^)]+)\)/gi, '\\sqrt{$1}');
+
+    // Exponents: x^2 → x^{2}
+    formatted = formatted.replace(/([a-zA-Z])\^([a-zA-Z0-9])/g, '$1^{$2}');
+
+    // Subscripts: x_0 → x_{0}
+    formatted = formatted.replace(/([a-zA-Z])_(\d+)/g, '$1_{$2}');
+
+    // Wrap in $$ if contains LaTeX commands
+    const hasLatexCommands = /\\(lim|frac|sqrt|sin|cos|tan|ln|log|to|infty|pi|times|div|pm|int|sum|prod)/.test(formatted);
+    if (hasLatexCommands && !formatted.includes('$$')) {
+      formatted = `$$ ${formatted} $$`;
+    }
+
+    return sanitizeLaTeX(formatted);
+  };
+
+  /**
+   * Handle paste event - auto-format math expressions
+   */
+  const handlePaste = (e, fieldName) => {
+    const pastedText = e.clipboardData.getData('text');
+
+    // Check if pasted text contains math expressions
+    const hasMathKeywords = /lim|ln|log|sin|cos|tan|sqrt|∞|π|→|->|frac|int|sum|prod|√|∫|∑|∏|×|÷|±|≤|≥|≠|\^|_\d/.test(pastedText);
+
+    if (hasMathKeywords) {
+      e.preventDefault();
+      const formatted = formatMathToLatex(pastedText);
+      const sanitized = sanitizeLaTeX(formatted);
+
+      setFormData(prev => {
+        const currentValue = prev[fieldName] || '';
+
+        if (!currentValue.trim()) {
+          return { ...prev, [fieldName]: sanitized };
+        }
+
+        let newValue = currentValue;
+        if (!currentValue.includes('$$')) {
+          newValue = currentValue + (currentValue.trim() ? ' ' : '') + sanitized;
+        } else {
+          newValue = currentValue + ' ' + sanitized;
+        }
+
+        return { ...prev, [fieldName]: sanitizeLaTeX(newValue) };
+      });
+    }
   };
 
   const handleImageChange = (e, fieldName) => {
@@ -347,10 +518,11 @@ const EditQuestionPage = () => {
                   name="question_text"
                   value={formData.question_text}
                   onChange={handleChange}
+                  onPaste={(e) => handlePaste(e, 'question_text')}
                   required
                   rows={4}
                   className="w-full px-4 py-2 pr-24 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent touch-target"
-                  placeholder="Enter your question here... Use $$ for math equations"
+                  placeholder="Enter your question here... Paste math: lim x→0 (ex-1)/x"
                 />
                 {/* Insert Equation Button */}
                 <button
@@ -365,8 +537,21 @@ const EditQuestionPage = () => {
               </div>
               <p className="text-[10px] text-gray-400 mt-2">
                 <i className="fas fa-info-circle mr-1"></i>
-                Tip: Use <code className="bg-gray-100 px-1 rounded">$$ x^2 $$</code> for math equations
+                Tip: Paste math like <code className="bg-gray-100 px-1 rounded">lim x→0 (ex-1)/x</code>
               </p>
+              
+              {/* Live LaTeX Preview */}
+              {formData.question_text && (
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <label className="block text-xs font-semibold text-blue-700 mb-2">
+                    <i className="fas fa-eye mr-1"></i>
+                    Live Preview (LaTeX Rendering)
+                  </label>
+                  <div className="bg-white p-4 rounded border border-blue-100">
+                    <RichTextRenderer content={formData.question_text} />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
