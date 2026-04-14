@@ -14,19 +14,14 @@ const addQuestion = (req, res) => {
     // Verify exam exists
     examService.getExamById(examId);
 
-    // Validate image sizes (max 500KB base64)
-    const maxImageSize = 500 * 1024; // 500KB
-    const imageFields = ['question_image', 'option_a_image', 'option_b_image', 'option_c_image', 'option_d_image', 'explanation_image'];
-    
-    for (const field of imageFields) {
-      if (req.body[field] && req.body[field].length > maxImageSize) {
-        return errorResponse(res, 400, `Image ${field} exceeds 500KB limit. Please compress the image.`);
-      }
-    }
+    console.log('📝 Adding question - received data:', JSON.stringify(req.body, null, 2));
 
     const question = questionService.addQuestion(examId, req.body);
     return apiResponse(res, 201, question, 'Question added successfully');
   } catch (error) {
+    console.error('❌ Error in addQuestion:', error.message);
+    console.error('Stack trace:', error.stack);
+    
     if (error.message === 'Exam not found.') {
       return errorResponse(res, 404, error.message);
     }

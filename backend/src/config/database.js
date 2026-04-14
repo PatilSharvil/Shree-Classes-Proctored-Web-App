@@ -74,63 +74,21 @@ const initializeDatabase = () => {
     CREATE TABLE IF NOT EXISTS questions (
       id TEXT PRIMARY KEY,
       exam_id TEXT NOT NULL,
-      question_text TEXT NOT NULL,
-      question_image TEXT,
-      option_a TEXT NOT NULL,
-      option_a_image TEXT,
-      option_b TEXT NOT NULL,
-      option_b_image TEXT,
-      option_c TEXT NOT NULL,
-      option_c_image TEXT,
-      option_d TEXT NOT NULL,
-      option_d_image TEXT,
+      question_type TEXT DEFAULT 'TEXT' CHECK(question_type IN ('TEXT', 'IMAGE')),
+      question_text TEXT,
+      option_a TEXT,
+      option_b TEXT,
+      option_c TEXT,
+      option_d TEXT,
       correct_option TEXT NOT NULL CHECK(correct_option IN ('A', 'B', 'C', 'D')),
       marks INTEGER DEFAULT 1,
       negative_marks REAL DEFAULT 0,
       difficulty TEXT DEFAULT 'MEDIUM' CHECK(difficulty IN ('EASY', 'MEDIUM', 'HARD')),
       explanation TEXT,
-      explanation_image TEXT,
       created_at TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE
     )
   `);
-
-  // Add question_image and option_image columns if they don't exist (safe migration)
-  try {
-    db.exec(`ALTER TABLE questions ADD COLUMN question_image TEXT`);
-  } catch (e) {
-    // Column already exists, ignore
-  }
-
-  try {
-    db.exec(`ALTER TABLE questions ADD COLUMN option_a_image TEXT`);
-  } catch (e) {
-    // Column already exists, ignore
-  }
-
-  try {
-    db.exec(`ALTER TABLE questions ADD COLUMN option_b_image TEXT`);
-  } catch (e) {
-    // Column already exists, ignore
-  }
-
-  try {
-    db.exec(`ALTER TABLE questions ADD COLUMN option_c_image TEXT`);
-  } catch (e) {
-    // Column already exists, ignore
-  }
-
-  try {
-    db.exec(`ALTER TABLE questions ADD COLUMN option_d_image TEXT`);
-  } catch (e) {
-    // Column already exists, ignore
-  }
-
-  try {
-    db.exec(`ALTER TABLE questions ADD COLUMN explanation_image TEXT`);
-  } catch (e) {
-    // Column already exists, ignore
-  }
 
   // Exam sessions table (active exams)
   db.exec(`
@@ -287,6 +245,117 @@ const initializeDatabase = () => {
     db.exec(`ALTER TABLE attempt_history ADD COLUMN session_id TEXT`);
   } catch (e) {
     // Column already exists, ignore
+  }
+
+  // Add image columns to questions table if they don't exist
+  const imageColumns = [
+    'image_url',
+    'option_a_image_url',
+    'option_b_image_url',
+    'option_c_image_url',
+    'option_d_image_url',
+    'explanation_image_url'
+  ];
+
+  for (const col of imageColumns) {
+    try {
+      db.exec(`ALTER TABLE questions ADD COLUMN ${col} TEXT`);
+    } catch (e) {
+      // Column already exists, ignore
+    }
+  }
+
+  // Add question_type column if it doesn't exist (safe migration for existing DBs)
+  try {
+    db.exec(`ALTER TABLE questions ADD COLUMN question_type TEXT DEFAULT 'TEXT' CHECK(question_type IN ('TEXT', 'IMAGE'))`);
+  } catch (e) {
+    // Column already exists, ignore
+  }
+
+  // Migration: Recreate questions table to allow NULL question_text and option fields
+  // This is necessary because SQLite doesn't support ALTER COLUMN
+  try {
+    const tableInfo = db.prepare("PRAGMA table_info(questions)").all();
+    const hasOldSchema = tableInfo.some(col => col.name === 'question_text' && col.notnull === 1);
+    
+    if (hasOldSchema) {
+      console.log('Migrating questions table schema to support image-based questions...');
+      
+      // Temporarily disable foreign keys
+      db.pragma('foreign_keys = OFF');
+      
+      // Drop the new table if it exists from a failed previous attempt
+      try {
+        db.exec(`DROP TABLE IF EXISTS questions_new`);
+      } catch (e) {
+        // Ignore
+      }
+      
+      // Create new table with updated schema
+      db.exec(`
+        CREATE TABLE questions_new (
+          id TEXT PRIMARY KEY,
+          exam_id TEXT NOT NULL,
+          question_type TEXT DEFAULT 'TEXT' CHECK(question_type IN ('TEXT', 'IMAGE')),
+          question_text TEXT,
+          option_a TEXT,
+          option_b TEXT,
+          option_c TEXT,
+          option_d TEXT,
+          correct_option TEXT NOT NULL CHECK(correct_option IN ('A', 'B', 'C', 'D')),
+          marks INTEGER DEFAULT 1,
+          negative_marks REAL DEFAULT 0,
+          difficulty TEXT DEFAULT 'MEDIUM' CHECK(difficulty IN ('EASY', 'MEDIUM', 'HARD')),
+          explanation TEXT,
+          image_url TEXT,
+          option_a_image_url TEXT,
+          option_b_image_url TEXT,
+          option_c_image_url TEXT,
+          option_d_image_url TEXT,
+          explanation_image_url TEXT,
+          created_at TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE
+        )
+      `);
+
+      // Copy data from old table
+      db.exec(`
+        INSERT INTO questions_new 
+        SELECT 
+          id, exam_id, 
+          COALESCE(question_type, 'TEXT') as question_type,
+          question_text,
+          option_a, option_b, option_c, option_d,
+          correct_option, marks, negative_marks, difficulty, explanation,
+          image_url, option_a_image_url, option_b_image_url, option_c_image_url, option_d_image_url, explanation_image_url,
+          created_at
+        FROM questions
+      `);
+
+      // Drop old table and rename new one
+      db.exec(`DROP TABLE questions`);
+      db.exec(`ALTER TABLE questions_new RENAME TO questions`);
+
+      // Recreate indexes
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_questions_exam ON questions(exam_id)`);
+      
+      // Re-enable foreign keys
+      db.pragma('foreign_keys = ON');
+      
+      console.log('✅ Questions table migration completed!');
+    }
+  } catch (e) {
+    // Re-enable foreign keys on error
+    try {
+      db.pragma('foreign_keys = ON');
+    } catch (err) {
+      // Ignore
+    }
+    
+    if (!e.message.includes('already exists') && !e.message.includes('duplicate column')) {
+      console.error('Migration error:', e.message);
+      // Don't fail - continue with existing schema
+    }
   }
 
   console.log('Database initialized successfully');

@@ -42,9 +42,16 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
     const validate = async () => {
       const storedUser = localStorage.getItem('user');
       const storedToken = localStorage.getItem('token');
-      // Only validate if we have credentials; otherwise skip and let the sync state handle it
+      
+      // Only validate if we have credentials
       if (storedUser && storedToken) {
-        await checkAuth();
+        try {
+          await checkAuth();
+        } catch (error) {
+          // If checkAuth throws, the store should have been updated inside checkAuth
+          // Just continue and let the state determine access
+          console.warn('[ProtectedRoute] Auth validation error:', error);
+        }
       }
       setValidating(false);
     };
@@ -58,32 +65,37 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   const currentAuth = useAuthStore.getState().isAuthenticated;
   const currentUser = useAuthStore.getState().user;
 
-  console.log('[ProtectedRoute] Checking auth:', { isAuthenticated: currentAuth, userRole: currentUser?.role, adminOnly });
-
   if (!currentAuth) {
+    // Double check localStorage as fallback
     const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      console.log('[ProtectedRoute] State says not authenticated but localStorage has user, allowing access');
-      if (adminOnly) {
+    const storedToken = localStorage.getItem('token');
+    
+    if (storedUser && storedToken) {
+      // We have credentials but state says not authenticated
+      // Try to parse user and allow access (optimistic)
+      try {
         const parsedUser = JSON.parse(storedUser);
-        if (parsedUser.role !== 'ADMIN') {
-          console.log('[ProtectedRoute] Admin-only route but user is not admin, redirecting to dashboard');
+        if (adminOnly && parsedUser.role !== 'ADMIN') {
           return <Navigate to="/dashboard" replace />;
         }
+        // Allow access - backend will validate on subsequent API calls
+        return children;
+      } catch (e) {
+        // Invalid JSON in localStorage, clear and redirect
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('csrf_token');
+        return <Navigate to="/login" replace />;
       }
-      return children;
     }
 
-    console.log('[ProtectedRoute] No auth found, redirecting to login');
     return <Navigate to="/login" replace />;
   }
 
   if (adminOnly && currentUser?.role !== 'ADMIN') {
-    console.log('[ProtectedRoute] Admin-only route but user is not admin, redirecting to dashboard');
     return <Navigate to="/dashboard" replace />;
   }
 
-  console.log('[ProtectedRoute] Auth check passed, allowing access');
   return children;
 };
 

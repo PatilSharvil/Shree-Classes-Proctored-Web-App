@@ -120,6 +120,12 @@ const EditQuestionPage = () => {
     const imageUrl = existingImages[fieldName];
     if (!imageUrl) return;
 
+    // Check if it's a base64 data URL - if so, just remove it from state (no server deletion needed)
+    if (imageUrl.startsWith('data:')) {
+      setExistingImages(prev => ({ ...prev, [fieldName]: null }));
+      return;
+    }
+
     try {
       // Extract filename from URL (e.g., "/uploads/abc123.jpg" -> "abc123.jpg")
       const filename = imageUrl.split('/').pop();
@@ -136,11 +142,38 @@ const EditQuestionPage = () => {
     if (imageFile && typeof imageFile === 'object') {
       return URL.createObjectURL(imageFile);
     }
-    // If it's an existing image, return the full URL
+    // If it's an existing image, return the full URL or base64
     if (existingUrl) {
       return getImageUrl(existingUrl);
     }
     return null;
+  };
+
+  // Convert image file to base64 with compression
+  const compressImageToBase64 = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          // Resize to max 800px width
+          const maxWidth = 800;
+          const scale = Math.min(1, maxWidth / img.width);
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          // Compress to 80% quality
+          const base64 = canvas.toDataURL('image/jpeg', 0.8);
+          resolve(base64);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const openEquationEditor = (fieldName) => {
@@ -164,8 +197,9 @@ const EditQuestionPage = () => {
     const uploadedUrls = {};
     for (const [key, file] of Object.entries(images)) {
       if (file) {
-        const response = await uploadAPI.uploadImage(file);
-        uploadedUrls[key] = response.data.url;
+        // Convert to base64 with compression
+        const base64 = await compressImageToBase64(file);
+        uploadedUrls[key] = base64;
       }
     }
     return uploadedUrls;
@@ -193,7 +227,7 @@ const EditQuestionPage = () => {
       const hasText = formData[field] && formData[field].trim();
       const hasNewImage = images[`${field}_image_url`];
       const hasExistingImage = existingImages[`${field}_image_url`];
-      
+
       if (!hasText && !hasNewImage && !hasExistingImage) {
         const optionLabel = field.replace('option_', '').toUpperCase();
         setError(`Option ${optionLabel} must have either text or an image`);
@@ -204,11 +238,23 @@ const EditQuestionPage = () => {
     setSubmitting(true);
 
     try {
+      // Upload new images first
       const uploadedImageUrls = await uploadImages();
+
+      // Merge existing images with new uploads
+      // Use new image if uploaded, otherwise keep existing image
+      const allImages = {
+        image_url: uploadedImageUrls.image_url || existingImages.image_url || null,
+        option_a_image_url: uploadedImageUrls.option_a_image_url || existingImages.option_a_image_url || null,
+        option_b_image_url: uploadedImageUrls.option_b_image_url || existingImages.option_b_image_url || null,
+        option_c_image_url: uploadedImageUrls.option_c_image_url || existingImages.option_c_image_url || null,
+        option_d_image_url: uploadedImageUrls.option_d_image_url || existingImages.option_d_image_url || null,
+        explanation_image_url: uploadedImageUrls.explanation_image_url || existingImages.explanation_image_url || null
+      };
 
       const payload = {
         ...formData,
-        ...uploadedImageUrls,
+        ...allImages,
         marks: parseInt(formData.marks),
         negative_marks: parseFloat(formData.negative_marks) || 0
       };
@@ -653,6 +699,34 @@ const EditQuestionPage = () => {
               </label>
               {images.explanation_image_url && <span className="text-xs text-green-600 font-bold"><i className="fas fa-check-circle"></i> {images.explanation_image_url.name} selected</span>}
             </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex items-center gap-4 pt-6 border-t border-gray-200">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3 text-lg"
+            >
+              {submitting ? (
+                <>
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <span>Updating Question...</span>
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-save"></i>
+                  <span>Update Question</span>
+                </>
+              )}
+            </button>
+            <Link
+              to={`/admin/exams/${examId}`}
+              className="px-8 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
+            >
+              <i className="fas fa-times"></i>
+              <span>Cancel</span>
+            </Link>
           </div>
         </form>
       </Card>

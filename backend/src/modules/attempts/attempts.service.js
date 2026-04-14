@@ -358,7 +358,9 @@ class AttemptService {
     const session = this.getSessionById(sessionId);
     
     const responses = db.prepare(`
-      SELECT r.*, q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option
+      SELECT r.*, q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option,
+             q.image_url, q.option_a_image_url, q.option_b_image_url, q.option_c_image_url, q.option_d_image_url,
+             q.explanation, q.explanation_image_url
       FROM responses r
       JOIN questions q ON r.question_id = q.id
       WHERE r.session_id = ?

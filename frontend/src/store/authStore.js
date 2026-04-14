@@ -54,9 +54,10 @@ const useAuthStore = create((set, get) => ({
   checkAuth: async () => {
     const user = localStorage.getItem('user');
     const token = localStorage.getItem('token');
+    
     if (!user || !token) {
-      set({ user: null, isAuthenticated: false });
       console.log('[AuthStore] Auth check failed, no user or token found');
+      set({ user: null, isAuthenticated: false });
       return false;
     }
 
@@ -76,14 +77,28 @@ const useAuthStore = create((set, get) => ({
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         localStorage.removeItem('csrf_token');
+        // Clear stale cookies
+        document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict';
+        document.cookie = 'csrf_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict';
         set({ user: null, isAuthenticated: false });
         return false;
       }
+      
       // Network error or server unreachable — trust localStorage as fallback
       console.warn('[AuthStore] Backend unreachable, trusting localStorage:', error.message);
-      const parsedUser = JSON.parse(user);
-      set({ user: parsedUser, isAuthenticated: true });
-      return true;
+      try {
+        const parsedUser = JSON.parse(user);
+        set({ user: parsedUser, isAuthenticated: true });
+        return true;
+      } catch (parseError) {
+        // Invalid JSON in localStorage, clear everything
+        console.error('[AuthStore] Invalid user data in localStorage, clearing');
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('csrf_token');
+        set({ user: null, isAuthenticated: false });
+        return false;
+      }
     }
   }
 }));

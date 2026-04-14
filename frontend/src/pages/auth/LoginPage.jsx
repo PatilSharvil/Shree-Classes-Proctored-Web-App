@@ -19,6 +19,15 @@ const LoginPage = () => {
     setLoading(true);
 
     try {
+      // Clear any stale auth state before attempting login
+      // This prevents conflicts from expired tokens or CSRF mismatches
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem('csrf_token');
+      // Also clear stale cookies
+      document.cookie = 'csrf_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+      document.cookie = 'auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+
       const response = await login(email, password);
       const user = response.data?.user;
 
@@ -34,7 +43,22 @@ const LoginPage = () => {
       }, 100);
     } catch (err) {
       console.error('[LoginPage] Login error:', err);
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      const message = err.response?.data?.message || 'Login failed. Please try again.';
+      
+      // Provide user-friendly error messages
+      if (err.response?.status === 403 && message.includes('CSRF')) {
+        setError('Session expired. Please try logging in again.');
+      } else if (err.response?.status === 401) {
+        setError('Invalid email or password. Please check your credentials and try again.');
+      } else if (err.response?.status === 429) {
+        setError('Too many login attempts. Please wait a few minutes and try again.');
+      } else if (err.response?.status === 404) {
+        setError('No account found with this email address.');
+      } else if (err.code === 'ERR_NETWORK') {
+        setError('Unable to connect to the server. Please check your internet connection.');
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }

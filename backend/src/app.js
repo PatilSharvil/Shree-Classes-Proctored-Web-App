@@ -17,6 +17,7 @@ const examsRoutes = require('./modules/exams/exams.routes');
 const questionsRoutes = require('./modules/questions/questions.routes');
 const attemptsRoutes = require('./modules/attempts/attempts.routes');
 const proctoringRoutes = require('./modules/proctoring/proctoring.routes');
+const uploadRoutes = require('./modules/upload/upload.routes');
 
 const app = express();
 
@@ -170,10 +171,12 @@ const isDev = env.nodeEnv === 'development';
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDev ? 5000 : 300, // limit each IP to 300 requests in prod, 5000 in dev
+  max: isDev ? 10000 : 300, // limit each IP to 300 requests in prod, 10000 in dev
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  // Skip rate limiting in development mode
+  skip: () => isDev,
   validate: { trustProxy: false }, // Disable trust proxy validation (we trust our reverse proxy)
 });
 app.use('/api/', limiter);
@@ -186,6 +189,7 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Only count failed requests
+  skip: () => isDev, // Skip in development
   validate: { trustProxy: false }, // Disable trust proxy validation (we trust our reverse proxy)
 });
 app.use('/api/auth/login', authLimiter);
@@ -221,6 +225,15 @@ app.use('/api/exams', examsRoutes);
 app.use('/api', questionsRoutes);
 app.use('/api/attempts', attemptsRoutes);
 app.use('/api/proctoring', proctoringRoutes);
+app.use('/api/upload', uploadRoutes);
+
+// Configure static file serving for uploaded files
+// Allow access to the /data/uploads directory under /uploads
+const uploadsDir = path.join(__dirname, '../../data/uploads');
+if (!require('fs').existsSync(uploadsDir)) {
+  require('fs').mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
 
 // 404 handler
 app.use(notFoundHandler);
