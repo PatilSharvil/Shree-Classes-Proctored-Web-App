@@ -17,6 +17,7 @@ const examsRoutes = require('./modules/exams/exams.routes');
 const questionsRoutes = require('./modules/questions/questions.routes');
 const attemptsRoutes = require('./modules/attempts/attempts.routes');
 const proctoringRoutes = require('./modules/proctoring/proctoring.routes');
+const uploadRoutes = require('./modules/upload/upload.routes');
 
 const app = express();
 
@@ -221,6 +222,15 @@ app.use('/api/exams', examsRoutes);
 app.use('/api', questionsRoutes);
 app.use('/api/attempts', attemptsRoutes);
 app.use('/api/proctoring', proctoringRoutes);
+app.use('/api/upload', uploadRoutes);
+
+// Configure static file serving for uploaded files
+// Allow access to the /data/uploads directory under /uploads
+const uploadsDir = path.join(__dirname, '../../data/uploads');
+if (!require('fs').existsSync(uploadsDir)) {
+  require('fs').mkdirSync(uploadsDir, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsDir));
 
 // 404 handler
 app.use(notFoundHandler);
