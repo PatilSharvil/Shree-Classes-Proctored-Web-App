@@ -17,7 +17,7 @@ const LandingPage = () => {
     { icon: 'fas fa-medal', num: '50+', label: 'Top 100 Ranks' }
   ];
 
-  const [displayedStats, setDisplayedStats] = useState(statsData.map(s => ({ ...s, animatedNum: 0 })));
+  const [displayedStats, setDisplayedStats] = useState(statsData.map(s => ({ ...s, animatedNum: 0, completed: false })));
 
   // Counting animation triggered by IntersectionObserver
   useEffect(() => {
@@ -40,33 +40,39 @@ const LandingPage = () => {
   }, []);
 
   const animateCounters = () => {
-    const duration = 2000; // 2 seconds
-    const startTime = Date.now();
+    const duration = 2000;
+    const staggerDelay = 250; // ms between each card
 
-    const easeOutExpo = (t) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t));
+    statsData.forEach((stat, idx) => {
+      const targetNum = parseInt(stat.num.replace('+', ''), 10);
+      const startDelay = idx * staggerDelay;
 
-    const step = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      const easedProgress = easeOutExpo(progress);
+      setTimeout(() => {
+        const startTime = Date.now();
+        const easeOutExpo = (t) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t));
 
-      setDisplayedStats(
-        statsData.map((stat) => {
-          const targetNum = parseInt(stat.num.replace('+', ''), 10);
+        const step = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const easedProgress = easeOutExpo(progress);
           const currentNum = Math.floor(easedProgress * targetNum);
-          return { ...stat, animatedNum: currentNum };
-        })
-      );
 
-      if (progress < 1) {
+          setDisplayedStats((prev) =>
+            prev.map((s, i) => (i === idx ? { ...s, animatedNum: currentNum } : s))
+          );
+
+          if (progress < 1) {
+            requestAnimationFrame(step);
+          } else {
+            setDisplayedStats((prev) =>
+              prev.map((s, i) => (i === idx ? { ...s, animatedNum: targetNum, completed: true } : s))
+            );
+          }
+        };
+
         requestAnimationFrame(step);
-      } else {
-        // Set final values
-        setDisplayedStats(statsData.map((stat) => ({ ...stat, animatedNum: parseInt(stat.num.replace('+', ''), 10) })));
-      }
-    };
-
-    requestAnimationFrame(step);
+      }, startDelay);
+    });
   };
 
   useEffect(() => {
@@ -321,7 +327,7 @@ const LandingPage = () => {
           <h2>Our Success Record</h2>
           <div className="grid stats-grid">
             {displayedStats.map((stat, idx) => (
-              <div key={idx} className="stats-card">
+              <div key={idx} className={`stats-card${stat.completed ? ' pulse' : ''}`}>
                 <i className={stat.icon}></i>
                 <span className="number">
                   {stat.animatedNum}{stat.num.includes('+') ? '+' : ''}
