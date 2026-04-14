@@ -49,56 +49,6 @@ const ExamPage = () => {
   const toggleReview = useExamStore((state) => state.toggleReview);
   const clearExamState = useExamStore((state) => state.clearExamState);
 
-  // Handle time up — idempotent (safe to call multiple times)
-  const handleTimeUp = useCallback(async () => {
-    // Prevent multiple concurrent submit calls
-    if (isSubmittingRef.current || !session) return;
-    isSubmittingRef.current = true;
-    setSubmitting(true);
-    setAutoSubmitError(false);
-
-    const isAutoSubmit = proctoring.weightedScore >= 5;
-
-    try {
-      await attemptsAPI.submit(session.id);
-
-      // Emit exam submitted via WebSocket
-      if (webSocket.emitExamSubmitted) {
-        webSocket.emitExamSubmitted(new Date().toISOString());
-      }
-
-      // Emit auto-submitted if threshold was reached
-      if (isAutoSubmit && webSocket.emitAutoSubmitted) {
-        webSocket.emitAutoSubmitted('violation_threshold_exceeded');
-      }
-
-      clearExamState();
-      localStorage.removeItem('examOfflineQueue');
-      navigate('/dashboard', { state: { message: 'Exam auto-submitted due to timeout' } });
-    } catch (error) {
-      const msg = error.response?.data?.message || '';
-      // If already submitted, just redirect to dashboard
-      if (msg.includes('not in progress') || msg.includes('already submitted') || msg.includes('Exam is not in progress')) {
-        clearExamState();
-
-        // Still emit WebSocket event even if already submitted
-        if (webSocket.emitExamSubmitted) {
-          webSocket.emitExamSubmitted(new Date().toISOString());
-        }
-        if (isAutoSubmit && webSocket.emitAutoSubmitted) {
-          webSocket.emitAutoSubmitted('violation_threshold_exceeded');
-        }
-
-        navigate('/dashboard', { state: { message: 'Your exam has already been submitted.' } });
-        return;
-      }
-      console.error('Auto-submit failed:', error);
-      setAutoSubmitError(true);
-      setSubmitting(false);
-      isSubmittingRef.current = false;
-    }
-  }, [session, navigate, clearExamState, proctoring.weightedScore, webSocket]);
-
   // Proctoring hook with comprehensive monitoring and device-aware thresholds
   const proctoring = useProctoring(session?.id, {
     violationThreshold: 5,
@@ -109,8 +59,8 @@ const ExamPage = () => {
     violationCooldownMs: isMobile ? 5000 : 3000,
     // Violation decay window - violations lose weight after this period
     violationDecayMs: 120000, // 2 minutes
-    onViolationThreshold: (weightedScore) => {
-      console.warn(`[Proctoring] Weighted score threshold reached: ${weightedScore}. Auto-submitting...`);
+    onViolationThreshold: () => {
+      console.warn(`[Proctoring] Weighted score threshold reached. Auto-submitting...`);
       handleTimeUp();
     },
     onViolation: (violation) => {
@@ -131,6 +81,57 @@ const ExamPage = () => {
     examId: exam?.id,
     authToken,
   });
+
+  // Handle time up — idempotent (safe to call multiple times)
+  const handleTimeUp = useCallback(async () => {
+    // Prevent multiple concurrent submit calls
+    if (isSubmittingRef.current || !session) return;
+    isSubmittingRef.current = true;
+    setSubmitting(true);
+    setAutoSubmitError(false);
+
+    const isAutoSubmit = proctoring?.weightedScore >= 5;
+
+    try {
+      await attemptsAPI.submit(session.id);
+
+      // Emit exam submitted via WebSocket
+      if (webSocket?.emitExamSubmitted) {
+        webSocket.emitExamSubmitted(new Date().toISOString());
+      }
+
+      // Emit auto-submitted if threshold was reached
+      if (isAutoSubmit && webSocket?.emitAutoSubmitted) {
+        webSocket.emitAutoSubmitted('violation_threshold_exceeded');
+      }
+
+      clearExamState();
+      localStorage.removeItem('examOfflineQueue');
+      navigate('/dashboard', { state: { message: 'Exam auto-submitted due to timeout' } });
+    } catch (error) {
+      const msg = error.response?.data?.message || '';
+      // If already submitted, just redirect to dashboard
+      if (msg.includes('not in progress') || msg.includes('already submitted') || msg.includes('Exam is not in progress')) {
+        clearExamState();
+
+        // Still emit WebSocket event even if already submitted
+        if (webSocket?.emitExamSubmitted) {
+          webSocket.emitExamSubmitted(new Date().toISOString());
+        }
+        if (isAutoSubmit && webSocket?.emitAutoSubmitted) {
+          webSocket.emitAutoSubmitted('violation_threshold_exceeded');
+        }
+
+        navigate('/dashboard', { state: { message: 'Your exam has already been submitted.' } });
+        return;
+      }
+      console.error('Auto-submit failed:', error);
+      setAutoSubmitError(true);
+      setSubmitting(false);
+      isSubmittingRef.current = false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, navigate, clearExamState]);
 
   // Emit violations via WebSocket when they occur
   const lastViolationRef = useRef(0);

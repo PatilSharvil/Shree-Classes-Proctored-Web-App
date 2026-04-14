@@ -171,10 +171,12 @@ const isDev = env.nodeEnv === 'development';
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: isDev ? 5000 : 300, // limit each IP to 300 requests in prod, 5000 in dev
+  max: isDev ? 10000 : 300, // limit each IP to 300 requests in prod, 10000 in dev
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  // Skip rate limiting in development mode
+  skip: () => isDev,
   validate: { trustProxy: false }, // Disable trust proxy validation (we trust our reverse proxy)
 });
 app.use('/api/', limiter);
@@ -187,6 +189,7 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Only count failed requests
+  skip: () => isDev, // Skip in development
   validate: { trustProxy: false }, // Disable trust proxy validation (we trust our reverse proxy)
 });
 app.use('/api/auth/login', authLimiter);
