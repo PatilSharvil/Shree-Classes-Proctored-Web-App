@@ -193,7 +193,6 @@ const LandingPage = () => {
               <div className="icon-box"><i className={cat.icon}></i></div>
               <h3>{cat.title}</h3>
               <p>{cat.desc}</p>
-              <button className="btn-text">Explore <i className="fas fa-chevron-right"></i></button>
             </div>
           ))}
         </div>

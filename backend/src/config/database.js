@@ -68,8 +68,6 @@ const initializeDatabase = () => {
   } catch (e) {
     // Column already exists, ignore
   }
-    // Column already exists, ignore
-  }
 
   // Questions table
   db.exec(`
