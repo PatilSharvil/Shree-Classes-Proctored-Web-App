@@ -17,7 +17,7 @@ db.pragma('foreign_keys = ON');
 // Initialize database schema
 const initializeDatabase = () => {
   console.log('Initializing database...');
-  
+
   // Users table (cached from Excel)
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (

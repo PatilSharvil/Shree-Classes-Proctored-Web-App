@@ -1,9 +1,19 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './LandingPage.css';
 
 const LandingPage = () => {
   const navigate = useNavigate();
+
+  const [currentSubjectIndex, setCurrentSubjectIndex] = useState(0);
+  const subjects = ['Physics', 'Chemistry', 'Maths'];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSubjectIndex((prevIndex) => (prevIndex + 1) % subjects.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     // Mobile Menu Toggle logic
@@ -125,9 +135,12 @@ const LandingPage = () => {
           <div className="hero-text">
             <h1>Best Coaching for <span>MHT CET</span> Success</h1>
             <p>Expert guidance for Class 12th students preparing for MHT CET PCM & PCB. Comprehensive study material, mock tests, and personalized mentorship for engineering & medical aspirants.</p>
-            <div className="search-box">
-              <input type="text" placeholder="Search for PCM/PCB courses, mock tests..." />
-              <button className="btn btn-primary">Search</button>
+            <div className="modern-hero-text">
+              <span className="top-label">Smart PCM Practice Platform</span>
+              <h2 className="main-heading">
+                Boost your <span className="rotating-subject fade-animation" key={currentSubjectIndex}>{subjects[currentSubjectIndex]}</span> score
+              </h2>
+              <p className="sub-label">Practice smarter. Score higher.</p>
             </div>
           </div>
           <div className="hero-image">
@@ -149,7 +162,6 @@ const LandingPage = () => {
                   <div className="news-card-content">
                     <h3>MHT CET 2026 Registration Opens</h3>
                     <p>State Common Entrance Test Cell announces registration dates for PCM/PCB groups. Apply before deadline.</p>
-                    <a href="#" className="read-more">Read More <i className="fas fa-arrow-right"></i></a>
                   </div>
                 </div>
                 <div className="news-card">
@@ -157,15 +169,13 @@ const LandingPage = () => {
                   <div className="news-card-content">
                     <h3>MHT CET Syllabus 2026 Released</h3>
                     <p>Complete syllabus for Physics, Chemistry, Mathematics & Biology now available. Download from official website.</p>
-                    <a href="#" className="read-more">Read More <i className="fas fa-arrow-right"></i></a>
                   </div>
                 </div>
                 <div className="news-card">
-                  <img src="/assets/news1.png" alt="News 3" />
+                  <img src="/assets/news3.png" alt="News 3" />
                   <div className="news-card-content">
                     <h3>New Batch Starting for Class 12th CET</h3>
                     <p>Join our upcoming batch for MHT CET preparation. Limited seats available. Register now!</p>
-                    <a href="#" className="read-more">Read More <i className="fas fa-arrow-right"></i></a>
                   </div>
                 </div>
               </div>
@@ -193,7 +203,6 @@ const LandingPage = () => {
               <div className="icon-box"><i className={cat.icon}></i></div>
               <h3>{cat.title}</h3>
               <p>{cat.desc}</p>
-              <button className="btn-text">Explore <i className="fas fa-chevron-right"></i></button>
             </div>
           ))}
         </div>
