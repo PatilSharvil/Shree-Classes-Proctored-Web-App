@@ -30,11 +30,13 @@ const api = axios.create({
 // Request interceptor - add CSRF token and Authorization header
 api.interceptors.request.use(
   (config) => {
-    // Add CSRF token for state-changing requests
-    if (['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase())) {
+    // Skip CSRF for login endpoint (backend bypasses it anyway)
+    const isLoginRequest = config.url?.includes('/auth/login');
+    
+    // Add CSRF token for state-changing requests (except login)
+    if (['post', 'put', 'delete', 'patch'].includes(config.method?.toLowerCase()) && !isLoginRequest) {
       const csrfToken = getCSRFToken();
       if (csrfToken) {
-        console.log(`[API] Adding CSRF token to ${config.method.toUpperCase()} ${config.url}`);
         config.headers['X-CSRF-Token'] = csrfToken;
       } else {
         console.warn(`[API] No CSRF token found for ${config.method.toUpperCase()} ${config.url}`);
@@ -46,7 +48,6 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
-      console.log(`[API] Adding Authorization header to ${config.method.toUpperCase()} ${config.url}`);
     }
 
     return config;
@@ -106,13 +107,26 @@ api.interceptors.response.use(
       }
     }
 
-    // Handle CSRF token errors
+    // Handle CSRF token errors - prevent reload loops
     if (error.response?.status === 403 && error.response?.data?.message?.includes('CSRF')) {
-      console.error('[API] CSRF token validation failed. Clearing and reloading...');
-      // Clear invalid token and reload to get new one
+      console.error('[API] CSRF token validation failed. Clearing stale tokens.');
+      // Clear invalid token
       localStorage.removeItem('csrf_token');
-      document.cookie = 'csrf_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
-      window.location.reload();
+      document.cookie = 'csrf_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; SameSite=Strict';
+      
+      // If user is on login page, let them try again without reload
+      const currentPath = window.location.pathname;
+      if (currentPath === '/login') {
+        // Don't reload - just reject so the login page can show the error
+        error.message = 'Session expired. Please try logging in again.';
+        return Promise.reject(error);
+      }
+      
+      // For other pages, clear auth state and redirect to login
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+      return Promise.reject(error);
     }
 
     return Promise.reject(error);
@@ -152,7 +166,10 @@ export const examsAPI = {
   create: (data) => api.post('/exams', data),
   update: (id, data) => api.put(`/exams/${id}`, data),
   delete: (id) => api.delete(`/exams/${id}`),
-  checkAvailability: (id) => api.get(`/exams/${id}/availability`)
+  checkAvailability: (id) => api.get(`/exams/${id}/availability`),
+  syncToGithub: () => api.post('/exams/sync-to-github'),
+  restoreFromGithub: () => api.post('/exams/restore-from-github'),
+  getSyncStatus: () => api.get('/exams/sync-status')
 };
 
 // Questions API
@@ -209,19 +226,17 @@ export const proctoringAPI = {
   getExamCheatingSummary: (examId) => api.get(`/proctoring/cheating-summary/${examId}`)
 };
 
-// Upload API for images (questions, options, etc.)
+// Upload API
 export const uploadAPI = {
-  uploadImage: async (file) => {
+  uploadImage: (file) => {
     const formData = new FormData();
-    formData.append('image', file);
-    // Note: Backend upload endpoint needs to be implemented
-    // For now, this returns a local URL for preview
-    return {
-      data: {
-        url: URL.createObjectURL(file),
-        filename: file.name
-      }
-    };
+    formData.append('file', file);
+    return api.post('/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  deleteImage: (filename) => {
+    return api.delete(`/upload/${filename}`);
   }
 };
 

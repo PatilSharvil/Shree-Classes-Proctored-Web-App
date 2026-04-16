@@ -4,6 +4,7 @@ import { questionsAPI, uploadAPI } from '../../services/api';
 import { sanitizeText } from '../../utils/sanitizer';
 import { getImageUrl } from '../../utils/imageHelper';
 import MathEquationEditor from '../../components/ui/MathEquationEditor';
+import RichTextRenderer from '../../components/ui/RichTextRenderer';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -97,6 +98,176 @@ const EditQuestionPage = () => {
     }));
   };
 
+  /**
+   * Sanitize and fix malformed LaTeX in form fields
+   */
+  const sanitizeLaTeX = (text) => {
+    if (!text || !text.trim()) return text;
+
+    let sanitized = text.trim();
+
+    // Fix 1: If text ends with $$ but doesn't start with $$, add $$ at beginning
+    if (sanitized.endsWith('$$') && !sanitized.startsWith('$$')) {
+      sanitized = `$$ ${sanitized.replace(/\s*\$\$\s*$/, '').trim()} $$`;
+    }
+
+    // Fix 2: If text has $$ only at start but not at end, add $$ at end
+    if (sanitized.startsWith('$$') && !sanitized.endsWith('$$')) {
+      sanitized = `${sanitized.replace(/^\$\$\s*/, '').trim()} $$`;
+    }
+
+    // Fix 3: Remove double $$ like $$$$ or $$ $$
+    sanitized = sanitized.replace(/\$\$\s*\$\$/g, '$$');
+
+    // Fix 4: If has LaTeX commands but no $$ wrappers, add them
+    const hasLatexCommands = /\\(lim|frac|sqrt|sin|cos|tan|ln|log|to|infty|pi|times|int|sum|prod|div|pm)/.test(sanitized);
+    if (hasLatexCommands && !sanitized.includes('$$')) {
+      sanitized = `$$ ${sanitized} $$`;
+    }
+
+    // Fix 5: Fix unbalanced parentheses
+    const openParenCount = (sanitized.match(/\(/g) || []).length;
+    const closeParenCount = (sanitized.match(/\)/g) || []).length;
+    if (openParenCount > closeParenCount) {
+      sanitized += ')'.repeat(openParenCount - closeParenCount);
+    }
+
+    return sanitized;
+  };
+
+  /**
+   * Auto-format pasted math text into LaTeX
+   */
+  const formatMathToLatex = (text) => {
+    if (!text || !text.trim()) return text;
+
+    const trimmed = text.trim();
+
+    // If already properly formatted LaTeX, return as-is
+    if (trimmed.startsWith('$$') && trimmed.endsWith('$$')) {
+      return trimmed;
+    }
+
+    // If text already contains LaTeX commands (has backslashes), just wrap in $$ if needed
+    if (trimmed.includes('\\')) {
+      if (!trimmed.includes('$$')) {
+        return `$$ ${trimmed} $$`;
+      }
+      return sanitizeLaTeX(trimmed);
+    }
+
+    let formatted = trimmed;
+
+    // Fix spaced letters: "s i n" → "sin", "l i m" → "lim"
+    formatted = formatted.replace(/\b([a-zA-Z])\s+([a-zA-Z])\s+([a-zA-Z])\b/g, '$1$2$3');
+    formatted = formatted.replace(/\b([a-zA-Z])\s+([a-zA-Z])\b/g, '$1$2');
+
+    // Unicode superscripts → LaTeX exponents
+    formatted = formatted.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]/g, (match) => {
+      const map = {'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9'};
+      return `^${map[match]}`;
+    });
+
+    // Unicode subscripts → LaTeX subscripts
+    formatted = formatted.replace(/[₀₁₂₃₄₅₆₇₈₉]/g, (match) => {
+      const map = {'₀':'0','₁':'1','₂':'2','₃':'3','₄':'4','₅':'5','₆':'6','₇':'7','₈':'8','₉':'9'};
+      return `_${map[match]}`;
+    });
+
+    // Superscript plus/minus for one-sided limits: 0⁺ → 0^+
+    formatted = formatted.replace(/⁺/g, '^+');
+    formatted = formatted.replace(/⁻/g, '^-');
+
+    // ∞ BEFORE limit regex so it gets captured as \infty in $3
+    formatted = formatted.replace(/∞/g, '\\infty');
+
+    // Limits: lim x→0 or lim x->0 or limx→∞ → \lim_{x \to 0}
+    // Must run BEFORE → is converted to \to below
+    // /gi flag: case-insensitive, global (multiple limits)
+    formatted = formatted.replace(/lim\s*([a-zA-Z])\s*(→|->|⟶|⇒)\s*([^\s\)\},]+)/gi, '\\lim_{$1 \\to $3}');
+
+    // Unicode math symbols → LaTeX
+    formatted = formatted.replace(/√/g, '\\sqrt');
+    formatted = formatted.replace(/∫/g, '\\int');
+    formatted = formatted.replace(/∑/g, '\\sum');
+    formatted = formatted.replace(/∏/g, '\\prod');
+    // ∞ already handled before limit regex
+    formatted = formatted.replace(/π/g, '\\pi');
+    formatted = formatted.replace(/→/g, '\\to');
+    formatted = formatted.replace(/⟶/g, '\\to');
+    formatted = formatted.replace(/≠/g, '\\neq');
+    formatted = formatted.replace(/≤/g, '\\leq');
+    formatted = formatted.replace(/≥/g, '\\geq');
+    formatted = formatted.replace(/±/g, '\\pm');
+    formatted = formatted.replace(/×/g, '\\times');
+    formatted = formatted.replace(/÷/g, '\\div');
+
+    // Exponential notation: ex → e^{x}
+    formatted = formatted.replace(/\be([a-zA-Z])\b/g, 'e^{$1}');
+
+    // Logarithms & Trig functions
+    formatted = formatted.replace(/\bl\s*n\s*\(/gi, '\\ln(');
+    formatted = formatted.replace(/\blog\s*\(/g, '\\log(');
+    formatted = formatted.replace(/\blogₑ\s*/g, '\\ln ');
+    formatted = formatted.replace(/\bsin\s*\(/g, '\\sin(');
+    formatted = formatted.replace(/\bcos\s*\(/g, '\\cos(');
+    formatted = formatted.replace(/\btan\s*\(/g, '\\tan(');
+
+    // Fractions: (expr)/x or a/b → \frac{a}{b}
+    formatted = formatted.replace(/\(([^)]+)\)\s*\/\s*([a-zA-Z0-9^{}]+)/g, '\\frac{$1}{$2}');
+    formatted = formatted.replace(/([a-zA-Z0-9^{}]+)\s*\/\s*([a-zA-Z0-9^{}]+)/g, '\\frac{$1}{$2}');
+
+    // Square roots: sqrt(x) → \sqrt{x}
+    formatted = formatted.replace(/\bsqrt\s*\(([^)]+)\)/gi, '\\sqrt{$1}');
+
+    // Exponents: x^2 → x^{2}
+    formatted = formatted.replace(/([a-zA-Z])\^([a-zA-Z0-9])/g, '$1^{$2}');
+
+    // Subscripts: x_0 → x_{0}
+    formatted = formatted.replace(/([a-zA-Z])_(\d+)/g, '$1_{$2}');
+
+    // Wrap in $$ if contains LaTeX commands
+    const hasLatexCommands = /\\(lim|frac|sqrt|sin|cos|tan|ln|log|to|infty|pi|times|div|pm|int|sum|prod)/.test(formatted);
+    if (hasLatexCommands && !formatted.includes('$$')) {
+      formatted = `$$ ${formatted} $$`;
+    }
+
+    return sanitizeLaTeX(formatted);
+  };
+
+  /**
+   * Handle paste event - auto-format math expressions
+   */
+  const handlePaste = (e, fieldName) => {
+    const pastedText = e.clipboardData.getData('text');
+
+    // Check if pasted text contains math expressions
+    const hasMathKeywords = /lim|ln|log|sin|cos|tan|sqrt|∞|π|→|->|frac|int|sum|prod|√|∫|∑|∏|×|÷|±|≤|≥|≠|\^|_\d/.test(pastedText);
+
+    if (hasMathKeywords) {
+      e.preventDefault();
+      const formatted = formatMathToLatex(pastedText);
+      const sanitized = sanitizeLaTeX(formatted);
+
+      setFormData(prev => {
+        const currentValue = prev[fieldName] || '';
+
+        if (!currentValue.trim()) {
+          return { ...prev, [fieldName]: sanitized };
+        }
+
+        let newValue = currentValue;
+        if (!currentValue.includes('$$')) {
+          newValue = currentValue + (currentValue.trim() ? ' ' : '') + sanitized;
+        } else {
+          newValue = currentValue + ' ' + sanitized;
+        }
+
+        return { ...prev, [fieldName]: sanitizeLaTeX(newValue) };
+      });
+    }
+  };
+
   const handleImageChange = (e, fieldName) => {
     const file = e.target.files[0];
     if (file) {
@@ -120,6 +291,12 @@ const EditQuestionPage = () => {
     const imageUrl = existingImages[fieldName];
     if (!imageUrl) return;
 
+    // Check if it's a base64 data URL - if so, just remove it from state (no server deletion needed)
+    if (imageUrl.startsWith('data:')) {
+      setExistingImages(prev => ({ ...prev, [fieldName]: null }));
+      return;
+    }
+
     try {
       // Extract filename from URL (e.g., "/uploads/abc123.jpg" -> "abc123.jpg")
       const filename = imageUrl.split('/').pop();
@@ -136,11 +313,38 @@ const EditQuestionPage = () => {
     if (imageFile && typeof imageFile === 'object') {
       return URL.createObjectURL(imageFile);
     }
-    // If it's an existing image, return the full URL
+    // If it's an existing image, return the full URL or base64
     if (existingUrl) {
       return getImageUrl(existingUrl);
     }
     return null;
+  };
+
+  // Convert image file to base64 with compression
+  const compressImageToBase64 = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          // Resize to max 800px width
+          const maxWidth = 800;
+          const scale = Math.min(1, maxWidth / img.width);
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          // Compress to 80% quality
+          const base64 = canvas.toDataURL('image/jpeg', 0.8);
+          resolve(base64);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const openEquationEditor = (fieldName) => {
@@ -164,8 +368,9 @@ const EditQuestionPage = () => {
     const uploadedUrls = {};
     for (const [key, file] of Object.entries(images)) {
       if (file) {
-        const response = await uploadAPI.uploadImage(file);
-        uploadedUrls[key] = response.data.url;
+        // Convert to base64 with compression
+        const base64 = await compressImageToBase64(file);
+        uploadedUrls[key] = base64;
       }
     }
     return uploadedUrls;
@@ -193,7 +398,7 @@ const EditQuestionPage = () => {
       const hasText = formData[field] && formData[field].trim();
       const hasNewImage = images[`${field}_image_url`];
       const hasExistingImage = existingImages[`${field}_image_url`];
-      
+
       if (!hasText && !hasNewImage && !hasExistingImage) {
         const optionLabel = field.replace('option_', '').toUpperCase();
         setError(`Option ${optionLabel} must have either text or an image`);
@@ -204,11 +409,23 @@ const EditQuestionPage = () => {
     setSubmitting(true);
 
     try {
+      // Upload new images first
       const uploadedImageUrls = await uploadImages();
+
+      // Merge existing images with new uploads
+      // Use new image if uploaded, otherwise keep existing image
+      const allImages = {
+        image_url: uploadedImageUrls.image_url || existingImages.image_url || null,
+        option_a_image_url: uploadedImageUrls.option_a_image_url || existingImages.option_a_image_url || null,
+        option_b_image_url: uploadedImageUrls.option_b_image_url || existingImages.option_b_image_url || null,
+        option_c_image_url: uploadedImageUrls.option_c_image_url || existingImages.option_c_image_url || null,
+        option_d_image_url: uploadedImageUrls.option_d_image_url || existingImages.option_d_image_url || null,
+        explanation_image_url: uploadedImageUrls.explanation_image_url || existingImages.explanation_image_url || null
+      };
 
       const payload = {
         ...formData,
-        ...uploadedImageUrls,
+        ...allImages,
         marks: parseInt(formData.marks),
         negative_marks: parseFloat(formData.negative_marks) || 0
       };
@@ -301,10 +518,11 @@ const EditQuestionPage = () => {
                   name="question_text"
                   value={formData.question_text}
                   onChange={handleChange}
+                  onPaste={(e) => handlePaste(e, 'question_text')}
                   required
                   rows={4}
                   className="w-full px-4 py-2 pr-24 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent touch-target"
-                  placeholder="Enter your question here... Use $$ for math equations"
+                  placeholder="Enter your question here... Paste math: lim x→0 (ex-1)/x"
                 />
                 {/* Insert Equation Button */}
                 <button
@@ -319,8 +537,21 @@ const EditQuestionPage = () => {
               </div>
               <p className="text-[10px] text-gray-400 mt-2">
                 <i className="fas fa-info-circle mr-1"></i>
-                Tip: Use <code className="bg-gray-100 px-1 rounded">$$ x^2 $$</code> for math equations
+                Tip: Paste math like <code className="bg-gray-100 px-1 rounded">lim x→0 (ex-1)/x</code>
               </p>
+              
+              {/* Live LaTeX Preview */}
+              {formData.question_text && (
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <label className="block text-xs font-semibold text-blue-700 mb-2">
+                    <i className="fas fa-eye mr-1"></i>
+                    Live Preview (LaTeX Rendering)
+                  </label>
+                  <div className="bg-white p-4 rounded border border-blue-100">
+                    <RichTextRenderer content={formData.question_text} />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -441,6 +672,7 @@ const EditQuestionPage = () => {
                         name={field}
                         value={formData[field]}
                         onChange={handleChange}
+                        onPaste={(e) => handlePaste(e, field)}
                         onClick={(e) => e.stopPropagation()}
                         className="w-full px-3 py-1.5 pr-16 border border-gray-200 rounded-md focus:ring-2 focus:ring-primary-500 bg-white"
                         placeholder={`Enter ${label}...`}
@@ -625,6 +857,7 @@ const EditQuestionPage = () => {
                 name="explanation"
                 value={formData.explanation}
                 onChange={handleChange}
+                onPaste={(e) => handlePaste(e, 'explanation')}
                 rows={2}
                 className="w-full px-4 py-2 pr-24 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
                 placeholder="Briefly explain why this answer is correct..."
@@ -653,6 +886,34 @@ const EditQuestionPage = () => {
               </label>
               {images.explanation_image_url && <span className="text-xs text-green-600 font-bold"><i className="fas fa-check-circle"></i> {images.explanation_image_url.name} selected</span>}
             </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex items-center gap-4 pt-6 border-t border-gray-200">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3 text-lg"
+            >
+              {submitting ? (
+                <>
+                  <i className="fas fa-spinner fa-spin"></i>
+                  <span>Updating Question...</span>
+                </>
+              ) : (
+                <>
+                  <i className="fas fa-save"></i>
+                  <span>Update Question</span>
+                </>
+              )}
+            </button>
+            <Link
+              to={`/admin/exams/${examId}`}
+              className="px-8 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
+            >
+              <i className="fas fa-times"></i>
+              <span>Cancel</span>
+            </Link>
           </div>
         </form>
       </Card>

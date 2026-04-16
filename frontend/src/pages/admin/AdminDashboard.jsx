@@ -15,6 +15,8 @@ const AdminDashboard = () => {
   const [exams, setExams] = useState([]);
   const [stats, setStats] = useState({ totalExams: 0, totalStudents: 0, activeExams: 0, totalMinutes: 0 });
   const [loading, setLoading] = useState(true);
+
+  const [toastMessage, setToastMessage] = useState(null);
   const { logout } = useAuthStore();
   const navigate = useNavigate();
 
@@ -52,6 +54,11 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleToast = (msg, type = 'success') => {
+    setToastMessage({ msg, type });
+    setTimeout(() => setToastMessage(null), 5000);
+  };
+
   // Calculate duration analytics (histogram)
   const getDurationAnalytics = () => {
     const buckets = [0, 0, 0, 0, 0, 0]; // 0-30, 31-60, 61-90, 91-120, 121-150, 151+
@@ -79,7 +86,14 @@ const AdminDashboard = () => {
   const durationData = getDurationAnalytics();
 
   return (
-    <div className="admin-dashboard-container">
+    <div className="admin-dashboard-container relative">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 9999, padding: '15px 25px', borderRadius: '8px', color: 'white', fontWeight: 'bold', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', background: toastMessage.type === 'error' ? '#ef4444' : '#10b981', transition: 'all 0.3s ease' }}>
+          {toastMessage.msg}
+        </div>
+      )}
+
       {/* Sidebar */}
       <AdminSidebar />
 

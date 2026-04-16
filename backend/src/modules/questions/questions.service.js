@@ -8,31 +8,58 @@ class QuestionService {
   async addQuestion(examId, questionData) {
     const questionId = uuidv4();
 
+    // Validate: TEXT type requires question_text, IMAGE type requires image_url
+    const questionType = questionData.question_type || 'TEXT';
+    
+    if (questionType === 'TEXT' && (!questionData.question_text || !questionData.question_text.trim())) {
+      throw new Error('Question text is required for text-based questions');
+    }
+    
+    if (questionType === 'IMAGE' && !questionData.image_url) {
+      throw new Error('Question image is required for image-based questions');
+    }
+
+    // Validate: each option must have either text or image
+    const options = ['option_a', 'option_b', 'option_c', 'option_d'];
+    for (const opt of options) {
+      const hasText = questionData[opt] && questionData[opt].trim();
+      const hasImage = questionData[`${opt}_image_url`];
+      
+      if (!hasText && !hasImage) {
+        const optionLabel = opt.replace('option_', '').toUpperCase();
+        throw new Error(`Option ${optionLabel} must have either text or an image`);
+      }
+    }
+
+    const finalQuestionText = questionType === 'TEXT' ? questionData.question_text : null;
+    const finalImageUrl = questionType === 'IMAGE' ? questionData.image_url : null;
+
     await query(
       `INSERT INTO questions (
-        id, exam_id, question_text, question_image, option_a, option_a_image,
-        option_b, option_b_image, option_c, option_c_image, option_d, option_d_image,
-        correct_option, marks, negative_marks, difficulty, explanation, explanation_image
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+        id, exam_id, question_type, question_text, option_a, option_b, option_c, option_d,
+        correct_option, marks, negative_marks, difficulty, explanation,
+        image_url, option_a_image_url, option_b_image_url, option_c_image_url, option_d_image_url, explanation_image_url
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
       [
         questionId,
         examId,
-        questionData.question_text,
-        questionData.question_image || null,
-        questionData.option_a,
-        questionData.option_a_image || null,
-        questionData.option_b,
-        questionData.option_b_image || null,
-        questionData.option_c,
-        questionData.option_c_image || null,
-        questionData.option_d,
-        questionData.option_d_image || null,
+        questionType,
+        finalQuestionText,
+        questionData.option_a || '',
+        questionData.option_b || '',
+        questionData.option_c || '',
+        questionData.option_d || '',
         questionData.correct_option,
         questionData.marks || 1,
         questionData.negative_marks || 0,
         questionData.difficulty || 'MEDIUM',
         questionData.explanation || null,
-        questionData.explanation_image || null
+        finalImageUrl,
+        questionData.option_a_image_url || null,
+        questionData.option_b_image_url || null,
+        questionData.option_c_image_url || null,
+        questionData.option_d_image_url || null,
+        questionData.explanation_image_url || null
       ]
     );
 
@@ -45,31 +72,54 @@ class QuestionService {
   async addQuestionsBulk(examId, questions) {
     for (const q of questions) {
       const questionId = uuidv4();
+      const questionType = q.question_type || 'TEXT';
+      
+      if (questionType === 'TEXT' && (!q.question_text || !q.question_text.trim())) {
+        throw new Error('Question text is required for text-based questions');
+      }
+      if (questionType === 'IMAGE' && !q.image_url) {
+        throw new Error('Question image is required for image-based questions');
+      }
+
+      const options = ['option_a', 'option_b', 'option_c', 'option_d'];
+      for (const opt of options) {
+        const hasText = q[opt] && q[opt].trim();
+        const hasImage = q[`${opt}_image_url`];
+        if (!hasText && !hasImage) {
+          const optionLabel = opt.replace('option_', '').toUpperCase();
+          throw new Error(`Option ${optionLabel} must have either text or an image`);
+        }
+      }
+
+      const finalQuestionText = questionType === 'TEXT' ? q.question_text : null;
+      const finalImageUrl = questionType === 'IMAGE' ? q.image_url : null;
+
       await query(
         `INSERT INTO questions (
-          id, exam_id, question_text, question_image, option_a, option_a_image,
-          option_b, option_b_image, option_c, option_c_image, option_d, option_d_image,
-          correct_option, marks, negative_marks, difficulty, explanation, explanation_image
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+          id, exam_id, question_type, question_text, option_a, option_b, option_c, option_d,
+          correct_option, marks, negative_marks, difficulty, explanation,
+          image_url, option_a_image_url, option_b_image_url, option_c_image_url, option_d_image_url, explanation_image_url
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
         [
           questionId,
           examId,
-          q.question_text,
-          q.question_image || null,
-          q.option_a,
-          q.option_a_image || null,
-          q.option_b,
-          q.option_b_image || null,
-          q.option_c,
-          q.option_c_image || null,
-          q.option_d,
-          q.option_d_image || null,
+          questionType,
+          finalQuestionText,
+          q.option_a || '',
+          q.option_b || '',
+          q.option_c || '',
+          q.option_d || '',
           q.correct_option,
           q.marks || 1,
           q.negative_marks || 0,
           q.difficulty || 'MEDIUM',
           q.explanation || null,
-          q.explanation_image || null
+          finalImageUrl,
+          q.option_a_image_url || null,
+          q.option_b_image_url || null,
+          q.option_c_image_url || null,
+          q.option_d_image_url || null,
+          q.explanation_image_url || null
         ]
       );
     }
@@ -96,15 +146,22 @@ class QuestionService {
   async getQuestionsByExam(examId, options = {}) {
     const { includeCorrect = false, shuffled = false } = options;
 
-    let sql;
-    if (includeCorrect) {
-      sql = `SELECT id, exam_id, question_text, option_a, option_b, option_c, option_d,
-                    marks, negative_marks, difficulty, explanation
-             FROM questions WHERE exam_id = $1`;
-    } else {
-      sql = `SELECT id, exam_id, question_text, option_a, option_b, option_c, option_d,
-                    marks, negative_marks, difficulty
-             FROM questions WHERE exam_id = $1`;
+    let sql = `
+      SELECT id, exam_id, question_type, question_text, option_a, option_b, option_c, option_d,
+             marks, negative_marks, difficulty, explanation,
+             image_url, option_a_image_url, option_b_image_url, option_c_image_url, option_d_image_url, explanation_image_url
+      FROM questions
+      WHERE exam_id = $1
+    `;
+
+    if (!includeCorrect) {
+      sql = `
+        SELECT id, exam_id, question_type, question_text, option_a, option_b, option_c, option_d,
+               marks, negative_marks, difficulty,
+               image_url, option_a_image_url, option_b_image_url, option_c_image_url, option_d_image_url
+        FROM questions
+        WHERE exam_id = $1
+      `;
     }
 
     const { rows } = await query(sql, [examId]);
@@ -144,12 +201,20 @@ class QuestionService {
 
     const newCorrectKey = options.find(o => o.value === correctValue)?.key || question.correct_option;
 
+    const getImgForOrigKey = (origKey) => {
+       return question[`option_${origKey.toLowerCase()}_image_url`];
+    };
+
     return {
       ...question,
       option_a: options[0].value,
       option_b: options[1].value,
       option_c: options[2].value,
       option_d: options[3].value,
+      option_a_image_url: getImgForOrigKey(options[0].key),
+      option_b_image_url: getImgForOrigKey(options[1].key),
+      option_c_image_url: getImgForOrigKey(options[2].key),
+      option_d_image_url: getImgForOrigKey(options[3].key),
       correct_option: newCorrectKey
     };
   }
@@ -172,20 +237,51 @@ class QuestionService {
    * Update question
    */
   async updateQuestion(id, questionData) {
-    await this.getQuestionById(id); // ensure exists
+    const question = await this.getQuestionById(id);
 
     const updateFields = [];
     const values = [];
     let idx = 1;
 
     const allowedFields = [
-      'question_text', 'question_image', 'option_a', 'option_a_image', 'option_b', 'option_b_image',
-      'option_c', 'option_c_image', 'option_d', 'option_d_image',
-      'correct_option', 'marks', 'negative_marks', 'difficulty', 'explanation', 'explanation_image'
+      'question_type', 'question_text', 'option_a', 'option_b', 'option_c', 'option_d',
+      'correct_option', 'marks', 'negative_marks', 'difficulty', 'explanation',
+      'image_url', 'option_a_image_url', 'option_b_image_url', 'option_c_image_url', 'option_d_image_url', 'explanation_image_url'
     ];
 
+    const newQuestionType = questionData.question_type || question.question_type || 'TEXT';
+    
+    if (questionData.question_text !== undefined || questionData.image_url !== undefined) {
+      if (newQuestionType === 'TEXT' && questionData.question_text === '') {
+        throw new Error('Question text is required for text-based questions');
+      }
+      if (newQuestionType === 'IMAGE' && !questionData.image_url && !question.image_url) {
+        throw new Error('Question image is required for image-based questions');
+      }
+    }
+
+    if (newQuestionType === 'TEXT') {
+      if (questionData.question_text !== undefined) {
+        updateFields.push(`question_text = $${idx++}`);
+        values.push(questionData.question_text);
+      }
+      if (questionData.question_type === 'TEXT' && question.question_type !== 'TEXT') {
+        updateFields.push(`image_url = $${idx++}`);
+        values.push(null);
+      }
+    } else if (newQuestionType === 'IMAGE') {
+      if (questionData.question_type === 'IMAGE' && question.question_type !== 'IMAGE') {
+        updateFields.push(`question_text = $${idx++}`);
+        values.push(null);
+      }
+      if (questionData.image_url !== undefined) {
+        updateFields.push(`image_url = $${idx++}`);
+        values.push(questionData.image_url);
+      }
+    }
+
     for (const field of allowedFields) {
-      if (questionData[field] !== undefined) {
+      if (field !== 'question_text' && field !== 'image_url' && questionData[field] !== undefined) {
         updateFields.push(`${field} = $${idx++}`);
         values.push(questionData[field]);
       }
@@ -209,7 +305,7 @@ class QuestionService {
    * Delete question
    */
   async deleteQuestion(id) {
-    await this.getQuestionById(id); // ensure exists
+    await this.getQuestionById(id);
     await query('DELETE FROM questions WHERE id = $1', [id]);
     return { message: 'Question deleted successfully.' };
   }
@@ -238,6 +334,7 @@ class QuestionService {
    */
   async importFromExcelData(examId, excelData) {
     const questions = excelData.map(row => ({
+      question_type: row.QuestionType || row.question_type || 'TEXT',
       question_text: row.Question || row.question_text,
       option_a: row.OptionA || row.option_a,
       option_b: row.OptionB || row.option_b,
@@ -247,7 +344,13 @@ class QuestionService {
       marks: row.Marks || row.marks || 1,
       negative_marks: row.NegativeMarks || row.negative_marks || 0,
       difficulty: row.Difficulty || row.difficulty || 'MEDIUM',
-      explanation: row.Explanation || row.explanation
+      explanation: row.Explanation || row.explanation,
+      image_url: row.ImageUrl || row.image_url,
+      option_a_image_url: row.OptionAImageUrl || row.option_a_image_url,
+      option_b_image_url: row.OptionBImageUrl || row.option_b_image_url,
+      option_c_image_url: row.OptionCImageUrl || row.option_c_image_url,
+      option_d_image_url: row.OptionDImageUrl || row.option_d_image_url,
+      explanation_image_url: row.ExplanationImageUrl || row.explanation_image_url
     }));
 
     return this.addQuestionsBulk(examId, questions);

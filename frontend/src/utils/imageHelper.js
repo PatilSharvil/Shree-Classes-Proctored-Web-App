@@ -20,17 +20,20 @@ export const getUploadBaseUrl = () => {
 };
 
 /**
- * Generate full image URL from a relative path
- * @param {string} imagePath - Relative path like '/uploads/abc123.jpg' or 'uploads/abc123.jpg'
- * @returns {string} Full URL like 'http://localhost:5000/uploads/abc123.jpg'
+ * Generate full image URL from a relative path or return data URL as-is
+ * @param {string} imagePath - Can be:
+ *   - Data URL: 'data:image/jpeg;base64,/9j/4AA...'
+ *   - Relative path: '/uploads/abc123.jpg' or 'uploads/abc123.jpg'
+ *   - Full URL: 'http://example.com/image.jpg'
+ * @returns {string} Full URL or data URL
  */
 export const getImageUrl = (imagePath) => {
   if (!imagePath) {
     return '';
   }
 
-  // If it's already a full URL, return as-is
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+  // If it's already a full URL or data URL, return as-is
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('data:')) {
     return imagePath;
   }
 

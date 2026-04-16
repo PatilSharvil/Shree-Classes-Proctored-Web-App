@@ -7,6 +7,7 @@ const { authenticate, authorize } = require('../../middlewares/auth.middleware')
 router.use(authenticate);
 
 
+
 /**
  * @route   POST /api/exams
  * @desc    Create exam (Admin only)

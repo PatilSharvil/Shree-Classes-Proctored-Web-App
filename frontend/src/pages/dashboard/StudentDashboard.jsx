@@ -138,16 +138,18 @@ const StudentDashboard = () => {
             </div>
             <h1 className="text-3xl md:text-5xl font-bold text-white mb-3 leading-tight">
               Welcome Back,<br/>
-              <span className="font-semibold">{user?.name || 'Student'}</span>
+              <span className="font-semibold capitalize">{user?.name || (user?.email ? user.email.split('@')[0] : 'Student')}</span>
             </h1>
             <p className="text-white/80 text-base font-medium max-w-lg leading-relaxed mb-6">
               MHT-CET Exam Prep — Study smart and achieve your best scores with Shree Science Academy.
             </p>
-            <div className="flex flex-wrap gap-3">
-               <div className="px-5 py-2.5 bg-white/95 text-blue-700 rounded-xl font-bold text-xs tracking-wide shadow-lg hover:bg-white transition-all cursor-default">
-                  {performanceLevel}
-               </div>
-            </div>
+            {attemptHistory.length > 0 && (
+              <div className="flex flex-wrap gap-3">
+                 <div className="px-5 py-2.5 bg-white/95 text-blue-700 rounded-xl font-bold text-xs tracking-wide shadow-lg hover:bg-white transition-all cursor-default">
+                    Performance: {performanceLevel}
+                 </div>
+              </div>
+            )}
           </div>
 
           <div className="hidden lg:block w-64 h-64 relative">

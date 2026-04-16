@@ -1,9 +1,86 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './LandingPage.css';
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const statsRef = useRef(null);
+  const animatedRef = useRef(false);
+
+  const [currentSubjectIndex, setCurrentSubjectIndex] = useState(0);
+  const subjects = ['Physics', 'Chemistry', 'Maths'];
+
+  // Stats data
+  const statsData = [
+    { icon: 'fas fa-user-graduate', num: '500+', label: 'Students Trained' },
+    { icon: 'fas fa-university', num: '150+', label: 'Top Colleges' },
+    { icon: 'fas fa-medal', num: '50+', label: 'Top 100 Ranks' }
+  ];
+
+  const [displayedStats, setDisplayedStats] = useState(statsData.map(s => ({ ...s, animatedNum: 0, completed: false })));
+
+  // Counting animation triggered by IntersectionObserver
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && !animatedRef.current) {
+          animatedRef.current = true;
+          animateCounters();
+        }
+      },
+      { threshold: 0.3 }
+    );
+
+    if (statsRef.current) {
+      observer.observe(statsRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
+  const animateCounters = () => {
+    const duration = 2000;
+    const staggerDelay = 250; // ms between each card
+
+    statsData.forEach((stat, idx) => {
+      const targetNum = parseInt(stat.num.replace('+', ''), 10);
+      const startDelay = idx * staggerDelay;
+
+      setTimeout(() => {
+        const startTime = Date.now();
+        const easeOutExpo = (t) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t));
+
+        const step = () => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const easedProgress = easeOutExpo(progress);
+          const currentNum = Math.floor(easedProgress * targetNum);
+
+          setDisplayedStats((prev) =>
+            prev.map((s, i) => (i === idx ? { ...s, animatedNum: currentNum } : s))
+          );
+
+          if (progress < 1) {
+            requestAnimationFrame(step);
+          } else {
+            setDisplayedStats((prev) =>
+              prev.map((s, i) => (i === idx ? { ...s, animatedNum: targetNum, completed: true } : s))
+            );
+          }
+        };
+
+        requestAnimationFrame(step);
+      }, startDelay);
+    });
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSubjectIndex((prevIndex) => (prevIndex + 1) % subjects.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     // Mobile Menu Toggle logic
@@ -125,9 +202,12 @@ const LandingPage = () => {
           <div className="hero-text">
             <h1>Best Coaching for <span>MHT CET</span> Success</h1>
             <p>Expert guidance for Class 12th students preparing for MHT CET PCM & PCB. Comprehensive study material, mock tests, and personalized mentorship for engineering & medical aspirants.</p>
-            <div className="search-box">
-              <input type="text" placeholder="Search for PCM/PCB courses, mock tests..." />
-              <button className="btn btn-primary">Search</button>
+            <div className="modern-hero-text">
+              <span className="top-label">Smart PCM Practice Platform</span>
+              <h2 className="main-heading">
+                Boost your <span className="rotating-subject fade-animation" key={currentSubjectIndex}>{subjects[currentSubjectIndex]}</span> score
+              </h2>
+              <p className="sub-label">Practice smarter. Score higher.</p>
             </div>
           </div>
           <div className="hero-image">
@@ -149,7 +229,6 @@ const LandingPage = () => {
                   <div className="news-card-content">
                     <h3>MHT CET 2026 Registration Opens</h3>
                     <p>State Common Entrance Test Cell announces registration dates for PCM/PCB groups. Apply before deadline.</p>
-                    <a href="#" className="read-more">Read More <i className="fas fa-arrow-right"></i></a>
                   </div>
                 </div>
                 <div className="news-card">
@@ -157,15 +236,13 @@ const LandingPage = () => {
                   <div className="news-card-content">
                     <h3>MHT CET Syllabus 2026 Released</h3>
                     <p>Complete syllabus for Physics, Chemistry, Mathematics & Biology now available. Download from official website.</p>
-                    <a href="#" className="read-more">Read More <i className="fas fa-arrow-right"></i></a>
                   </div>
                 </div>
                 <div className="news-card">
-                  <img src="/assets/news1.png" alt="News 3" />
+                  <img src="/assets/news3.png" alt="News 3" />
                   <div className="news-card-content">
                     <h3>New Batch Starting for Class 12th CET</h3>
                     <p>Join our upcoming batch for MHT CET preparation. Limited seats available. Register now!</p>
-                    <a href="#" className="read-more">Read More <i className="fas fa-arrow-right"></i></a>
                   </div>
                 </div>
               </div>
@@ -193,7 +270,6 @@ const LandingPage = () => {
               <div className="icon-box"><i className={cat.icon}></i></div>
               <h3>{cat.title}</h3>
               <p>{cat.desc}</p>
-              <button className="btn-text">Explore <i className="fas fa-chevron-right"></i></button>
             </div>
           ))}
         </div>
@@ -246,75 +322,113 @@ const LandingPage = () => {
       </section>
 
       {/* Statistics Section */}
-      <section className="statistics container" id="results">
-        <h2>Our Success Record</h2>
-        <div className="grid stats-grid">
-          {[
-            { icon: 'fas fa-user-graduate', num: '500+', label: 'Students Trained' },
-            { icon: 'fas fa-university', num: '150+', label: 'Top Colleges' },
-            { icon: 'fas fa-medal', num: '50+', label: 'Top 100 Ranks' }
-          ].map((stat, idx) => (
-            <div key={idx} className="stats-card">
-              <i className={stat.icon}></i>
-              <span className="number">{stat.num}</span>
-              <span className="label">{stat.label}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="online-courses">
+      <section className="statistics" id="results" ref={statsRef}>
         <div className="container">
-          <div className="cta-card">
-            <h2>Start Your CET Preparation Today!</h2>
-            <p>Join Shree Science Academy for expert coaching, mock tests, and personalized mentorship.</p>
+          <h2>Our Success Record</h2>
+          <div className="grid stats-grid">
+            {displayedStats.map((stat, idx) => (
+              <div key={idx} className={`stats-card${stat.completed ? ' pulse' : ''}`}>
+                <i className={stat.icon}></i>
+                <span className="number">
+                  {stat.animatedNum}{stat.num.includes('+') ? '+' : ''}
+                </span>
+                <span className="label">{stat.label}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="footer" id="contact">
-        <div className="container footer-content">
-          <div className="footer-about">
-            <h3>About Shree Science Academy</h3>
-            <p>We are dedicated to providing quality education to Class 12th students preparing for MHT CET PCM & PCB. Our expert faculty, comprehensive study material, and online mock tests ensure complete preparation for engineering & medical entrance exams.</p>
-          </div>
-          <div className="footer-links">
-            <h4>Quick Links</h4>
-            <ul>
-              <li><Link to="/">Home</Link></li>
-              <li><Link to="/login">Login</Link></li>
-              <li><Link to="/register">Register</Link></li>
-              <li><Link to="/dashboard">Dashboard</Link></li>
-            </ul>
-          </div>
-          <div className="footer-links">
-            <h4>Our Courses</h4>
-            <ul>
-              <li><a href="#">MHT CET PCM</a></li>
-              <li><a href="#">MHT CET PCB</a></li>
-              <li><a href="#">Mock Test Series</a></li>
-              <li><a href="#">Study Material</a></li>
-            </ul>
-          </div>
-          <div className="footer-contact">
-            <h4>Contact Us</h4>
-            <p><i className="fas fa-envelope"></i> info@shreescienceacademy.com</p>
-            <p><i className="fas fa-phone"></i> +91 98765 43210</p>
-            <p><i className="fas fa-map-marker-alt"></i> Maharashtra, India</p>
+      {/* Combined Footer Wrapper */}
+      <div className="footer-wrapper">
+        <div className="container relative-wrapper">
+          {/* Overlapped CTA / Newsletter Card */}
+          <div className="cta-newsletter-card">
+            <div className="cta-left">
+              <div className="cta-icon-placeholder">
+                  <i className="fas fa-graduation-cap"></i>
+              </div>
+            </div>
+            <div className="cta-right">
+              <h2>Start Your CET Preparation Today!</h2>
+              <p>Join Shree Science Academy for expert coaching, mock tests, and personalized mentorship.</p>
+              <div style={{ marginBottom: '20px' }}>
+                  <Link to="/register">
+                    <button className="btn-subscribe" style={{ padding: '15px 35px', fontSize: '16px' }}>Get Started</button>
+                  </Link>
+              </div>
+              <p className="cta-policy">Secure your future with the best coaching in Maharashtra.</p>
+            </div>
           </div>
         </div>
-        <div className="footer-bottom">
-          <p>&copy; 2026 Shree Science Academy. All Rights Reserved.</p>
-          <div className="social-icons">
-            <a href="#"><i className="fab fa-facebook-f"></i></a>
-            <a href="#"><i className="fab fa-instagram"></i></a>
-            <a href="#"><i className="fab fa-youtube"></i></a>
-            <a href="#"><i className="fab fa-telegram"></i></a>
+
+        <footer className="footer-modern" id="contact">
+          <div className="container">
+             <div className="footer-grid">
+               <div className="footer-brand">
+                 <div className="brand-logo text-primary-600">
+                   <i className="fas fa-graduation-cap text-primary-600"></i>
+                   <span>Shree Science Academy</span>
+                 </div>
+                 <p className="brand-desc">We are dedicated to providing quality education to Class 12th students preparing for MHT CET PCM & PCB. Our expert faculty, comprehensive study material, and online mock tests ensure complete preparation for engineering & medical entrance exams.</p>
+                 <div className="social-icons-modern">
+                   <a href="#"><i className="fab fa-facebook-f"></i></a>
+                   <a href="#"><i className="fab fa-twitter"></i></a>
+                   <a href="#"><i className="fab fa-instagram"></i></a>
+                   <a href="#"><i className="fab fa-linkedin-in"></i></a>
+                   <a href="#"><i className="fab fa-youtube"></i></a>
+                 </div>
+               </div>
+
+               <div className="footer-links-col">
+                 <h4>Quick Links</h4>
+                 <ul>
+                   <li><Link to="/">Home</Link></li>
+                   <li><Link to="/login">Login</Link></li>
+                   <li><Link to="/register">Register</Link></li>
+                   <li><Link to="/dashboard">Dashboard</Link></li>
+                 </ul>
+               </div>
+
+               <div className="footer-links-col">
+                 <h4>Our Courses</h4>
+                 <ul>
+                   <li><a href="#">MHT CET PCM</a></li>
+                   <li><a href="#">MHT CET PCB</a></li>
+                   <li><a href="#">Mock Test Series</a></li>
+                   <li><a href="#">Study Material</a></li>
+                 </ul>
+               </div>
+
+               <div className="footer-contact-col">
+                 <h4>Contact Us</h4>
+                 <div className="contact-item">
+                   <i className="fas fa-phone"></i>
+                   <span>+91 98765 43210</span>
+                 </div>
+                 <div className="contact-item">
+                   <i className="fas fa-envelope"></i>
+                   <span>info@shreescienceacademy.com</span>
+                 </div>
+                 <div className="contact-item">
+                   <i className="fas fa-map-marker-alt"></i>
+                   <span>Maharashtra, India</span>
+                 </div>
+               </div>
+             </div>
+             
+             <div className="footer-bottom-bar">
+                <p className="copyright">&copy; {new Date().getFullYear()} Shree Science Academy. All rights reserved.</p>
+                <div className="bottom-links">
+                  <a href="#">Privacy Policy</a>
+                  <a href="#">Terms of Use</a>
+                  <a href="#">Legal</a>
+                  <a href="#">Site Map</a>
+                </div>
+             </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   );
 };

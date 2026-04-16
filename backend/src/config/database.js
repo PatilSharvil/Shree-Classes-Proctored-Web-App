@@ -1,39 +1,25 @@
 const { Pool } = require('pg');
 const env = require('./env');
 
-// CockroachDB requires SSL in production. The `pg` driver handles this automatically
-// when the connection string contains `sslmode=require` (which CockroachDB connection
-// strings include by default).
 const pool = new Pool({
   connectionString: env.databaseUrl,
   ssl: env.nodeEnv === 'production' ? { rejectUnauthorized: false } : false,
-  max: 10,                  // max pool connections
-  idleTimeoutMillis: 30000, // close idle clients after 30s
-  connectionTimeoutMillis: 10000, // abort connection attempt after 10s
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
 });
 
 pool.on('error', (err) => {
   console.error('Unexpected database pool error:', err);
 });
 
-/**
- * Execute a query against the pool.
- * @param {string} text  - SQL query with $1, $2, ... placeholders
- * @param {Array}  params - Parameter values
- * @returns {Promise<import('pg').QueryResult>}
- */
 const query = (text, params) => pool.query(text, params);
 
-/**
- * Run the schema initialisation queries (CREATE TABLE IF NOT EXISTS).
- * Called once on server startup.
- */
 const initializeDatabase = async () => {
   const client = await pool.connect();
   try {
     console.log('Initializing database schema...');
 
-    // Users
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
@@ -47,7 +33,6 @@ const initializeDatabase = async () => {
       )
     `);
 
-    // Exams
     await client.query(`
       CREATE TABLE IF NOT EXISTS exams (
         id TEXT PRIMARY KEY,
@@ -70,33 +55,32 @@ const initializeDatabase = async () => {
       )
     `);
 
-    // Questions
     await client.query(`
       CREATE TABLE IF NOT EXISTS questions (
         id TEXT PRIMARY KEY,
         exam_id TEXT NOT NULL,
-        question_text TEXT NOT NULL,
-        question_image TEXT,
-        option_a TEXT NOT NULL,
-        option_a_image TEXT,
-        option_b TEXT NOT NULL,
-        option_b_image TEXT,
-        option_c TEXT NOT NULL,
-        option_c_image TEXT,
-        option_d TEXT NOT NULL,
-        option_d_image TEXT,
+        question_type TEXT DEFAULT 'TEXT' CHECK(question_type IN ('TEXT', 'IMAGE')),
+        question_text TEXT,
+        image_url TEXT,
+        option_a TEXT,
+        option_a_image_url TEXT,
+        option_b TEXT,
+        option_b_image_url TEXT,
+        option_c TEXT,
+        option_c_image_url TEXT,
+        option_d TEXT,
+        option_d_image_url TEXT,
         correct_option TEXT NOT NULL CHECK(correct_option IN ('A', 'B', 'C', 'D')),
         marks INTEGER DEFAULT 1,
         negative_marks REAL DEFAULT 0,
         difficulty TEXT DEFAULT 'MEDIUM' CHECK(difficulty IN ('EASY', 'MEDIUM', 'HARD')),
         explanation TEXT,
-        explanation_image TEXT,
+        explanation_image_url TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE
       )
     `);
 
-    // Exam sessions
     await client.query(`
       CREATE TABLE IF NOT EXISTS exam_sessions (
         id TEXT PRIMARY KEY,
@@ -117,7 +101,6 @@ const initializeDatabase = async () => {
       )
     `);
 
-    // Responses
     await client.query(`
       CREATE TABLE IF NOT EXISTS responses (
         id TEXT PRIMARY KEY,
@@ -132,7 +115,6 @@ const initializeDatabase = async () => {
       )
     `);
 
-    // Violations
     await client.query(`
       CREATE TABLE IF NOT EXISTS violations (
         id TEXT PRIMARY KEY,
@@ -147,7 +129,6 @@ const initializeDatabase = async () => {
       )
     `);
 
-    // Proctoring snapshots
     await client.query(`
       CREATE TABLE IF NOT EXISTS proctoring_snapshots (
         id TEXT PRIMARY KEY,
@@ -164,7 +145,6 @@ const initializeDatabase = async () => {
       )
     `);
 
-    // Proctoring logs
     await client.query(`
       CREATE TABLE IF NOT EXISTS proctoring_logs (
         id TEXT PRIMARY KEY,
@@ -179,7 +159,6 @@ const initializeDatabase = async () => {
       )
     `);
 
-    // Attempt history
     await client.query(`
       CREATE TABLE IF NOT EXISTS attempt_history (
         id TEXT PRIMARY KEY,
@@ -201,7 +180,6 @@ const initializeDatabase = async () => {
       )
     `);
 
-    // Indexes
     await client.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_exams_active ON exams(is_active)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_questions_exam ON questions(exam_id)`);

@@ -116,51 +116,49 @@ class GitHubService {
   }
 
   /**
-   * Read Excel file and parse to JSON
+   * Read CSV file and parse to JSON
    */
-  async readExcel(sheetName) {
-    const filePath = `${this.excelPath}/${sheetName}.xlsx`;
+  async readCsv(sheetName) {
+    const filePath = `${this.excelPath}/${sheetName}.csv`;
     const fileData = await this.getFile(filePath);
 
     if (!fileData) {
-      logger.debug(`Excel file ${sheetName}.xlsx not found, returning empty array`);
+      logger.debug(`CSV file ${sheetName}.csv not found, returning empty array`);
       return [];
     }
 
-    // Parse Excel
-    const workbook = XLSX.read(fileData.content, { type: 'string' });
+    // Parse CSV
+    const workbook = XLSX.read(fileData.content, { type: 'string', raw: true });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json(sheet);
 
-    logger.debug(`Read ${data.length} rows from ${sheetName}.xlsx`);
+    logger.debug(`Read ${data.length} rows from ${sheetName}.csv`);
     return data;
   }
 
   /**
-   * Write data to Excel file
+   * Write data to CSV file
    */
-  async writeExcel(sheetName, data, commitMessage = null) {
-    const filePath = `${this.excelPath}/${sheetName}.xlsx`;
+  async writeCsv(sheetName, data, commitMessage = null) {
+    const filePath = `${this.excelPath}/${sheetName}.csv`;
     
-    // Create workbook
-    const workbook = XLSX.utils.book_new();
+    // Create CSV buffer from JSON
     const worksheet = XLSX.utils.json_to_sheet(data);
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+    const csvContent = XLSX.utils.sheet_to_csv(worksheet);
 
-    // Convert to buffer
-    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-    const content = buffer.toString('base64');
+    // Convert string to base64
+    const content = Buffer.from(csvContent, 'utf-8').toString('base64');
 
     // Get current sha if exists
     const current = await this.getFile(filePath);
-    const message = commitMessage || `Update ${sheetName}.xlsx - ${new Date().toISOString()}`;
+    const message = commitMessage || `Update ${sheetName}.csv - ${new Date().toISOString()}`;
 
     await this.updateFile(filePath, content, message, current?.sha);
-    logger.info(`Wrote ${data.length} rows to ${sheetName}.xlsx`);
+    logger.info(`Wrote ${data.length} rows to ${sheetName}.csv`);
   }
 
   /**
-   * Batch sync - write multiple Excel files
+   * Batch sync - write multiple CSV files
    */
   async batchSync(sheets) {
     if (!this.isConfigured()) {
@@ -173,7 +171,7 @@ class GitHubService {
     const results = {};
     for (const [sheetName, data] of Object.entries(sheets)) {
       try {
-        await this.writeExcel(sheetName, data);
+        await this.writeCsv(sheetName, data);
         results[sheetName] = { success: true };
       } catch (error) {
         logger.error(`Failed to sync ${sheetName}:`, error);
