@@ -7,7 +7,7 @@ const { apiResponse, errorResponse } = require('../../utils/apiResponse');
  * Start exam attempt
  * POST /api/attempts/start
  */
-const startAttempt = (req, res) => {
+const startAttempt = async (req, res) => {
   try {
     const { examId } = req.body;
 
@@ -16,12 +16,12 @@ const startAttempt = (req, res) => {
     }
 
     // Check exam availability
-    const availability = examService.isExamAvailable(examId);
+    const availability = await examService.isExamAvailable(examId);
     if (!availability.available) {
       return errorResponse(res, 400, availability.reason);
     }
 
-    const session = attemptService.startAttempt(req.user.id, examId);
+    const session = await attemptService.startAttempt(req.user.id, examId);
     return apiResponse(res, 201, session, 'Exam started successfully');
   } catch (error) {
     if (error.message.includes('already have an active attempt') || 
@@ -36,19 +36,19 @@ const startAttempt = (req, res) => {
  * Get active session
  * GET /api/attempts/active/:examId
  */
-const getActiveSession = (req, res) => {
+const getActiveSession = async (req, res) => {
   try {
-    const session = attemptService.getActiveSession(req.user.id, req.params.examId);
+    const session = await attemptService.getActiveSession(req.user.id, req.params.examId);
 
     if (!session) {
       return errorResponse(res, 404, 'No active session found.');
     }
 
     // Check if exam is still available (not ended)
-    const availability = examService.isExamAvailable(session.exam_id);
+    const availability = await examService.isExamAvailable(session.exam_id);
     if (!availability.available) {
       // Auto-submit the stale session
-      attemptService.autoSubmitExam(session.id, 'EXAM_ENDED');
+      await attemptService.autoSubmitExam(session.id, 'EXAM_ENDED');
       return errorResponse(res, 400, availability.reason);
     }
 
@@ -62,7 +62,7 @@ const getActiveSession = (req, res) => {
  * Save response
  * POST /api/attempts/:sessionId/respond
  */
-const saveResponse = (req, res) => {
+const saveResponse = async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { questionId, selectedOption } = req.body;
@@ -71,7 +71,7 @@ const saveResponse = (req, res) => {
       return errorResponse(res, 400, 'Question ID and selected option are required.');
     }
 
-    const result = attemptService.saveResponse(sessionId, questionId, selectedOption);
+    const result = await attemptService.saveResponse(sessionId, questionId, selectedOption);
     return apiResponse(res, 200, result, 'Response saved successfully');
   } catch (error) {
     if (error.message.includes('not active') || error.message.includes('not found')) {
@@ -85,7 +85,7 @@ const saveResponse = (req, res) => {
  * Update current question
  * PUT /api/attempts/:sessionId/question
  */
-const updateCurrentQuestion = (req, res) => {
+const updateCurrentQuestion = async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { index } = req.body;
@@ -94,7 +94,7 @@ const updateCurrentQuestion = (req, res) => {
       return errorResponse(res, 400, 'Question index is required.');
     }
 
-    const result = attemptService.updateCurrentQuestion(sessionId, index);
+    const result = await attemptService.updateCurrentQuestion(sessionId, index);
     return apiResponse(res, 200, result, 'Question index updated');
   } catch (error) {
     if (error.message.includes('Invalid question index')) {
@@ -108,10 +108,10 @@ const updateCurrentQuestion = (req, res) => {
  * Submit exam
  * POST /api/attempts/:sessionId/submit
  */
-const submitExam = (req, res) => {
+const submitExam = async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const result = attemptService.submitExam(sessionId);
+    const result = await attemptService.submitExam(sessionId);
     return apiResponse(res, 200, result, 'Exam submitted successfully');
   } catch (error) {
     if (error.message.includes('not in progress')) {
@@ -125,10 +125,10 @@ const submitExam = (req, res) => {
  * Get attempt history
  * GET /api/attempts/history
  */
-const getAttemptHistory = (req, res) => {
+const getAttemptHistory = async (req, res) => {
   try {
     const { examId } = req.query;
-    const history = attemptService.getAttemptHistory(req.user.id, examId);
+    const history = await attemptService.getAttemptHistory(req.user.id, examId);
     return apiResponse(res, 200, history, 'Attempt history retrieved');
   } catch (error) {
     return errorResponse(res, 500, 'Failed to get attempt history.', error.message);
@@ -139,9 +139,9 @@ const getAttemptHistory = (req, res) => {
  * Get attempt details
  * GET /api/attempts/:sessionId/details
  */
-const getAttemptDetails = (req, res) => {
+const getAttemptDetails = async (req, res) => {
   try {
-    const details = attemptService.getAttemptDetails(req.params.sessionId);
+    const details = await attemptService.getAttemptDetails(req.params.sessionId);
     return apiResponse(res, 200, details, 'Attempt details retrieved');
   } catch (error) {
     if (error.message.includes('not found')) {
@@ -155,9 +155,9 @@ const getAttemptDetails = (req, res) => {
  * Get exam attempts (Admin)
  * GET /api/attempts/exam/:examId
  */
-const getExamAttempts = (req, res) => {
+const getExamAttempts = async (req, res) => {
   try {
-    const attempts = attemptService.getExamAttempts(req.params.examId);
+    const attempts = await attemptService.getExamAttempts(req.params.examId);
     return apiResponse(res, 200, attempts, 'Exam attempts retrieved');
   } catch (error) {
     return errorResponse(res, 500, 'Failed to get exam attempts.', error.message);

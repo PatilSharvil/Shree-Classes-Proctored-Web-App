@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
-const db = require('../../config/database');
+const { query } = require('../../config/database');
 const env = require('../../config/env');
 const { v4: uuidv4 } = require('uuid');
 
@@ -9,7 +9,8 @@ class AuthService {
    * Login user with email and password
    */
   async login(email, password) {
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    const { rows } = await query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = rows[0];
 
     if (!user) {
       throw new Error('Invalid email or password.');
@@ -47,7 +48,8 @@ class AuthService {
    * Create admin user if not exists
    */
   async createAdminIfNotExists() {
-    const existingAdmin = db.prepare('SELECT * FROM users WHERE role = ?').get('ADMIN');
+    const { rows } = await query('SELECT * FROM users WHERE role = $1', ['ADMIN']);
+    const existingAdmin = rows[0];
 
     if (existingAdmin) {
       console.log('Admin user already exists');
@@ -57,10 +59,11 @@ class AuthService {
     const hashedPassword = await bcrypt.hash(env.adminPassword, 10);
     const adminId = uuidv4();
 
-    db.prepare(`
-      INSERT INTO users (id, email, password, name, role, must_change_password)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(adminId, env.adminEmail, hashedPassword, 'Admin', 'ADMIN', 0);
+    await query(
+      `INSERT INTO users (id, email, password, name, role, must_change_password)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [adminId, env.adminEmail, hashedPassword, 'Admin', 'ADMIN', 0]
+    );
 
     console.log('Default admin user created');
     return { id: adminId, email: env.adminEmail, role: 'ADMIN', must_change_password: 0 };
@@ -69,20 +72,19 @@ class AuthService {
   /**
    * Create a new user (Admin only)
    */
-  createUser(userData, createdBy) {
-    const existingUser = db.prepare('SELECT * FROM users WHERE email = ?').get(userData.email);
-
-    if (existingUser) {
+  async createUser(userData, createdBy) {
+    const { rows: existing } = await query('SELECT * FROM users WHERE email = $1', [userData.email]);
+    if (existing[0]) {
       throw new Error('User with this email already exists.');
     }
 
-    // Fix #12 — Email format validation
+    // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(userData.email)) {
       throw new Error('Invalid email format. Please enter a valid email address.');
     }
 
-    // Fix #13 — Password strength validation
+    // Password strength validation
     if (!userData.password || userData.password.length < 8) {
       throw new Error('Password must be at least 8 characters long.');
     }
@@ -94,12 +96,12 @@ class AuthService {
     }
 
     const userId = uuidv4();
-    const hashedPassword = bcrypt.hashSync(userData.password, 10);
+    const hashedPassword = await bcrypt.hash(userData.password, 10);
 
-    db.prepare(`
-      INSERT INTO users (id, email, password, name, role)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(userId, userData.email, hashedPassword, userData.name, userData.role);
+    await query(
+      `INSERT INTO users (id, email, password, name, role) VALUES ($1, $2, $3, $4, $5)`,
+      [userId, userData.email, hashedPassword, userData.name, userData.role]
+    );
 
     return {
       id: userId,
@@ -112,16 +114,23 @@ class AuthService {
   /**
    * Get all users (Admin only)
    */
-  getAllUsers() {
-    return db.prepare('SELECT id, email, name, role, created_at FROM users ORDER BY created_at DESC').all();
+  async getAllUsers() {
+    const { rows } = await query(
+      'SELECT id, email, name, role, created_at FROM users ORDER BY created_at DESC'
+    );
+    return rows;
   }
 
   /**
    * Get user by ID
    */
-  getUserById(id) {
-    const user = db.prepare('SELECT id, email, name, role, created_at FROM users WHERE id = ?').get(id);
-    
+  async getUserById(id) {
+    const { rows } = await query(
+      'SELECT id, email, name, role, created_at FROM users WHERE id = $1',
+      [id]
+    );
+    const user = rows[0];
+
     if (!user) {
       throw new Error('User not found.');
     }
@@ -132,33 +141,37 @@ class AuthService {
   /**
    * Update user
    */
-  updateUser(id, userData) {
-    const user = this.getUserById(id);
+  async updateUser(id, userData) {
+    await this.getUserById(id); // ensure exists
 
     const updateFields = [];
     const values = [];
+    let idx = 1;
 
     if (userData.name) {
-      updateFields.push('name = ?');
+      updateFields.push(`name = $${idx++}`);
       values.push(userData.name);
     }
 
     if (userData.email) {
-      const existing = db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(userData.email, id);
-      if (existing) {
+      const { rows } = await query(
+        'SELECT id FROM users WHERE email = $1 AND id != $2',
+        [userData.email, id]
+      );
+      if (rows[0]) {
         throw new Error('Email already in use.');
       }
-      updateFields.push('email = ?');
+      updateFields.push(`email = $${idx++}`);
       values.push(userData.email);
     }
 
     if (userData.password) {
-      updateFields.push('password = ?');
-      values.push(bcrypt.hashSync(userData.password, 10));
+      updateFields.push(`password = $${idx++}`);
+      values.push(await bcrypt.hash(userData.password, 10));
     }
 
     if (userData.role) {
-      updateFields.push('role = ?');
+      updateFields.push(`role = $${idx++}`);
       values.push(userData.role);
     }
 
@@ -166,11 +179,13 @@ class AuthService {
       throw new Error('No fields to update.');
     }
 
-    updateFields.push('updated_at = datetime("now")');
+    updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
     values.push(id);
 
-    const query = `UPDATE users SET ${updateFields.join(', ')} WHERE id = ?`;
-    db.prepare(query).run(...values);
+    await query(
+      `UPDATE users SET ${updateFields.join(', ')} WHERE id = $${idx}`,
+      values
+    );
 
     return this.getUserById(id);
   }
@@ -178,22 +193,21 @@ class AuthService {
   /**
    * Delete user
    */
-  deleteUser(id) {
-    const user = this.getUserById(id);
+  async deleteUser(id) {
+    const user = await this.getUserById(id);
 
-    // Prevent deleting admin
     if (user.role === 'ADMIN') {
       throw new Error('Cannot delete admin user.');
     }
 
-    db.prepare('DELETE FROM users WHERE id = ?').run(id);
+    await query('DELETE FROM users WHERE id = $1', [id]);
     return { message: 'User deleted successfully.' };
   }
 
   /**
    * Bulk import students from Excel data
    */
-  bulkImportStudents(studentsData, createdBy) {
+  async bulkImportStudents(studentsData, createdBy) {
     const results = {
       success: 0,
       failed: 0,
@@ -201,96 +215,66 @@ class AuthService {
       students: []
     };
 
-    const insertUser = db.prepare(`
-      INSERT INTO users (id, email, password, name, role)
-      VALUES (?, ?, ?, ?, ?)
-    `);
-
-    const insertMany = db.transaction((students) => {
-      for (const studentData of students) {
-        try {
-          // Validate required fields
-          if (!studentData.email || !studentData.password) {
-            results.failed++;
-            results.errors.push({
-              email: studentData.email || 'Unknown',
-              error: 'Email and password are required'
-            });
-            continue;
-          }
-
-          // Validate email format
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          if (!emailRegex.test(studentData.email)) {
-            results.failed++;
-            results.errors.push({
-              email: studentData.email,
-              error: 'Invalid email format'
-            });
-            continue;
-          }
-
-          // Validate password strength
-          if (studentData.password.length < 8) {
-            results.failed++;
-            results.errors.push({
-              email: studentData.email,
-              error: 'Password must be at least 8 characters'
-            });
-            continue;
-          }
-          if (!/[A-Z]/.test(studentData.password)) {
-            results.failed++;
-            results.errors.push({
-              email: studentData.email,
-              error: 'Password must contain at least one uppercase letter'
-            });
-            continue;
-          }
-          if (!/[0-9]/.test(studentData.password)) {
-            results.failed++;
-            results.errors.push({
-              email: studentData.email,
-              error: 'Password must contain at least one number'
-            });
-            continue;
-          }
-
-          // Check if user already exists
-          const existingUser = db.prepare('SELECT id FROM users WHERE email = ?').get(studentData.email);
-          if (existingUser) {
-            results.failed++;
-            results.errors.push({
-              email: studentData.email,
-              error: 'User already exists'
-            });
-            continue;
-          }
-
-          // Create user
-          const userId = uuidv4();
-          const hashedPassword = bcrypt.hashSync(studentData.password, 10);
-          const name = studentData.name || '';
-
-          insertUser.run(userId, studentData.email, hashedPassword, name, 'STUDENT');
-
-          results.success++;
-          results.students.push({
-            id: userId,
-            email: studentData.email,
-            name: name
-          });
-        } catch (error) {
+    for (const studentData of studentsData) {
+      try {
+        // Validate required fields
+        if (!studentData.email || !studentData.password) {
           results.failed++;
-          results.errors.push({
-            email: studentData.email || 'Unknown',
-            error: error.message
-          });
+          results.errors.push({ email: studentData.email || 'Unknown', error: 'Email and password are required' });
+          continue;
         }
-      }
-    });
 
-    insertMany(studentsData);
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(studentData.email)) {
+          results.failed++;
+          results.errors.push({ email: studentData.email, error: 'Invalid email format' });
+          continue;
+        }
+
+        // Validate password strength
+        if (studentData.password.length < 8) {
+          results.failed++;
+          results.errors.push({ email: studentData.email, error: 'Password must be at least 8 characters' });
+          continue;
+        }
+        if (!/[A-Z]/.test(studentData.password)) {
+          results.failed++;
+          results.errors.push({ email: studentData.email, error: 'Password must contain at least one uppercase letter' });
+          continue;
+        }
+        if (!/[0-9]/.test(studentData.password)) {
+          results.failed++;
+          results.errors.push({ email: studentData.email, error: 'Password must contain at least one number' });
+          continue;
+        }
+
+        // Check if user already exists
+        const { rows: existing } = await query('SELECT id FROM users WHERE email = $1', [studentData.email]);
+        if (existing[0]) {
+          results.failed++;
+          results.errors.push({ email: studentData.email, error: 'User already exists' });
+          continue;
+        }
+
+        // Create user
+        const userId = uuidv4();
+        const hashedPassword = await bcrypt.hash(studentData.password, 10);
+        const name = studentData.name || '';
+
+        await query(
+          `INSERT INTO users (id, email, password, name, role) VALUES ($1, $2, $3, $4, $5)`,
+          [userId, studentData.email, hashedPassword, name, 'STUDENT']
+        );
+
+        results.success++;
+        results.students.push({ id: userId, email: studentData.email, name });
+      } catch (error) {
+        results.failed++;
+        results.errors.push({ email: studentData.email || 'Unknown', error: error.message });
+      }
+    }
+
     return results;
   }
 }

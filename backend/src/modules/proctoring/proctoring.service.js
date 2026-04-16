@@ -1,67 +1,65 @@
-const db = require('../../config/database');
+const { query } = require('../../config/database');
 const { v4: uuidv4 } = require('uuid');
 const env = require('../../config/env');
 const snapshotFileManager = require('../../utils/snapshotFileManager');
+const logger = require('../../utils/logger');
 
 class ProctoringService {
   /**
    * Record a violation with severity level
    */
-  recordViolation(sessionId, type, description = null, severity = 'MEDIUM', metadata = null) {
+  async recordViolation(sessionId, type, description = null, severity = 'MEDIUM', metadata = null) {
     const violationId = uuidv4();
 
-    // Define severity weights
-    const severityWeights = {
-      LOW: 1,
-      MEDIUM: 2,
-      HIGH: 3,
-      CRITICAL: 5
-    };
+    const severityWeights = { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 5 };
 
-    db.prepare(`
-      INSERT INTO violations (id, session_id, type, description, severity, metadata)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(violationId, sessionId, type, description, severity, metadata ? JSON.stringify(metadata) : null);
+    await query(
+      `INSERT INTO violations (id, session_id, type, description, severity, metadata)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [violationId, sessionId, type, description, severity, metadata ? JSON.stringify(metadata) : null]
+    );
 
-    // Update session violation count with weighted score
     const weight = severityWeights[severity] || 2;
-    db.prepare(`
-      UPDATE exam_sessions
-      SET violation_count = violation_count + ?, last_activity_at = datetime('now')
-      WHERE id = ?
-    `).run(weight, sessionId);
+    await query(
+      `UPDATE exam_sessions
+       SET violation_count = violation_count + $1, last_activity_at = CURRENT_TIMESTAMP
+       WHERE id = $2`,
+      [weight, sessionId]
+    );
 
-    // Get updated violation count
-    const session = db.prepare('SELECT violation_count FROM exam_sessions WHERE id = ?').get(sessionId);
+    const { rows } = await query(
+      'SELECT violation_count FROM exam_sessions WHERE id = $1',
+      [sessionId]
+    );
+    const session = rows[0];
 
     return {
       violationId,
       type,
       description,
       severity,
-      totalViolations: session.violation_count,
+      totalViolations: session ? session.violation_count : 0,
       threshold: env.proctorViolationThreshold,
-      shouldAutoSubmit: env.proctorAutoSubmit && session.violation_count >= env.proctorViolationThreshold
+      shouldAutoSubmit: env.proctorAutoSubmit && session && session.violation_count >= env.proctorViolationThreshold
     };
   }
 
   /**
    * Log a proctoring event (detailed activity tracking)
    */
-  logActivity(sessionId, eventType, eventData = null, isViolation = false, ipAddress = null, userAgent = null) {
+  async logActivity(sessionId, eventType, eventData = null, isViolation = false, ipAddress = null, userAgent = null) {
     const logId = uuidv4();
-    
-    db.prepare(`
-      INSERT INTO proctoring_logs (id, session_id, event_type, event_data, ip_address, user_agent, is_violation)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(logId, sessionId, eventType, eventData ? JSON.stringify(eventData) : null, ipAddress, userAgent, isViolation ? 1 : 0);
 
-    // Update last activity timestamp
-    db.prepare(`
-      UPDATE exam_sessions
-      SET last_activity_at = datetime('now')
-      WHERE id = ?
-    `).run(sessionId);
+    await query(
+      `INSERT INTO proctoring_logs (id, session_id, event_type, event_data, ip_address, user_agent, is_violation)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [logId, sessionId, eventType, eventData ? JSON.stringify(eventData) : null, ipAddress, userAgent, isViolation ? 1 : 0]
+    );
+
+    await query(
+      `UPDATE exam_sessions SET last_activity_at = CURRENT_TIMESTAMP WHERE id = $1`,
+      [sessionId]
+    );
 
     return { logId, eventType, isViolation };
   }
@@ -69,12 +67,10 @@ class ProctoringService {
   /**
    * Record violation with automatic activity logging
    */
-  recordViolationWithLog(sessionId, type, description, severity, metadata = null, req = null) {
-    // Record the violation
-    const violationResult = this.recordViolation(sessionId, type, description, severity, metadata);
-    
-    // Log the activity
-    this.logActivity(
+  async recordViolationWithLog(sessionId, type, description, severity, metadata = null, req = null) {
+    const violationResult = await this.recordViolation(sessionId, type, description, severity, metadata);
+
+    await this.logActivity(
       sessionId,
       `VIOLATION_${type}`,
       { description, severity, metadata },
@@ -89,49 +85,52 @@ class ProctoringService {
   /**
    * Get violations for a session
    */
-  getSessionViolations(sessionId) {
-    return db.prepare(`
-      SELECT * FROM violations
-      WHERE session_id = ?
-      ORDER BY timestamp DESC
-    `).all(sessionId);
+  async getSessionViolations(sessionId) {
+    const { rows } = await query(
+      `SELECT * FROM violations WHERE session_id = $1 ORDER BY timestamp DESC`,
+      [sessionId]
+    );
+    return rows;
   }
 
   /**
    * Get activity logs for a session
    */
-  getSessionActivityLogs(sessionId, limit = 100) {
-    return db.prepare(`
-      SELECT * FROM proctoring_logs
-      WHERE session_id = ?
-      ORDER BY timestamp DESC
-      LIMIT ?
-    `).all(sessionId, limit);
+  async getSessionActivityLogs(sessionId, limit = 100) {
+    const { rows } = await query(
+      `SELECT * FROM proctoring_logs WHERE session_id = $1 ORDER BY timestamp DESC LIMIT $2`,
+      [sessionId, limit]
+    );
+    return rows;
   }
 
   /**
    * Get violation count
    */
-  getViolationCount(sessionId) {
-    const result = db.prepare(
-      'SELECT COUNT(*) as count FROM violations WHERE session_id = ?'
-    ).get(sessionId);
-    return result.count;
+  async getViolationCount(sessionId) {
+    const { rows } = await query(
+      'SELECT COUNT(*) as count FROM violations WHERE session_id = $1',
+      [sessionId]
+    );
+    return parseInt(rows[0].count, 10);
   }
 
   /**
    * Get weighted violation score
    */
-  getWeightedViolationScore(sessionId) {
-    const session = db.prepare('SELECT violation_count FROM exam_sessions WHERE id = ?').get(sessionId);
-    return session ? session.violation_count : 0;
+  async getWeightedViolationScore(sessionId) {
+    const { rows } = await query(
+      'SELECT violation_count FROM exam_sessions WHERE id = $1',
+      [sessionId]
+    );
+    return rows[0] ? rows[0].violation_count : 0;
   }
 
   /**
    * Check if session should be auto-submitted
    */
-  shouldAutoSubmit(sessionId) {
-    const score = this.getWeightedViolationScore(sessionId);
+  async shouldAutoSubmit(sessionId) {
+    const score = await this.getWeightedViolationScore(sessionId);
     return {
       shouldSubmit: env.proctorAutoSubmit && score >= env.proctorViolationThreshold,
       currentScore: score,
@@ -142,9 +141,9 @@ class ProctoringService {
   /**
    * Get violation statistics for an exam
    */
-  getExamViolationStats(examId) {
-    return db.prepare(`
-      SELECT
+  async getExamViolationStats(examId) {
+    const { rows } = await query(
+      `SELECT
         es.id as session_id,
         es.user_id,
         u.email,
@@ -154,84 +153,72 @@ class ProctoringService {
         MAX(es.status) as session_status,
         es.started_at,
         es.submitted_at
-      FROM exam_sessions es
-      JOIN users u ON es.user_id = u.id
-      LEFT JOIN violations v ON v.session_id = es.id
-      WHERE es.exam_id = ?
-      GROUP BY es.id
-      ORDER BY weighted_score DESC
-    `).all(examId);
+       FROM exam_sessions es
+       JOIN users u ON es.user_id = u.id
+       LEFT JOIN violations v ON v.session_id = es.id
+       WHERE es.exam_id = $1
+       GROUP BY es.id, es.user_id, u.email, u.name, es.violation_count, es.started_at, es.submitted_at
+       ORDER BY weighted_score DESC`,
+      [examId]
+    );
+    return rows;
   }
 
   /**
    * Get violation type breakdown
    */
-  getViolationTypeBreakdown(examId = null) {
-    let query = `
-      SELECT
-        type,
-        severity,
-        COUNT(*) as count
+  async getViolationTypeBreakdown(examId = null) {
+    let sql = `
+      SELECT type, severity, COUNT(*) as count
       FROM violations v
       JOIN exam_sessions es ON v.session_id = es.id
     `;
+    const params = [];
 
     if (examId) {
-      query += ' WHERE es.exam_id = ?';
+      sql += ' WHERE es.exam_id = $1';
+      params.push(examId);
     }
 
-    query += ' GROUP BY type, severity ORDER BY count DESC';
+    sql += ' GROUP BY type, severity ORDER BY count DESC';
 
-    const params = examId ? [examId] : [];
-    return db.prepare(query).all(...params);
+    const { rows } = await query(sql, params);
+    return rows;
   }
 
   /**
    * Get cheating detection data for a specific student session
-   * Returns detailed AI violation data with gaze tracking info
    */
-  getStudentCheatingData(sessionId) {
-    // Get all violations for this session with metadata
-    const violations = db.prepare(`
-      SELECT 
-        v.id,
-        v.type,
-        v.description,
-        v.severity,
-        v.confidence_score,
-        v.timestamp,
-        v.metadata,
-        ps.file_path,
-        ps.file_size,
-        ps.detection_type,
+  async getStudentCheatingData(sessionId) {
+    const { rows: violations } = await query(
+      `SELECT
+        v.id, v.type, v.description, v.severity, v.confidence_score,
+        v.timestamp, v.metadata,
+        ps.file_path, ps.file_size, ps.detection_type,
         ps.confidence as detection_confidence
-      FROM violations v
-      LEFT JOIN proctoring_snapshots ps ON v.id = ps.violation_id
-      WHERE v.session_id = ?
-      ORDER BY v.timestamp ASC
-    `).all(sessionId);
+       FROM violations v
+       LEFT JOIN proctoring_snapshots ps ON v.id = ps.violation_id
+       WHERE v.session_id = $1
+       ORDER BY v.timestamp ASC`,
+      [sessionId]
+    );
 
-    // Get session info
-    const session = db.prepare(`
-      SELECT 
-        es.id as session_id,
-        es.user_id,
-        es.started_at,
-        es.submitted_at,
-        es.status,
-        es.violation_count as weighted_score,
-        u.name,
-        u.email
-      FROM exam_sessions es
-      JOIN users u ON es.user_id = u.id
-      WHERE es.id = ?
-    `).get(sessionId);
+    const { rows: sessionRows } = await query(
+      `SELECT
+        es.id as session_id, es.user_id, es.started_at, es.submitted_at,
+        es.status, es.violation_count as weighted_score,
+        u.name, u.email
+       FROM exam_sessions es
+       JOIN users u ON es.user_id = u.id
+       WHERE es.id = $1`,
+      [sessionId]
+    );
+    const session = sessionRows[0];
 
     if (!session) {
       throw new Error('Session not found');
     }
 
-    // Calculate cheating risk score
     const aiViolations = violations.filter(v => {
       try {
         const meta = v.metadata ? JSON.parse(v.metadata) : {};
@@ -240,89 +227,60 @@ class ProctoringService {
         return false;
       }
     });
-    
-    const lookingAwayViolations = aiViolations.filter(v =>
-      v.type === 'LOOKING_AWAY'
-    );
 
-    const noFaceViolations = aiViolations.filter(v =>
-      v.type === 'NO_FACE'
-    );
-
+    const lookingAwayViolations = aiViolations.filter(v => v.type === 'LOOKING_AWAY');
+    const noFaceViolations = aiViolations.filter(v => v.type === 'NO_FACE');
     const tabSwitchViolations = aiViolations.filter(v =>
       v.type === 'TAB_SWITCH' || v.type === 'RAPID_TAB_SWITCH'
     );
 
     const totalAIViolations = aiViolations.length;
-    const maxConfidence = aiViolations.length > 0 
+    const maxConfidence = aiViolations.length > 0
       ? Math.max(...aiViolations.map(v => v.confidence_score || 0))
       : 0;
 
-    // Determine cheating risk level
     let cheatingRisk = 'LOW';
     let riskScore = 0;
-    
-    // Calculate risk based on violations
     riskScore += lookingAwayViolations.length * 2;
     riskScore += noFaceViolations.length * 3;
     riskScore += maxConfidence * 10;
 
-    if (riskScore >= 50) {
-      cheatingRisk = 'CRITICAL';
-    } else if (riskScore >= 30) {
-      cheatingRisk = 'HIGH';
-    } else if (riskScore >= 15) {
-      cheatingRisk = 'MEDIUM';
-    } else {
-      cheatingRisk = 'LOW';
-    }
+    if (riskScore >= 50) cheatingRisk = 'CRITICAL';
+    else if (riskScore >= 30) cheatingRisk = 'HIGH';
+    else if (riskScore >= 15) cheatingRisk = 'MEDIUM';
 
     return {
-      session,
-      violations,
-      aiViolations,
-      lookingAwayViolations,
-      noFaceViolations,
-      tabSwitchViolations,
+      session, violations, aiViolations, lookingAwayViolations,
+      noFaceViolations, tabSwitchViolations,
       tabSwitchCount: tabSwitchViolations.length,
-      totalAIViolations,
-      maxConfidence,
-      cheatingRisk,
-      riskScore
+      totalAIViolations, maxConfidence, cheatingRisk, riskScore
     };
   }
 
   /**
    * Get cheating detection summary for all students in an exam
    */
-  getExamCheatingSummary(examId) {
-    // Get all sessions for this exam
-    const sessions = db.prepare(`
-      SELECT 
-        es.id as session_id,
-        es.user_id,
-        u.name,
-        u.email,
-        es.status,
-        es.violation_count as weighted_score,
-        es.started_at,
-        es.submitted_at
-      FROM exam_sessions es
-      JOIN users u ON es.user_id = u.id
-      WHERE es.exam_id = ?
-      ORDER BY es.violation_count DESC
-    `).all(examId);
+  async getExamCheatingSummary(examId) {
+    const { rows: sessions } = await query(
+      `SELECT
+        es.id as session_id, es.user_id, u.name, u.email,
+        es.status, es.violation_count as weighted_score,
+        es.started_at, es.submitted_at
+       FROM exam_sessions es
+       JOIN users u ON es.user_id = u.id
+       WHERE es.exam_id = $1
+       ORDER BY es.violation_count DESC`,
+      [examId]
+    );
 
-    // Get cheating data for each session
-    return sessions.map(session => {
-      const cheatingData = this.getStudentCheatingData(session.session_id);
-
-      // Count tab switch violations
+    const results = [];
+    for (const session of sessions) {
+      const cheatingData = await this.getStudentCheatingData(session.session_id);
       const tabSwitchViolations = cheatingData.violations.filter(v =>
         v.type === 'TAB_SWITCH' || v.type === 'RAPID_TAB_SWITCH'
       );
 
-      return {
+      results.push({
         session_id: session.session_id,
         name: session.name,
         email: session.email,
@@ -337,108 +295,96 @@ class ProctoringService {
         lookingAwayCount: cheatingData.lookingAwayViolations.length,
         noFaceCount: cheatingData.noFaceViolations.length,
         maxConfidence: cheatingData.maxConfidence,
-        violations: cheatingData.violations.slice(0, 10) // Last 10 violations
-      };
-    });
+        violations: cheatingData.violations.slice(0, 10)
+      });
+    }
+    return results;
   }
 
   /**
    * Get activity summary for exam (admin dashboard)
    */
-  getExamActivitySummary(examId) {
-    return db.prepare(`
-      SELECT
+  async getExamActivitySummary(examId) {
+    const { rows } = await query(
+      `SELECT
         es.id as session_id,
-        u.name,
-        u.email,
-        es.status,
+        u.name, u.email, es.status,
         es.violation_count as weighted_score,
         COUNT(pl.id) as total_events,
         COUNT(CASE WHEN pl.is_violation = 1 THEN 1 END) as violation_events,
         MAX(pl.timestamp) as last_activity
-      FROM exam_sessions es
-      JOIN users u ON es.user_id = u.id
-      LEFT JOIN proctoring_logs pl ON pl.session_id = es.id
-      WHERE es.exam_id = ?
-      GROUP BY es.id
-      ORDER BY es.violation_count DESC
-    `).all(examId);
+       FROM exam_sessions es
+       JOIN users u ON es.user_id = u.id
+       LEFT JOIN proctoring_logs pl ON pl.session_id = es.id
+       WHERE es.exam_id = $1
+       GROUP BY es.id, u.name, u.email, es.status, es.violation_count
+       ORDER BY es.violation_count DESC`,
+      [examId]
+    );
+    return rows;
   }
 
   /**
    * Get detailed activity timeline for a session
    */
-  getSessionActivityTimeline(sessionId) {
-    return db.prepare(`
-      SELECT
-        event_type,
-        event_data,
-        is_violation,
-        timestamp,
-        ip_address
-      FROM proctoring_logs
-      WHERE session_id = ?
-      ORDER BY timestamp ASC
-    `).all(sessionId);
+  async getSessionActivityTimeline(sessionId) {
+    const { rows } = await query(
+      `SELECT event_type, event_data, is_violation, timestamp, ip_address
+       FROM proctoring_logs WHERE session_id = $1 ORDER BY timestamp ASC`,
+      [sessionId]
+    );
+    return rows;
   }
 
   /**
    * Get live active sessions with recent activity
    */
-  getLiveActiveSessions(examId) {
+  async getLiveActiveSessions(examId) {
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-    
-    return db.prepare(`
-      SELECT
-        es.id as session_id,
-        es.user_id,
-        u.name,
-        u.email,
-        es.started_at,
-        es.violation_count as weighted_score,
-        es.status,
+
+    const { rows } = await query(
+      `SELECT
+        es.id as session_id, es.user_id, u.name, u.email,
+        es.started_at, es.violation_count as weighted_score, es.status,
         COUNT(pl.id) as recent_events,
         COUNT(CASE WHEN pl.is_violation = 1 THEN 1 END) as recent_violations,
         MAX(pl.timestamp) as last_activity
-      FROM exam_sessions es
-      JOIN users u ON es.user_id = u.id
-      LEFT JOIN proctoring_logs pl ON pl.session_id = es.id AND pl.timestamp > ?
-      WHERE es.exam_id = ? AND es.status IN ('IN_PROGRESS', 'PAUSED')
-      GROUP BY es.id
-      ORDER BY recent_violations DESC, last_activity ASC
-    `).all(thirtyMinutesAgo, examId);
+       FROM exam_sessions es
+       JOIN users u ON es.user_id = u.id
+       LEFT JOIN proctoring_logs pl ON pl.session_id = es.id AND pl.timestamp > $1
+       WHERE es.exam_id = $2 AND es.status IN ('IN_PROGRESS', 'PAUSED')
+       GROUP BY es.id, es.user_id, u.name, u.email, es.started_at, es.violation_count, es.status
+       ORDER BY recent_violations DESC, last_activity ASC`,
+      [thirtyMinutesAgo, examId]
+    );
+    return rows;
   }
 
   /**
    * Get common violation patterns across all exams
    */
-  getViolationPatterns() {
-    return db.prepare(`
-      SELECT
-        type,
-        severity,
-        COUNT(*) as count,
-        COUNT(DISTINCT session_id) as affected_sessions
-      FROM violations
-      GROUP BY type, severity
-      ORDER BY count DESC
-    `).all();
+  async getViolationPatterns() {
+    const { rows } = await query(
+      `SELECT type, severity, COUNT(*) as count, COUNT(DISTINCT session_id) as affected_sessions
+       FROM violations GROUP BY type, severity ORDER BY count DESC`
+    );
+    return rows;
   }
 
   /**
    * Clear violations for a session (Admin action)
    */
-  clearViolations(sessionId) {
-    db.prepare('DELETE FROM violations WHERE session_id = ?').run(sessionId);
-    db.prepare('UPDATE exam_sessions SET violation_count = 0 WHERE id = ?').run(sessionId);
+  async clearViolations(sessionId) {
+    await query('DELETE FROM violations WHERE session_id = $1', [sessionId]);
+    await query('UPDATE exam_sessions SET violation_count = 0 WHERE id = $1', [sessionId]);
     return { message: 'Violations cleared for this session.' };
   }
 
   /**
    * Export proctoring report for an exam
    */
-  exportProctoringReport(examId) {
-    const sessions = this.getExamActivitySummary(examId);
+  async exportProctoringReport(examId) {
+    const sessions = await this.getExamActivitySummary(examId);
 
     return sessions.map(session => ({
       sessionId: session.session_id,
@@ -454,208 +400,171 @@ class ProctoringService {
 
   /**
    * Save AI proctoring snapshot (evidence image)
-   * Images are stored as files on disk, database only stores file paths
    */
-  saveSnapshot(sessionId, imageData, detectionType, confidence, violationId = null, retentionDays = 7) {
+  async saveSnapshot(sessionId, imageData, detectionType, confidence, violationId = null, retentionDays = 7) {
     const snapshotId = uuidv4();
 
-    // Generate file path
     const filePath = snapshotFileManager.generateFilePath(snapshotId, detectionType);
-
-    // Save image to file
     const saveResult = snapshotFileManager.saveImage(imageData, filePath);
-    
+
     if (!saveResult.success) {
       throw new Error(`Failed to save snapshot image: ${saveResult.error}`);
     }
 
-    // Calculate expiration date
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + retentionDays);
-    const expiresAtStr = expiresAt.toISOString().replace('T', ' ').substring(0, 19);
 
-    // Store file path and metadata in database (NOT the image data)
-    db.prepare(`
-      INSERT INTO proctoring_snapshots (id, session_id, violation_id, file_path, file_size, detection_type, confidence, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(snapshotId, sessionId, violationId, filePath, saveResult.fileSize, detectionType, confidence, expiresAtStr);
+    await query(
+      `INSERT INTO proctoring_snapshots (id, session_id, violation_id, file_path, file_size, detection_type, confidence, expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [snapshotId, sessionId, violationId, filePath, saveResult.fileSize, detectionType, confidence, expiresAt.toISOString()]
+    );
 
-    // Update violation with snapshot reference if provided
     if (violationId) {
-      db.prepare(`
-        UPDATE violations SET snapshot_id = ?, confidence_score = ? WHERE id = ?
-      `).run(snapshotId, confidence, violationId);
+      await query(
+        `UPDATE violations SET snapshot_id = $1, confidence_score = $2 WHERE id = $3`,
+        [snapshotId, confidence, violationId]
+      );
     }
 
     logger.info(`[Proctoring] Snapshot saved: ${filePath} (${(saveResult.fileSize / 1024).toFixed(2)} KB)`);
 
     return {
-      snapshotId,
-      sessionId,
-      violationId,
-      detectionType,
-      confidence,
-      filePath,
-      fileSize: saveResult.fileSize,
-      expiresAt: expiresAtStr
+      snapshotId, sessionId, violationId, detectionType,
+      confidence, filePath, fileSize: saveResult.fileSize,
+      expiresAt: expiresAt.toISOString()
     };
   }
 
   /**
    * Get all snapshots for a session
    */
-  getSessionSnapshots(sessionId) {
-    return db.prepare(`
-      SELECT id, session_id, violation_id, detection_type, confidence, timestamp, expires_at
-      FROM proctoring_snapshots
-      WHERE session_id = ?
-      ORDER BY timestamp DESC
-    `).all(sessionId);
+  async getSessionSnapshots(sessionId) {
+    const { rows } = await query(
+      `SELECT id, session_id, violation_id, detection_type, confidence, timestamp, expires_at
+       FROM proctoring_snapshots WHERE session_id = $1 ORDER BY timestamp DESC`,
+      [sessionId]
+    );
+    return rows;
   }
 
   /**
    * Get evidence gallery for an exam (all sessions)
-   * Reads image files and includes them as base64 in response
    */
-  getExamEvidenceGallery(examId, options = {}) {
+  async getExamEvidenceGallery(examId, options = {}) {
     const { limit = 50, detectionType = null, minConfidence = 0, includeImage = true } = options;
 
-    let query = `
+    let sql = `
       SELECT
-        s.id as snapshot_id,
-        s.session_id,
-        s.violation_id,
-        s.file_path,
-        s.file_size,
-        s.detection_type,
-        s.confidence,
-        s.timestamp,
-        v.type as violation_type,
-        v.description as violation_description,
-        v.severity,
-        es.user_id,
-        u.name as student_name,
-        u.email as student_email
+        s.id as snapshot_id, s.session_id, s.violation_id, s.file_path,
+        s.file_size, s.detection_type, s.confidence, s.timestamp,
+        v.type as violation_type, v.description as violation_description, v.severity,
+        es.user_id, u.name as student_name, u.email as student_email
       FROM proctoring_snapshots s
       INNER JOIN exam_sessions es ON s.session_id = es.id
       LEFT JOIN users u ON es.user_id = u.id
       LEFT JOIN violations v ON s.violation_id = v.id
-      WHERE es.exam_id = ?
-        AND s.confidence >= ?
+      WHERE es.exam_id = $1 AND s.confidence >= $2
     `;
 
     const params = [examId, minConfidence];
+    let idx = 3;
 
     if (detectionType) {
-      query += ` AND s.detection_type = ?`;
+      sql += ` AND s.detection_type = $${idx++}`;
       params.push(detectionType);
     }
 
-    query += ` ORDER BY s.timestamp DESC LIMIT ?`;
+    sql += ` ORDER BY s.timestamp DESC LIMIT $${idx}`;
     params.push(limit);
 
-    const snapshots = db.prepare(query).all(...params);
+    const { rows: snapshots } = await query(sql, params);
 
-    // Read image files and convert to base64 for frontend display
     return snapshots.map(snapshot => {
       const imageData = includeImage ? snapshotFileManager.readImage(snapshot.file_path) : null;
-      
-      return {
-        ...snapshot,
-        image_data: imageData,
-        file_exists: imageData !== null
-      };
+      return { ...snapshot, image_data: imageData, file_exists: imageData !== null };
     });
   }
 
   /**
    * Delete expired snapshots (cleanup job)
-   * Deletes both database records and actual image files
    */
-  cleanupExpiredSnapshots() {
-    const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
-    
-    // Get expired snapshots
-    const expired = db.prepare(`
-      SELECT id, file_path, file_size FROM proctoring_snapshots WHERE expires_at < ?
-    `).all(now);
+  async cleanupExpiredSnapshots() {
+    const now = new Date().toISOString();
+
+    const { rows: expired } = await query(
+      `SELECT id, file_path, file_size FROM proctoring_snapshots WHERE expires_at < $1`,
+      [now]
+    );
 
     if (expired.length === 0) {
       return { deleted: 0, freedSpace: 0, message: 'No expired snapshots to clean' };
     }
 
-    // Delete files first
     const filePaths = expired.map(s => s.file_path);
     const cleanupResult = snapshotFileManager.cleanupExpired(filePaths);
 
-    // Then delete database records
-    const result = db.prepare(`
-      DELETE FROM proctoring_snapshots WHERE expires_at < ?
-    `).run(now);
+    const { rowCount } = await query(
+      `DELETE FROM proctoring_snapshots WHERE expires_at < $1`,
+      [now]
+    );
 
     const totalFreed = cleanupResult.freedSpace;
-    
-    logger.info(`[Proctoring] Cleanup: Deleted ${result.changes} snapshot records, freed ${(totalFreed / 1024 / 1024).toFixed(2)} MB`);
+    logger.info(`[Proctoring] Cleanup: Deleted ${rowCount} snapshot records, freed ${(totalFreed / 1024 / 1024).toFixed(2)} MB`);
 
     return {
-      deleted: result.changes,
+      deleted: rowCount,
       freedSpace: totalFreed,
-      message: `Deleted ${result.changes} expired snapshots, freed ${(totalFreed / 1024 / 1024).toFixed(2)} MB`
+      message: `Deleted ${rowCount} expired snapshots, freed ${(totalFreed / 1024 / 1024).toFixed(2)} MB`
     };
   }
 
   /**
    * Get active sessions for an exam (for WebSocket)
-   * Alias for getLiveActiveSessions with simpler response
    */
-  getActiveSessionsForExam(examId) {
-    return db.prepare(`
-      SELECT
-        es.id,
-        es.user_id,
-        u.name as user_name,
-        u.email as user_email,
-        es.started_at,
-        es.violation_count,
-        es.status,
-        es.last_activity_at
-      FROM exam_sessions es
-      JOIN users u ON es.user_id = u.id
-      WHERE es.exam_id = ? AND es.status IN ('IN_PROGRESS', 'PAUSED')
-      ORDER BY es.started_at DESC
-    `).all(examId);
+  async getActiveSessionsForExam(examId) {
+    const { rows } = await query(
+      `SELECT
+        es.id, es.user_id, u.name as user_name, u.email as user_email,
+        es.started_at, es.violation_count, es.status, es.last_activity_at
+       FROM exam_sessions es
+       JOIN users u ON es.user_id = u.id
+       WHERE es.exam_id = $1 AND es.status IN ('IN_PROGRESS', 'PAUSED')
+       ORDER BY es.started_at DESC`,
+      [examId]
+    );
+    return rows;
   }
 
   /**
    * Get session by ID with user details
    */
-  getSessionById(sessionId) {
-    return db.prepare(`
-      SELECT
-        es.*,
-        u.name as user_name,
-        u.email as user_email
-      FROM exam_sessions es
-      JOIN users u ON es.user_id = u.id
-      WHERE es.id = ?
-    `).get(sessionId);
+  async getSessionById(sessionId) {
+    const { rows } = await query(
+      `SELECT es.*, u.name as user_name, u.email as user_email
+       FROM exam_sessions es
+       JOIN users u ON es.user_id = u.id
+       WHERE es.id = $1`,
+      [sessionId]
+    );
+    return rows[0] || null;
   }
 
   /**
    * Get storage statistics
    */
-  getStorageStats() {
+  async getStorageStats() {
     const fileStats = snapshotFileManager.getStorageStats();
-    
-    const dbStats = db.prepare(`
-      SELECT COUNT(*) as total_records, SUM(file_size) as total_db_size
-      FROM proctoring_snapshots
-    `).get();
+
+    const { rows } = await query(
+      `SELECT COUNT(*) as total_records, SUM(file_size) as total_db_size FROM proctoring_snapshots`
+    );
+    const dbStats = rows[0];
 
     return {
       files: fileStats,
       database: {
-        totalRecords: dbStats.total_records,
+        totalRecords: parseInt(dbStats.total_records, 10),
         totalSize: dbStats.total_db_size || 0,
         totalSizeMB: ((dbStats.total_db_size || 0) / 1024 / 1024).toFixed(2)
       }

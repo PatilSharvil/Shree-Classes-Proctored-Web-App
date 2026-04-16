@@ -7,12 +7,12 @@ const { apiResponse, errorResponse } = require('../../utils/apiResponse');
  * Add question to exam
  * POST /api/exams/:examId/questions
  */
-const addQuestion = (req, res) => {
+const addQuestion = async (req, res) => {
   try {
     const { examId } = req.params;
 
     // Verify exam exists
-    examService.getExamById(examId);
+    await examService.getExamById(examId);
 
     // Validate image sizes (max 500KB base64)
     const maxImageSize = 500 * 1024; // 500KB
@@ -24,7 +24,7 @@ const addQuestion = (req, res) => {
       }
     }
 
-    const question = questionService.addQuestion(examId, req.body);
+    const question = await questionService.addQuestion(examId, req.body);
     return apiResponse(res, 201, question, 'Question added successfully');
   } catch (error) {
     if (error.message === 'Exam not found.') {
@@ -38,7 +38,7 @@ const addQuestion = (req, res) => {
  * Add questions in bulk
  * POST /api/exams/:examId/questions/bulk
  */
-const addQuestionsBulk = (req, res) => {
+const addQuestionsBulk = async (req, res) => {
   try {
     const { examId } = req.params;
     const { questions } = req.body;
@@ -48,9 +48,9 @@ const addQuestionsBulk = (req, res) => {
     }
 
     // Verify exam exists
-    examService.getExamById(examId);
+    await examService.getExamById(examId);
 
-    const result = questionService.addQuestionsBulk(examId, questions);
+    const result = await questionService.addQuestionsBulk(examId, questions);
     return apiResponse(res, 201, result, 'Questions added successfully');
   } catch (error) {
     if (error.message === 'Exam not found.') {
@@ -64,7 +64,7 @@ const addQuestionsBulk = (req, res) => {
  * Upload questions via Excel file
  * POST /api/exams/:examId/questions/upload
  */
-const uploadQuestions = (req, res) => {
+const uploadQuestions = async (req, res) => {
   try {
     const { examId } = req.params;
 
@@ -73,13 +73,13 @@ const uploadQuestions = (req, res) => {
     }
 
     // Verify exam exists
-    examService.getExamById(examId);
+    await examService.getExamById(examId);
 
     // Parse Excel file
     const excelData = excelService.importFromBuffer(req.file.buffer);
     
     // Import questions
-    const result = questionService.importFromExcelData(examId, excelData);
+    const result = await questionService.importFromExcelData(examId, excelData);
     return apiResponse(res, 201, result, 'Questions imported successfully');
   } catch (error) {
     if (error.message === 'Exam not found.') {
@@ -93,15 +93,15 @@ const uploadQuestions = (req, res) => {
  * Get questions for an exam
  * GET /api/exams/:examId/questions
  */
-const getQuestions = (req, res) => {
+const getQuestions = async (req, res) => {
   try {
     const { examId } = req.params;
     const { includeCorrect = 'false', shuffled = 'false', shuffledOptions = 'false' } = req.query;
 
     // Verify exam exists
-    examService.getExamById(examId);
+    await examService.getExamById(examId);
 
-    const questions = questionService.getQuestionsByExam(examId, {
+    const questions = await questionService.getQuestionsByExam(examId, {
       includeCorrect: includeCorrect === 'true',
       shuffled: shuffled === 'true',
       shuffledOptions: shuffledOptions === 'true'
@@ -120,9 +120,9 @@ const getQuestions = (req, res) => {
  * Get question by ID
  * GET /api/questions/:id
  */
-const getQuestionById = (req, res) => {
+const getQuestionById = async (req, res) => {
   try {
-    const question = questionService.getQuestionWithAnswer(req.params.id);
+    const question = await questionService.getQuestionWithAnswer(req.params.id);
     return apiResponse(res, 200, question, 'Question retrieved successfully');
   } catch (error) {
     if (error.message === 'Question not found.') {
@@ -136,9 +136,9 @@ const getQuestionById = (req, res) => {
  * Update question
  * PUT /api/questions/:id
  */
-const updateQuestion = (req, res) => {
+const updateQuestion = async (req, res) => {
   try {
-    const question = questionService.updateQuestion(req.params.id, req.body);
+    const question = await questionService.updateQuestion(req.params.id, req.body);
     return apiResponse(res, 200, question, 'Question updated successfully');
   } catch (error) {
     if (error.message === 'Question not found.') {
@@ -152,9 +152,9 @@ const updateQuestion = (req, res) => {
  * Delete question
  * DELETE /api/questions/:id
  */
-const deleteQuestion = (req, res) => {
+const deleteQuestion = async (req, res) => {
   try {
-    const result = questionService.deleteQuestion(req.params.id);
+    const result = await questionService.deleteQuestion(req.params.id);
     return apiResponse(res, 200, result, 'Question deleted successfully');
   } catch (error) {
     if (error.message === 'Question not found.') {

@@ -33,16 +33,21 @@ const env = {
   proctorViolationThreshold: parseInt(process.env.PROCTOR_VIOLATION_THRESHOLD) || 5,
   proctorAutoSubmit: process.env.PROCTOR_AUTO_SUBMIT === 'true',
 
-  // SQLite
-  sqliteDbPath: process.env.SQLITE_DB_PATH || './data/exam.db',
+  // PostgreSQL / CockroachDB
+  databaseUrl: process.env.DATABASE_URL || null,
 
   // Security
   requirePasswordChange: process.env.REQUIRE_PASSWORD_CHANGE !== 'false' // Default true
 };
 
 // Validate required env vars
-if (!env.githubToken && env.nodeEnv === 'production') {
-  console.warn('WARNING: GITHUB_TOKEN not set. GitHub sync will fail in production.');
+if (!env.databaseUrl) {
+  if (env.nodeEnv === 'production') {
+    console.error('FATAL: DATABASE_URL must be set in production.');
+    process.exit(1);
+  } else {
+    console.warn('WARNING: DATABASE_URL not set. Using a local PostgreSQL database or CockroachDB connection string is required.');
+  }
 }
 
 // Validate JWT secret strength in production

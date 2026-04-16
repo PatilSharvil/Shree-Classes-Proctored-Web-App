@@ -1,71 +1,71 @@
-const db = require('../../config/database');
+const { query, pool } = require('../../config/database');
 const { v4: uuidv4 } = require('uuid');
 
 class AttemptService {
   /**
-   * Start a new exam attempt with transaction to prevent race conditions
+   * Start a new exam attempt (uses a DB transaction to prevent race conditions)
    */
-  startAttempt(userId, examId) {
+  async startAttempt(userId, examId) {
     const sessionId = uuidv4();
+    const client = await pool.connect();
 
     try {
-      // Start transaction
-      db.exec('BEGIN TRANSACTION');
+      await client.query('BEGIN');
 
       // Check if user already has an active attempt for this exam
-      const existingAttempt = db.prepare(`
-        SELECT * FROM exam_sessions
-        WHERE user_id = ? AND exam_id = ? AND status = 'IN_PROGRESS'
-      `).get(userId, examId);
+      const { rows: existing } = await client.query(
+        `SELECT * FROM exam_sessions WHERE user_id = $1 AND exam_id = $2 AND status = 'IN_PROGRESS'`,
+        [userId, examId]
+      );
 
-      if (existingAttempt) {
-        db.exec('ROLLBACK');
+      if (existing[0]) {
+        await client.query('ROLLBACK');
         throw new Error('You already have an active attempt for this exam.');
       }
 
       // Get question count
-      const questionCount = db.prepare(
-        'SELECT COUNT(*) as count FROM questions WHERE exam_id = ?'
-      ).get(examId).count;
+      const { rows: countRows } = await client.query(
+        'SELECT COUNT(*) as count FROM questions WHERE exam_id = $1',
+        [examId]
+      );
+      const questionCount = parseInt(countRows[0].count, 10);
 
       if (questionCount === 0) {
-        db.exec('ROLLBACK');
+        await client.query('ROLLBACK');
         throw new Error('This exam has no questions.');
       }
 
       // Create session
-      db.prepare(`
-        INSERT INTO exam_sessions (
-          id, user_id, exam_id, total_questions, current_question_index
-        ) VALUES (?, ?, ?, ?, 0)
-      `).run(sessionId, userId, examId, questionCount);
+      await client.query(
+        `INSERT INTO exam_sessions (id, user_id, exam_id, total_questions, current_question_index)
+         VALUES ($1, $2, $3, $4, 0)`,
+        [sessionId, userId, examId, questionCount]
+      );
 
-      // Commit transaction
-      db.exec('COMMIT');
-
-      return this.getSessionById(sessionId);
+      await client.query('COMMIT');
     } catch (error) {
-      // Rollback on any error
-      try {
-        db.exec('ROLLBACK');
-      } catch (e) {
-        // Ignore rollback errors
-      }
+      await client.query('ROLLBACK');
       throw error;
+    } finally {
+      client.release();
     }
+
+    return this.getSessionById(sessionId);
   }
 
   /**
    * Get session by ID
    */
-  getSessionById(sessionId) {
-    const session = db.prepare(`
-      SELECT es.*, e.title as exam_title, e.duration_minutes,
-             e.total_marks, e.passing_percentage
-      FROM exam_sessions es
-      JOIN exams e ON es.exam_id = e.id
-      WHERE es.id = ?
-    `).get(sessionId);
+  async getSessionById(sessionId) {
+    const { rows } = await query(
+      `SELECT es.*, e.title as exam_title, e.duration_minutes,
+              e.total_marks, e.passing_percentage
+       FROM exam_sessions es
+       JOIN exams e ON es.exam_id = e.id
+       WHERE es.id = $1`,
+      [sessionId]
+    );
+    const session = rows[0];
 
     if (!session) {
       throw new Error('Session not found.');
@@ -77,118 +77,120 @@ class AttemptService {
   /**
    * Get active session for user and exam
    */
-  getActiveSession(userId, examId) {
-    return db.prepare(`
-      SELECT es.*, e.title as exam_title, e.duration_minutes
-      FROM exam_sessions es
-      JOIN exams e ON es.exam_id = e.id
-      WHERE es.user_id = ? AND es.exam_id = ? AND es.status = 'IN_PROGRESS'
-    `).get(userId, examId);
+  async getActiveSession(userId, examId) {
+    const { rows } = await query(
+      `SELECT es.*, e.title as exam_title, e.duration_minutes
+       FROM exam_sessions es
+       JOIN exams e ON es.exam_id = e.id
+       WHERE es.user_id = $1 AND es.exam_id = $2 AND es.status = 'IN_PROGRESS'`,
+      [userId, examId]
+    );
+    return rows[0] || null;
   }
 
   /**
-   * Save response for a question with transaction to prevent race conditions
+   * Save response for a question (uses a DB transaction)
    */
-  saveResponse(sessionId, questionId, selectedOption) {
-    const session = this.getSessionById(sessionId);
+  async saveResponse(sessionId, questionId, selectedOption) {
+    const session = await this.getSessionById(sessionId);
 
     if (session.status !== 'IN_PROGRESS') {
       throw new Error('Cannot save response. Exam session is not active.');
     }
 
+    const client = await pool.connect();
     try {
-      // Start transaction
-      db.exec('BEGIN TRANSACTION');
+      await client.query('BEGIN');
 
       // Get question details
-      const question = db.prepare('SELECT * FROM questions WHERE id = ?').get(questionId);
+      const { rows: qRows } = await client.query(
+        'SELECT * FROM questions WHERE id = $1',
+        [questionId]
+      );
+      const question = qRows[0];
       if (!question) {
-        db.exec('ROLLBACK');
+        await client.query('ROLLBACK');
         throw new Error('Question not found.');
       }
 
       // Check if response already exists
-      const existingResponse = db.prepare(
-        'SELECT * FROM responses WHERE session_id = ? AND question_id = ?'
-      ).get(sessionId, questionId);
+      const { rows: existingRows } = await client.query(
+        'SELECT * FROM responses WHERE session_id = $1 AND question_id = $2',
+        [sessionId, questionId]
+      );
+      const existingResponse = existingRows[0];
 
       const responseId = existingResponse ? existingResponse.id : uuidv4();
       const isCorrect = selectedOption === question.correct_option ? 1 : 0;
-      const marksAwarded = isCorrect ? question.marks : (selectedOption ? -question.negative_marks : 0);
+      const marksAwarded = isCorrect
+        ? question.marks
+        : (selectedOption ? -question.negative_marks : 0);
 
       if (existingResponse) {
-        // Update existing response
-        db.prepare(`
-          UPDATE responses
-          SET selected_option = ?, is_correct = ?, marks_awarded = ?, answered_at = datetime('now')
-          WHERE id = ?
-        `).run(selectedOption, isCorrect, marksAwarded, responseId);
+        await client.query(
+          `UPDATE responses
+           SET selected_option = $1, is_correct = $2, marks_awarded = $3, answered_at = CURRENT_TIMESTAMP
+           WHERE id = $4`,
+          [selectedOption, isCorrect, marksAwarded, responseId]
+        );
       } else {
-        // Insert new response
-        db.prepare(`
-          INSERT INTO responses (id, session_id, question_id, selected_option, is_correct, marks_awarded)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `).run(responseId, sessionId, questionId, selectedOption, isCorrect, marksAwarded);
+        await client.query(
+          `INSERT INTO responses (id, session_id, question_id, selected_option, is_correct, marks_awarded)
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [responseId, sessionId, questionId, selectedOption, isCorrect, marksAwarded]
+        );
       }
 
       // Update session stats
-      this.updateSessionStats(sessionId);
+      await this._updateSessionStats(client, sessionId);
 
-      // Commit transaction
-      db.exec('COMMIT');
+      await client.query('COMMIT');
 
-      return {
-        questionId,
-        selectedOption,
-        isCorrect: !!isCorrect,
-        marksAwarded
-      };
+      return { questionId, selectedOption, isCorrect: !!isCorrect, marksAwarded };
     } catch (error) {
-      // Rollback on any error
-      try {
-        db.exec('ROLLBACK');
-      } catch (e) {
-        // Ignore rollback errors
-      }
+      await client.query('ROLLBACK');
       throw error;
+    } finally {
+      client.release();
     }
   }
 
   /**
-   * Update session statistics
+   * Update session statistics (internal helper — expects a transactional client)
    */
-  updateSessionStats(sessionId) {
-    const stats = db.prepare(`
-      SELECT 
-        COUNT(*) as attempted_count,
-        COALESCE(SUM(is_correct), 0) as correct_count,
-        COALESCE(SUM(marks_awarded), 0) as score
-      FROM responses
-      WHERE session_id = ?
-    `).get(sessionId);
+  async _updateSessionStats(client, sessionId) {
+    const { rows } = await client.query(
+      `SELECT COUNT(*) as attempted_count,
+              COALESCE(SUM(is_correct), 0) as correct_count,
+              COALESCE(SUM(marks_awarded), 0) as score
+       FROM responses
+       WHERE session_id = $1`,
+      [sessionId]
+    );
+    const stats = rows[0];
 
-    db.prepare(`
-      UPDATE exam_sessions 
-      SET attempted_count = ?, correct_count = ?, score = ?, last_activity_at = datetime('now')
-      WHERE id = ?
-    `).run(stats.attempted_count, stats.correct_count, stats.score || 0, sessionId);
+    await client.query(
+      `UPDATE exam_sessions
+       SET attempted_count = $1, correct_count = $2, score = $3, last_activity_at = CURRENT_TIMESTAMP
+       WHERE id = $4`,
+      [stats.attempted_count, stats.correct_count, stats.score || 0, sessionId]
+    );
   }
 
   /**
    * Update current question index
    */
-  updateCurrentQuestion(sessionId, index) {
-    const session = this.getSessionById(sessionId);
-    
+  async updateCurrentQuestion(sessionId, index) {
+    const session = await this.getSessionById(sessionId);
+
     if (index < 0 || index >= session.total_questions) {
       throw new Error('Invalid question index.');
     }
 
-    db.prepare(`
-      UPDATE exam_sessions 
-      SET current_question_index = ?, last_activity_at = datetime('now')
-      WHERE id = ?
-    `).run(index, sessionId);
+    await query(
+      `UPDATE exam_sessions SET current_question_index = $1, last_activity_at = CURRENT_TIMESTAMP WHERE id = $2`,
+      [index, sessionId]
+    );
 
     return { current_question_index: index };
   }
@@ -196,60 +198,52 @@ class AttemptService {
   /**
    * Submit exam
    */
-  submitExam(sessionId) {
-    const session = this.getSessionById(sessionId);
+  async submitExam(sessionId) {
+    const session = await this.getSessionById(sessionId);
 
     if (session.status !== 'IN_PROGRESS') {
       throw new Error('Exam is not in progress.');
     }
 
-    // Update session status
-    db.prepare(`
-      UPDATE exam_sessions 
-      SET status = 'SUBMITTED', submitted_at = datetime('now'), last_activity_at = datetime('now')
-      WHERE id = ?
-    `).run(sessionId);
+    await query(
+      `UPDATE exam_sessions
+       SET status = 'SUBMITTED', submitted_at = CURRENT_TIMESTAMP, last_activity_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [sessionId]
+    );
 
-    // Get final stats
-    const stats = this.getSessionById(sessionId);
-
-    // Create attempt history record
-    const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(session.exam_id);
+    const stats = await this.getSessionById(sessionId);
+    const { rows: examRows } = await query('SELECT * FROM exams WHERE id = $1', [session.exam_id]);
+    const exam = examRows[0];
     const percentage = exam.total_marks > 0 ? (stats.score / exam.total_marks) * 100 : 0;
 
-    // Helper for safe date parsing
-    const parseDate = (d) => {
-      if (!d) return new Date();
-      // SQLite format is "YYYY-MM-DD HH:MM:SS", JS needs "YYYY-MM-DDTHH:MM:SS" or similar
-      return new Date(d.replace(' ', 'T'));
-    };
-
-    const submittedDate = parseDate(stats.submitted_at);
-    const startedDate = parseDate(session.started_at);
+    const submittedDate = new Date(stats.submitted_at);
+    const startedDate = new Date(session.started_at);
     const durationTaken = Math.floor((submittedDate - startedDate) / 1000);
 
     const historyId = uuidv4();
-    db.prepare(`
-      INSERT INTO attempt_history (
+    await query(
+      `INSERT INTO attempt_history (
         id, user_id, exam_id, session_id, score, total_marks, percentage,
         correct_count, incorrect_count, unattempted_count,
         duration_taken, started_at, submitted_at, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      historyId,
-      session.user_id,
-      session.exam_id,
-      sessionId,
-      stats.score || 0,
-      exam.total_marks,
-      percentage || 0,
-      stats.correct_count || 0,
-      (stats.attempted_count || 0) - (stats.correct_count || 0),
-      Math.max(0, session.total_questions - (stats.attempted_count || 0)),
-      isNaN(durationTaken) ? 0 : durationTaken,
-      session.started_at,
-      stats.submitted_at,
-      'SUBMITTED'
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+      [
+        historyId,
+        session.user_id,
+        session.exam_id,
+        sessionId,
+        stats.score || 0,
+        exam.total_marks,
+        percentage || 0,
+        stats.correct_count || 0,
+        (stats.attempted_count || 0) - (stats.correct_count || 0),
+        Math.max(0, session.total_questions - (stats.attempted_count || 0)),
+        isNaN(durationTaken) ? 0 : durationTaken,
+        session.started_at,
+        stats.submitted_at,
+        'SUBMITTED'
+      ]
     );
 
     return {
@@ -266,132 +260,122 @@ class AttemptService {
   /**
    * Auto-submit exam (timeout or proctoring violation)
    */
-  autoSubmitExam(sessionId, reason = 'TIMEOUT') {
-    const session = this.getSessionById(sessionId);
+  async autoSubmitExam(sessionId, reason = 'TIMEOUT') {
+    const session = await this.getSessionById(sessionId);
 
     if (session.status !== 'IN_PROGRESS') {
       return { message: 'Exam already submitted.' };
     }
 
-    // Update session status
-    db.prepare(`
-      UPDATE exam_sessions 
-      SET status = 'AUTO_SUBMITTED', submitted_at = datetime('now'), last_activity_at = datetime('now')
-      WHERE id = ?
-    `).run(sessionId);
+    await query(
+      `UPDATE exam_sessions
+       SET status = 'AUTO_SUBMITTED', submitted_at = CURRENT_TIMESTAMP, last_activity_at = CURRENT_TIMESTAMP
+       WHERE id = $1`,
+      [sessionId]
+    );
 
-    // Get final stats
-    const stats = this.getSessionById(sessionId);
-    const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(session.exam_id);
+    const stats = await this.getSessionById(sessionId);
+    const { rows: examRows } = await query('SELECT * FROM exams WHERE id = $1', [session.exam_id]);
+    const exam = examRows[0];
     const percentage = exam.total_marks > 0 ? (stats.score / exam.total_marks) * 100 : 0;
 
-    // Helper for safe date parsing
-    const parseDate = (d) => {
-      if (!d) return new Date();
-      return new Date(d.replace(' ', 'T'));
-    };
-
-    const submittedDate = parseDate(stats.submitted_at);
-    const startedDate = parseDate(session.started_at);
+    const submittedDate = new Date(stats.submitted_at);
+    const startedDate = new Date(session.started_at);
     const durationTaken = Math.floor((submittedDate - startedDate) / 1000);
 
-    // Create attempt history record
     const historyId = uuidv4();
-    db.prepare(`
-      INSERT INTO attempt_history (
+    await query(
+      `INSERT INTO attempt_history (
         id, user_id, exam_id, session_id, score, total_marks, percentage,
         correct_count, incorrect_count, unattempted_count,
         duration_taken, started_at, submitted_at, status
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      historyId,
-      session.user_id,
-      session.exam_id,
-      sessionId,
-      stats.score || 0,
-      exam.total_marks,
-      percentage || 0,
-      stats.correct_count || 0,
-      (stats.attempted_count || 0) - (stats.correct_count || 0),
-      Math.max(0, session.total_questions - (stats.attempted_count || 0)),
-      isNaN(durationTaken) ? 0 : durationTaken,
-      session.started_at,
-      stats.submitted_at,
-      `AUTO_SUBMITTED_${reason}`
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+      [
+        historyId,
+        session.user_id,
+        session.exam_id,
+        sessionId,
+        stats.score || 0,
+        exam.total_marks,
+        percentage || 0,
+        stats.correct_count || 0,
+        (stats.attempted_count || 0) - (stats.correct_count || 0),
+        Math.max(0, session.total_questions - (stats.attempted_count || 0)),
+        isNaN(durationTaken) ? 0 : durationTaken,
+        session.started_at,
+        stats.submitted_at,
+        `AUTO_SUBMITTED_${reason}`
+      ]
     );
 
-    return {
-      sessionId,
-      reason,
-      score: stats.score,
-      totalMarks: exam.total_marks
-    };
+    return { sessionId, reason, score: stats.score, totalMarks: exam.total_marks };
   }
 
   /**
    * Get user's attempt history
    */
-  getAttemptHistory(userId, examId = null) {
-    let query = `
+  async getAttemptHistory(userId, examId = null) {
+    let sql = `
       SELECT ah.*, e.title as exam_title
       FROM attempt_history ah
       JOIN exams e ON ah.exam_id = e.id
-      WHERE ah.user_id = ?
+      WHERE ah.user_id = $1
     `;
-
     const params = [userId];
 
     if (examId) {
-      query += ' AND ah.exam_id = ?';
+      sql += ' AND ah.exam_id = $2';
       params.push(examId);
     }
 
-    query += ' ORDER BY ah.submitted_at DESC';
+    sql += ' ORDER BY ah.submitted_at DESC';
 
-    return db.prepare(query).all(...params);
+    const { rows } = await query(sql, params);
+    return rows;
   }
 
   /**
    * Get attempt details with responses
    */
-  getAttemptDetails(sessionId) {
-    const session = this.getSessionById(sessionId);
-    
-    const responses = db.prepare(`
-      SELECT r.*, q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option
-      FROM responses r
-      JOIN questions q ON r.question_id = q.id
-      WHERE r.session_id = ?
-    `).all(sessionId);
+  async getAttemptDetails(sessionId) {
+    const session = await this.getSessionById(sessionId);
 
-    return {
-      session,
-      responses
-    };
+    const { rows: responses } = await query(
+      `SELECT r.*, q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option
+       FROM responses r
+       JOIN questions q ON r.question_id = q.id
+       WHERE r.session_id = $1`,
+      [sessionId]
+    );
+
+    return { session, responses };
   }
 
   /**
    * Get all attempts for an exam (Admin)
    */
-  getExamAttempts(examId) {
-    return db.prepare(`
-      SELECT ah.*, u.email, u.name
-      FROM attempt_history ah
-      JOIN users u ON ah.user_id = u.id
-      WHERE ah.exam_id = ?
-      ORDER BY ah.percentage DESC
-    `).all(examId);
+  async getExamAttempts(examId) {
+    const { rows } = await query(
+      `SELECT ah.*, u.email, u.name
+       FROM attempt_history ah
+       JOIN users u ON ah.user_id = u.id
+       WHERE ah.exam_id = $1
+       ORDER BY ah.percentage DESC`,
+      [examId]
+    );
+    return rows;
   }
 
   /**
    * Get stale sessions (for auto-submit)
    */
-  getStaleSessions(timeoutMinutes = 30) {
-    return db.prepare(`
-      SELECT * FROM exam_sessions
-      WHERE status = 'IN_PROGRESS'
-        AND last_activity_at < datetime('now', ? || ' minutes')
-    `).all(`-${timeoutMinutes}`);
+  async getStaleSessions(timeoutMinutes = 30) {
+    const { rows } = await query(
+      `SELECT * FROM exam_sessions
+       WHERE status = 'IN_PROGRESS'
+         AND last_activity_at < NOW() - INTERVAL '${parseInt(timeoutMinutes, 10)} minutes'`
+    );
+    return rows;
   }
 }
 

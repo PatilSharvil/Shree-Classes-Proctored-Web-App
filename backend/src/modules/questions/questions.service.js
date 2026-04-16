@@ -1,38 +1,39 @@
-const db = require('../../config/database');
+const { query } = require('../../config/database');
 const { v4: uuidv4 } = require('uuid');
 
 class QuestionService {
   /**
    * Add a single question to an exam
    */
-  addQuestion(examId, questionData) {
+  async addQuestion(examId, questionData) {
     const questionId = uuidv4();
 
-    db.prepare(`
-      INSERT INTO questions (
+    await query(
+      `INSERT INTO questions (
         id, exam_id, question_text, question_image, option_a, option_a_image,
         option_b, option_b_image, option_c, option_c_image, option_d, option_d_image,
         correct_option, marks, negative_marks, difficulty, explanation, explanation_image
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      questionId,
-      examId,
-      questionData.question_text,
-      questionData.question_image || null,
-      questionData.option_a,
-      questionData.option_a_image || null,
-      questionData.option_b,
-      questionData.option_b_image || null,
-      questionData.option_c,
-      questionData.option_c_image || null,
-      questionData.option_d,
-      questionData.option_d_image || null,
-      questionData.correct_option,
-      questionData.marks || 1,
-      questionData.negative_marks || 0,
-      questionData.difficulty || 'MEDIUM',
-      questionData.explanation || null,
-      questionData.explanation_image || null
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+      [
+        questionId,
+        examId,
+        questionData.question_text,
+        questionData.question_image || null,
+        questionData.option_a,
+        questionData.option_a_image || null,
+        questionData.option_b,
+        questionData.option_b_image || null,
+        questionData.option_c,
+        questionData.option_c_image || null,
+        questionData.option_d,
+        questionData.option_d_image || null,
+        questionData.correct_option,
+        questionData.marks || 1,
+        questionData.negative_marks || 0,
+        questionData.difficulty || 'MEDIUM',
+        questionData.explanation || null,
+        questionData.explanation_image || null
+      ]
     );
 
     return this.getQuestionById(questionId);
@@ -41,19 +42,16 @@ class QuestionService {
   /**
    * Add multiple questions (bulk upload)
    */
-  addQuestionsBulk(examId, questions) {
-    const insertStmt = db.prepare(`
-      INSERT INTO questions (
-        id, exam_id, question_text, question_image, option_a, option_a_image,
-        option_b, option_b_image, option_c, option_c_image, option_d, option_d_image,
-        correct_option, marks, negative_marks, difficulty, explanation, explanation_image
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const insertMany = db.transaction((questions) => {
-      for (const q of questions) {
-        const questionId = uuidv4();
-        insertStmt.run(
+  async addQuestionsBulk(examId, questions) {
+    for (const q of questions) {
+      const questionId = uuidv4();
+      await query(
+        `INSERT INTO questions (
+          id, exam_id, question_text, question_image, option_a, option_a_image,
+          option_b, option_b_image, option_c, option_c_image, option_d, option_d_image,
+          correct_option, marks, negative_marks, difficulty, explanation, explanation_image
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+        [
           questionId,
           examId,
           q.question_text,
@@ -72,19 +70,18 @@ class QuestionService {
           q.difficulty || 'MEDIUM',
           q.explanation || null,
           q.explanation_image || null
-        );
-      }
-    });
-
-    insertMany(questions);
+        ]
+      );
+    }
     return { count: questions.length, message: 'Questions added successfully' };
   }
 
   /**
    * Get question by ID
    */
-  getQuestionById(id) {
-    const question = db.prepare('SELECT * FROM questions WHERE id = ?').get(id);
+  async getQuestionById(id) {
+    const { rows } = await query('SELECT * FROM questions WHERE id = $1', [id]);
+    const question = rows[0];
 
     if (!question) {
       throw new Error('Question not found.');
@@ -96,37 +93,30 @@ class QuestionService {
   /**
    * Get all questions for an exam
    */
-  getQuestionsByExam(examId, options = {}) {
+  async getQuestionsByExam(examId, options = {}) {
     const { includeCorrect = false, shuffled = false } = options;
 
-    let query = `
-      SELECT id, exam_id, question_text, option_a, option_b, option_c, option_d,
-             marks, negative_marks, difficulty, explanation
-      FROM questions
-      WHERE exam_id = ?
-    `;
-
-    if (!includeCorrect) {
-      // Exclude correct_option and explanation for students
-      query = `
-        SELECT id, exam_id, question_text, option_a, option_b, option_c, option_d,
-               marks, negative_marks, difficulty
-        FROM questions
-        WHERE exam_id = ?
-      `;
+    let sql;
+    if (includeCorrect) {
+      sql = `SELECT id, exam_id, question_text, option_a, option_b, option_c, option_d,
+                    marks, negative_marks, difficulty, explanation
+             FROM questions WHERE exam_id = $1`;
+    } else {
+      sql = `SELECT id, exam_id, question_text, option_a, option_b, option_c, option_d,
+                    marks, negative_marks, difficulty
+             FROM questions WHERE exam_id = $1`;
     }
 
-    let questions = db.prepare(query).all(examId);
+    const { rows } = await query(sql, [examId]);
+    let questions = rows;
 
     if (shuffled) {
-      // Fisher-Yates shuffle
       for (let i = questions.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [questions[i], questions[j]] = [questions[j], questions[i]];
       }
     }
 
-    // Shuffle options for each question
     if (options.shuffledOptions) {
       questions = questions.map(q => this.shuffleOptions(q));
     }
@@ -145,16 +135,13 @@ class QuestionService {
       { key: 'D', value: question.option_d }
     ];
 
-    // Remember which value was the correct answer
     const correctValue = question[`option_${question.correct_option?.toLowerCase()}`];
 
-    // Shuffle options
     for (let i = options.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [options[i], options[j]] = [options[j], options[i]];
     }
 
-    // Find where the correct value ended up after shuffling
     const newCorrectKey = options.find(o => o.value === correctValue)?.key || question.correct_option;
 
     return {
@@ -170,8 +157,9 @@ class QuestionService {
   /**
    * Get question with correct answer (for review/admin)
    */
-  getQuestionWithAnswer(id) {
-    const question = db.prepare('SELECT * FROM questions WHERE id = ?').get(id);
+  async getQuestionWithAnswer(id) {
+    const { rows } = await query('SELECT * FROM questions WHERE id = $1', [id]);
+    const question = rows[0];
 
     if (!question) {
       throw new Error('Question not found.');
@@ -183,11 +171,12 @@ class QuestionService {
   /**
    * Update question
    */
-  updateQuestion(id, questionData) {
-    const question = this.getQuestionById(id);
+  async updateQuestion(id, questionData) {
+    await this.getQuestionById(id); // ensure exists
 
     const updateFields = [];
     const values = [];
+    let idx = 1;
 
     const allowedFields = [
       'question_text', 'question_image', 'option_a', 'option_a_image', 'option_b', 'option_b_image',
@@ -197,7 +186,7 @@ class QuestionService {
 
     for (const field of allowedFields) {
       if (questionData[field] !== undefined) {
-        updateFields.push(`${field} = ?`);
+        updateFields.push(`${field} = $${idx++}`);
         values.push(questionData[field]);
       }
     }
@@ -208,8 +197,10 @@ class QuestionService {
 
     values.push(id);
 
-    const query = `UPDATE questions SET ${updateFields.join(', ')} WHERE id = ?`;
-    db.prepare(query).run(...values);
+    await query(
+      `UPDATE questions SET ${updateFields.join(', ')} WHERE id = $${idx}`,
+      values
+    );
 
     return this.getQuestionWithAnswer(id);
   }
@@ -217,32 +208,35 @@ class QuestionService {
   /**
    * Delete question
    */
-  deleteQuestion(id) {
-    const question = this.getQuestionById(id);
-    db.prepare('DELETE FROM questions WHERE id = ?').run(id);
+  async deleteQuestion(id) {
+    await this.getQuestionById(id); // ensure exists
+    await query('DELETE FROM questions WHERE id = $1', [id]);
     return { message: 'Question deleted successfully.' };
   }
 
   /**
    * Delete all questions for an exam
    */
-  deleteQuestionsByExam(examId) {
-    db.prepare('DELETE FROM questions WHERE exam_id = ?').run(examId);
+  async deleteQuestionsByExam(examId) {
+    await query('DELETE FROM questions WHERE exam_id = $1', [examId]);
     return { message: 'All questions deleted for this exam.' };
   }
 
   /**
    * Get question count for an exam
    */
-  getQuestionCount(examId) {
-    const result = db.prepare('SELECT COUNT(*) as count FROM questions WHERE exam_id = ?').get(examId);
-    return result.count;
+  async getQuestionCount(examId) {
+    const { rows } = await query(
+      'SELECT COUNT(*) as count FROM questions WHERE exam_id = $1',
+      [examId]
+    );
+    return parseInt(rows[0].count, 10);
   }
 
   /**
    * Import questions from Excel data
    */
-  importFromExcelData(examId, excelData) {
+  async importFromExcelData(examId, excelData) {
     const questions = excelData.map(row => ({
       question_text: row.Question || row.question_text,
       option_a: row.OptionA || row.option_a,

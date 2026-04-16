@@ -1,4 +1,4 @@
-const db = require('../config/database');
+const { query } = require('../config/database');
 const attemptService = require('../modules/attempts/attempts.service');
 const emailService = require('./emailService');
 const logger = require('../utils/logger');
@@ -26,9 +26,6 @@ class ScheduledTaskService {
     // Cleanup stale sessions (every hour)
     this.intervals.push(setInterval(() => this.cleanupStaleSessions(), 60 * 60 * 1000));
 
-    // Sync to GitHub (every 5 minutes)
-    this.intervals.push(setInterval(() => this.syncToGitHub(), 5 * 60 * 1000));
-
     logger.info('All scheduled tasks started');
   }
 
@@ -47,18 +44,17 @@ class ScheduledTaskService {
   async checkExamStart() {
     try {
       const now = new Date().toISOString();
-      
-      // Find exams that just became available
-      const exams = db.prepare(`
-        SELECT * FROM exams
-        WHERE is_active = 1
-          AND scheduled_start <= ?
-          AND scheduled_end > ?
-      `).all(now, now);
+
+      const { rows: exams } = await query(
+        `SELECT * FROM exams
+         WHERE is_active = 1
+           AND scheduled_start <= $1
+           AND scheduled_end > $2`,
+        [now, now]
+      );
 
       for (const exam of exams) {
         logger.debug(`Exam "${exam.title}" is now available`);
-        // Could send notification to students here
       }
     } catch (error) {
       logger.error('Error checking exam start:', error);
@@ -70,24 +66,19 @@ class ScheduledTaskService {
    */
   async checkExamTimeout() {
     try {
-      const now = new Date();
-      
-      // Find sessions that have exceeded their duration
-      const sessions = db.prepare(`
-        SELECT es.*, e.duration_minutes
-        FROM exam_sessions es
-        JOIN exams e ON es.exam_id = e.id
-        WHERE es.status = 'IN_PROGRESS'
-          AND datetime(es.started_at, e.duration_minutes || ' minutes') < datetime('now')
-      `).all();
+      const { rows: sessions } = await query(
+        `SELECT es.*, e.duration_minutes
+         FROM exam_sessions es
+         JOIN exams e ON es.exam_id = e.id
+         WHERE es.status = 'IN_PROGRESS'
+           AND es.started_at + (e.duration_minutes || ' minutes')::INTERVAL < NOW()`
+      );
 
       for (const session of sessions) {
         logger.info(`Auto-submitting exam session ${session.id} due to timeout`);
-        
+
         try {
           await attemptService.autoSubmitExam(session.id, 'TIMEOUT');
-          
-          // Send result email
           await this.sendResultEmail(session.user_id, session.exam_id, session.id);
         } catch (error) {
           logger.error(`Failed to auto-submit session ${session.id}:`, error);
@@ -105,29 +96,27 @@ class ScheduledTaskService {
     try {
       const now = new Date();
       const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
-      
-      // Find exams starting in the next hour that haven't been reminded
-      const exams = db.prepare(`
-        SELECT * FROM exams
-        WHERE is_active = 1
-          AND scheduled_start > ?
-          AND scheduled_start <= ?
-      `).all(now.toISOString(), oneHourFromNow.toISOString());
+
+      const { rows: exams } = await query(
+        `SELECT * FROM exams
+         WHERE is_active = 1
+           AND scheduled_start > $1
+           AND scheduled_start <= $2`,
+        [now.toISOString(), oneHourFromNow.toISOString()]
+      );
 
       for (const exam of exams) {
-        // Get all students
-        const students = db.prepare(`
-          SELECT id, email, name FROM users WHERE role = 'STUDENT'
-        `).all();
+        const { rows: students } = await query(
+          `SELECT id, email, name FROM users WHERE role = 'STUDENT'`
+        );
 
         for (const student of students) {
-          // Check if reminder already sent
-          const reminderSent = db.prepare(`
-            SELECT 1 FROM attempt_history 
-            WHERE user_id = ? AND exam_id = ?
-          `).get(student.id, exam.id);
+          const { rows: reminderRows } = await query(
+            `SELECT 1 FROM attempt_history WHERE user_id = $1 AND exam_id = $2`,
+            [student.id, exam.id]
+          );
 
-          if (!reminderSent) {
+          if (!reminderRows[0]) {
             await emailService.sendExamReminder(student.email, student.name, exam);
             logger.info(`Sent reminder to ${student.email} for exam ${exam.title}`);
           }
@@ -143,11 +132,11 @@ class ScheduledTaskService {
    */
   async cleanupStaleSessions() {
     try {
-      const staleSessions = db.prepare(`
-        SELECT * FROM exam_sessions
-        WHERE status = 'IN_PROGRESS'
-          AND last_activity_at < datetime('now', '-24 hours')
-      `).all();
+      const { rows: staleSessions } = await query(
+        `SELECT * FROM exam_sessions
+         WHERE status = 'IN_PROGRESS'
+           AND last_activity_at < NOW() - INTERVAL '24 hours'`
+      );
 
       for (const session of staleSessions) {
         logger.info(`Cleaning up stale session ${session.id}`);
@@ -163,56 +152,26 @@ class ScheduledTaskService {
   }
 
   /**
-   * Sync data to GitHub (only runs if GitHub credentials are configured)
-   */
-  async syncToGitHub() {
-    try {
-      const githubService = require('./githubService');
-
-      // Skip entirely if GitHub is not configured
-      if (!githubService.isConfigured()) return;
-
-      const excelService = require('./excelService');
-
-      // Export data from SQLite
-      const students = db.prepare(`
-        SELECT id, email, name, role, created_at FROM users WHERE role = 'STUDENT'
-      `).all();
-
-      const exams = db.prepare(`
-        SELECT * FROM exams
-      `).all();
-
-      const questions = db.prepare(`
-        SELECT * FROM questions
-      `).all();
-
-      const attempts = db.prepare(`
-        SELECT * FROM attempt_history
-      `).all();
-
-      // Sync to GitHub
-      await githubService.batchSync({
-        students,
-        exams,
-        questions,
-        attempts
-      });
-
-      logger.debug('GitHub sync completed');
-    } catch (error) {
-      logger.error('Error syncing to GitHub:', error);
-    }
-  }
-
-  /**
    * Send result email after exam submission
    */
   async sendResultEmail(userId, examId, sessionId) {
     try {
-      const student = db.prepare('SELECT email, name FROM users WHERE id = ?').get(userId);
-      const exam = db.prepare('SELECT * FROM exams WHERE id = ?').get(examId);
-      const session = db.prepare('SELECT * FROM exam_sessions WHERE id = ?').get(sessionId);
+      const { rows: userRows } = await query(
+        'SELECT email, name FROM users WHERE id = $1',
+        [userId]
+      );
+      const { rows: examRows } = await query(
+        'SELECT * FROM exams WHERE id = $1',
+        [examId]
+      );
+      const { rows: sessionRows } = await query(
+        'SELECT * FROM exam_sessions WHERE id = $1',
+        [sessionId]
+      );
+
+      const student = userRows[0];
+      const exam = examRows[0];
+      const session = sessionRows[0];
 
       if (!student || !exam || !session) return;
 

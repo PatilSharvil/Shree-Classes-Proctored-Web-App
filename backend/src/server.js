@@ -2,6 +2,7 @@ const http = require('http');
 const app = require('./app');
 const env = require('./config/env');
 const logger = require('./utils/logger');
+const { initializeDatabase } = require('./config/database');
 const authService = require('./modules/auth/auth.service');
 const scheduledTaskService = require('./services/scheduledTaskService');
 const { initializeSocket } = require('./services/websocket.service');
@@ -14,8 +15,9 @@ const server = http.createServer(app);
 // Initialize WebSocket
 const io = initializeSocket(server, app);
 
-// Create default admin user
-authService.createAdminIfNotExists()
+// Database initialization and default admin user
+initializeDatabase()
+  .then(() => authService.createAdminIfNotExists())
   .then(() => {
     // Start scheduled tasks
     scheduledTaskService.start();
@@ -46,7 +48,7 @@ authService.createAdminIfNotExists()
     });
   })
   .catch((error) => {
-    logger.error('Failed to create admin user:', error);
+    logger.error('Failed to initialize application:', error);
     process.exit(1);
   });
 

@@ -2,7 +2,7 @@ const authService = require('./auth.service');
 const { apiResponse, errorResponse } = require('../../utils/apiResponse');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const db = require('../../config/database');
+const { query } = require('../../config/database');
 const env = require('../../config/env');
 const lockoutService = require('../../services/lockoutService');
 
@@ -138,7 +138,8 @@ const changePassword = async (req, res) => {
     }
 
     // Get user
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    const { rows: userRows } = await query('SELECT * FROM users WHERE id = $1', [userId]);
+    const user = userRows[0];
     if (!user) {
       console.log('[changePassword] User not found:', userId);
       return errorResponse(res, 404, 'User not found.');
@@ -172,13 +173,12 @@ const changePassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Update password and clear must_change_password flag
-    const result = db.prepare(`
-      UPDATE users
-      SET password = ?, must_change_password = 0, updated_at = datetime('now')
-      WHERE id = ?
-    `).run(hashedPassword, userId);
+    await query(
+      `UPDATE users SET password = $1, must_change_password = 0, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+      [hashedPassword, userId]
+    );
 
-    console.log('[changePassword] Password updated successfully. Rows changed:', result.changes);
+    console.log('[changePassword] Password updated successfully.');
 
     return apiResponse(res, 200, null, 'Password changed successfully');
   } catch (error) {
