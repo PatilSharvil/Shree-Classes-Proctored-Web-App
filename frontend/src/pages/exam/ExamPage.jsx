@@ -49,31 +49,6 @@ const ExamPage = () => {
   const toggleReview = useExamStore((state) => state.toggleReview);
   const clearExamState = useExamStore((state) => state.clearExamState);
 
-  // Proctoring hook with comprehensive monitoring and device-aware thresholds
-  const proctoring = useProctoring(session?.id, {
-    violationThreshold: 5,
-    // Use exam-specific thresholds, with device-specific defaults
-    tabSwitchThreshold: exam?.tab_switch_threshold || (isMobile ? 8 : 5),
-    lookingAwayThreshold: exam?.looking_away_threshold || (isMobile ? 10 : 5),
-    // Device-specific cooldown to prevent rapid-fire violations
-    violationCooldownMs: isMobile ? 5000 : 3000,
-    // Violation decay window - violations lose weight after this period
-    violationDecayMs: 120000, // 2 minutes
-    onViolationThreshold: () => {
-      console.warn(`[Proctoring] Weighted score threshold reached. Auto-submitting...`);
-      handleTimeUp();
-    },
-    onViolation: (violation) => {
-      console.log(`[Proctoring] Violation: ${violation.type} | Severity: ${violation.severity} | Count: ${violation.totalViolations} | Weighted: ${violation.weightedScore} | Device: ${isMobile ? 'mobile' : 'desktop'}`);
-    },
-    enableFullscreen: !isMobile, // Skip fullscreen enforcement on mobile
-    enableTabSwitch: true,
-    enableNetworkMonitor: true,
-    enableClipboardMonitor: true,
-    enableIdleDetect: true,
-    idleTimeoutMs: 10 * 60 * 1000  // 10 minutes
-  });
-
   // WebSocket hook for real-time proctoring updates
   const authToken = localStorage.getItem('token');
   const webSocket = useWebSocket({
@@ -90,7 +65,7 @@ const ExamPage = () => {
     setSubmitting(true);
     setAutoSubmitError(false);
 
-    const isAutoSubmit = proctoring?.weightedScore >= 5;
+    const isAutoSubmit = proctoringRef.current?.weightedScore >= 5;
 
     try {
       await attemptsAPI.submit(session.id);
@@ -130,8 +105,38 @@ const ExamPage = () => {
       setSubmitting(false);
       isSubmittingRef.current = false;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, navigate, clearExamState]);
+  }, [session, navigate, clearExamState, webSocket]);
+
+  // Memoize proctoring config to prevent infinite re-renders
+  const proctoringConfig = useMemo(() => ({
+    violationThreshold: 5,
+    tabSwitchThreshold: exam?.tab_switch_threshold || (isMobile ? 8 : 5),
+    lookingAwayThreshold: exam?.looking_away_threshold || (isMobile ? 10 : 5),
+    violationCooldownMs: isMobile ? 5000 : 3000,
+    violationDecayMs: 120000,
+    onViolationThreshold: () => {
+      console.warn(`[Proctoring] Weighted score threshold reached. Auto-submitting...`);
+      handleTimeUp();
+    },
+    onViolation: (violation) => {
+      console.log(`[Proctoring] Violation: ${violation.type} | Severity: ${violation.severity} | Count: ${violation.totalViolations} | Weighted: ${violation.weightedScore} | Device: ${isMobile ? 'mobile' : 'desktop'}`);
+    },
+    enableFullscreen: !isMobile,
+    enableTabSwitch: true,
+    enableNetworkMonitor: true,
+    enableClipboardMonitor: true,
+    enableIdleDetect: true,
+    idleTimeoutMs: 10 * 60 * 1000
+  }), [exam?.tab_switch_threshold, exam?.looking_away_threshold, handleTimeUp, isMobile]);
+
+  // Proctoring hook with comprehensive monitoring
+  const proctoring = useProctoring(session?.id, proctoringConfig);
+  
+  // Use a ref to access latest proctoring state in callbacks without re-triggering them
+  const proctoringRef = useRef(proctoring);
+  useEffect(() => {
+    proctoringRef.current = proctoring;
+  }, [proctoring]);
 
   // Emit violations via WebSocket when they occur
   const lastViolationRef = useRef(0);
@@ -268,7 +273,8 @@ const ExamPage = () => {
           // Session is valid — load questions and resume
           const questionsRes = await questionsAPI.getByExam(examId, {
             shuffled: 'true',
-            shuffledOptions: 'true'
+            shuffledOptions: 'true',
+            sessionId: existingSession.id
           });
 
           const examData = { ...existingSession };
@@ -322,7 +328,8 @@ const ExamPage = () => {
 
       const questionsRes = await questionsAPI.getByExam(examId, {
         shuffled: 'true',
-        shuffledOptions: 'false'
+        shuffledOptions: 'true',
+        sessionId: sessionData.id
       });
 
       setActiveExam(exam, sessionData);
