@@ -25,6 +25,7 @@ const ExamManagePage = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      setError('');
       const [examRes, questionsRes, attemptsRes] = await Promise.all([
         examsAPI.getById(examId),
         questionsAPI.getByExam(examId, { includeCorrect: 'true' }),
@@ -34,7 +35,12 @@ const ExamManagePage = () => {
       setQuestions(questionsRes.data.data || []);
       setAttempts(attemptsRes.data.data || []);
     } catch (err) {
-      setError('Failed to load exam data');
+      console.error('Error loading exam data:', err);
+      if (err.response?.status === 404) {
+        setError('Exam not found');
+      } else {
+        setError('Failed to load exam data. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
@@ -42,21 +48,38 @@ const ExamManagePage = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-12">
-        <LoadingSpinner size="lg" />
+      <div className="admin-dashboard-container">
+        <AdminSidebar />
+        <main className="admin-main-content flex items-center justify-center py-12">
+          <LoadingSpinner size="lg" />
+        </main>
       </div>
     );
   }
 
-  if (!exam) {
+  if (error || !exam) {
     return (
-      <Card>
-        <h2 className="text-xl font-bold text-red-600 mb-4">Error</h2>
-        <p className="text-gray-700 mb-4">Exam not found</p>
-        <Link to="/admin/exams">
-          <Button>Back to Exams</Button>
-        </Link>
-      </Card>
+      <div className="admin-dashboard-container">
+        <AdminSidebar />
+        <main className="admin-main-content">
+          <Card className="max-w-md mx-auto mt-10">
+            <div className="text-center py-6">
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i className="fas fa-exclamation-triangle text-2xl"></i>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">{error || 'Exam not found'}</h2>
+              <p className="text-gray-600 mb-6">
+                {error === 'Exam not found' 
+                  ? "The exam you're looking for doesn't exist or has been deleted." 
+                  : "There was a problem connecting to the server."}
+              </p>
+              <Link to="/admin/exams">
+                <Button variant="primary">Back to Exams</Button>
+              </Link>
+            </div>
+          </Card>
+        </main>
+      </div>
     );
   }
 

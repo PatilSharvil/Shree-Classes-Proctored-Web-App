@@ -148,7 +148,7 @@ class QuestionService {
 
     let sql = `
       SELECT id, exam_id, question_type, question_text, option_a, option_b, option_c, option_d,
-             marks, negative_marks, difficulty, explanation,
+             correct_option, marks, negative_marks, difficulty, explanation,
              image_url, option_a_image_url, option_b_image_url, option_c_image_url, option_d_image_url, explanation_image_url
       FROM questions
       WHERE exam_id = $1
