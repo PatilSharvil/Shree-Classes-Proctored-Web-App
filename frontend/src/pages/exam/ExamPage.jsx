@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { examsAPI, questionsAPI, attemptsAPI } from '../../services/api';
 import useExamStore from '../../store/examStore';
@@ -21,18 +21,18 @@ const ExamPage = () => {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
 
-  const [exam, setExam] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [examStarted, setExamStarted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
-  const [showPalette, setShowPalette] = useState(false);
-  const [autoSubmitError, setAutoSubmitError] = useState(false);
-  const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'failed'
-  const [totalDuration, setTotalDuration] = useState(null); // For timer progress bar
-  const isSubmittingRef = useRef(false); // Guard against concurrent submit calls
-  const timerInitialized = useRef(false); // Prevent timer from firing at 0 on stale state
+  const [exam, setExam] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState('');
+  const [examStarted, setExamStarted] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
+  const [showConfirmSubmit, setShowConfirmSubmit] = React.useState(false);
+  const [showPalette, setShowPalette] = React.useState(false);
+  const [autoSubmitError, setAutoSubmitError] = React.useState(false);
+  const [saveStatus, setSaveStatus] = React.useState('idle'); // 'idle' | 'saving' | 'failed'
+  const [totalDuration, setTotalDuration] = React.useState(null); // For timer progress bar
+  const isSubmittingRef = React.useRef(false); // Guard against concurrent submit calls
+  const timerInitialized = React.useRef(false); // Prevent timer from firing at 0 on stale state
 
   // Get store state and actions
   const session = useExamStore((state) => state.session);
@@ -57,8 +57,13 @@ const ExamPage = () => {
     authToken,
   });
 
+  const webSocketRef = React.useRef(webSocket);
+  React.useEffect(() => {
+    webSocketRef.current = webSocket;
+  }, [webSocket]);
+
   // Handle time up — idempotent (safe to call multiple times)
-  const handleTimeUp = useCallback(async () => {
+  const handleTimeUp = React.useCallback(async () => {
     // Prevent multiple concurrent submit calls
     if (isSubmittingRef.current || !session) return;
     isSubmittingRef.current = true;
@@ -70,14 +75,14 @@ const ExamPage = () => {
     try {
       await attemptsAPI.submit(session.id);
 
-      // Emit exam submitted via WebSocket
-      if (webSocket?.emitExamSubmitted) {
-        webSocket.emitExamSubmitted(new Date().toISOString());
+      // Emit exam submitted via WebSocket using ref
+      if (webSocketRef.current?.emitExamSubmitted) {
+        webSocketRef.current.emitExamSubmitted(new Date().toISOString());
       }
 
       // Emit auto-submitted if threshold was reached
-      if (isAutoSubmit && webSocket?.emitAutoSubmitted) {
-        webSocket.emitAutoSubmitted('violation_threshold_exceeded');
+      if (isAutoSubmit && webSocketRef.current?.emitAutoSubmitted) {
+        webSocketRef.current.emitAutoSubmitted('violation_threshold_exceeded');
       }
 
       clearExamState();
@@ -90,11 +95,11 @@ const ExamPage = () => {
         clearExamState();
 
         // Still emit WebSocket event even if already submitted
-        if (webSocket?.emitExamSubmitted) {
-          webSocket.emitExamSubmitted(new Date().toISOString());
+        if (webSocketRef.current?.emitExamSubmitted) {
+          webSocketRef.current.emitExamSubmitted(new Date().toISOString());
         }
-        if (isAutoSubmit && webSocket?.emitAutoSubmitted) {
-          webSocket.emitAutoSubmitted('violation_threshold_exceeded');
+        if (isAutoSubmit && webSocketRef.current?.emitAutoSubmitted) {
+          webSocketRef.current.emitAutoSubmitted('violation_threshold_exceeded');
         }
 
         navigate('/dashboard', { state: { message: 'Your exam has already been submitted.' } });
@@ -105,10 +110,10 @@ const ExamPage = () => {
       setSubmitting(false);
       isSubmittingRef.current = false;
     }
-  }, [session, navigate, clearExamState, webSocket]);
+  }, [session, navigate, clearExamState]);
 
   // Memoize proctoring config to prevent infinite re-renders
-  const proctoringConfig = useMemo(() => ({
+  const proctoringConfig = React.useMemo(() => ({
     violationThreshold: 5,
     tabSwitchThreshold: exam?.tab_switch_threshold || (isMobile ? 8 : 5),
     lookingAwayThreshold: exam?.looking_away_threshold || (isMobile ? 10 : 5),
@@ -133,14 +138,14 @@ const ExamPage = () => {
   const proctoring = useProctoring(session?.id, proctoringConfig);
   
   // Use a ref to access latest proctoring state in callbacks without re-triggering them
-  const proctoringRef = useRef(proctoring);
-  useEffect(() => {
+  const proctoringRef = React.useRef(proctoring);
+  React.useEffect(() => {
     proctoringRef.current = proctoring;
   }, [proctoring]);
 
   // Emit violations via WebSocket when they occur
-  const lastViolationRef = useRef(0);
-  useEffect(() => {
+  const lastViolationRef = React.useRef(0);
+  React.useEffect(() => {
     if (!webSocket.emitViolation || proctoring.violationCount <= lastViolationRef.current) {
       return;
     }
@@ -165,7 +170,7 @@ const ExamPage = () => {
   }, [proctoring.violationCount, proctoring.warnings, webSocket.emitViolation]);
 
   // Fix #18 — Sync offline queue when back online
-  useEffect(() => {
+  React.useEffect(() => {
     const syncOfflineQueue = async () => {
       const queue = JSON.parse(localStorage.getItem('examOfflineQueue') || '[]');
       if (queue.length === 0 || !proctoring.isOnline || !session) return;
@@ -189,14 +194,14 @@ const ExamPage = () => {
 
   // Auto-submit when proctoring violation threshold is hit
   // Only trigger if exam is actively in progress (not before start)
-  useEffect(() => {
+  React.useEffect(() => {
     if (proctoring.weightedScore >= 5 && session && examStarted && timerInitialized.current && !isSubmittingRef.current) {
       handleTimeUp();
     }
   }, [proctoring.weightedScore]); // eslint-disable-line
 
   // Timer effect — only starts if timeRemaining > 0
-  useEffect(() => {
+  React.useEffect(() => {
     if (!examStarted || !exam || submitting || timeRemaining === null) return;
 
     // Guard: if time has already expired when exam opens (stale session), handle gracefully
@@ -231,7 +236,7 @@ const ExamPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [examStarted, exam, submitting]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     loadExam();
     return () => clearExamState();
   }, [examId]);
@@ -472,7 +477,7 @@ const ExamPage = () => {
   };
 
   // Compute question statuses and counts - moved outside useMemo for clarity
-  const questionStatuses = useMemo(() => {
+  const questionStatuses = React.useMemo(() => {
     return questions.map((_, idx) => {
       const question = questions[idx];
       if (!question) return 'not-visited';
@@ -496,15 +501,15 @@ const ExamPage = () => {
 
   const getQuestionStatus = (idx) => questionStatuses[idx] || 'not-visited';
 
-  const answeredCount = useMemo(() => 
+  const answeredCount = React.useMemo(() => 
     questionStatuses.filter(s => s === 'answered' || s === 'answered-review').length
   , [questionStatuses]);
 
-  const notAnsweredCount = useMemo(() => 
+  const notAnsweredCount = React.useMemo(() => 
     questionStatuses.filter(s => s === 'not-answered' || s === 'not-visited').length
   , [questionStatuses]);
 
-  const reviewCount = useMemo(() => 
+  const reviewCount = React.useMemo(() => 
     questionStatuses.filter(s => s === 'review' || s === 'answered-review').length
   , [questionStatuses]);
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { io } from 'socket.io-client';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
@@ -189,7 +189,7 @@ const useWebSocket = ({ sessionId, examId, authToken }) => {
     return () => clearInterval(interval);
   }, [isConnected, emitHeartbeat]);
 
-  return {
+  return useMemo(() => ({
     isConnected,
     adminWarning,
     examPaused,
@@ -198,7 +198,16 @@ const useWebSocket = ({ sessionId, examId, authToken }) => {
     emitExamStarted,
     emitExamSubmitted,
     emitAutoSubmitted,
-  };
+  }), [
+    isConnected,
+    adminWarning,
+    examPaused,
+    emitViolation,
+    emitHeartbeat,
+    emitExamStarted,
+    emitExamSubmitted,
+    emitAutoSubmitted,
+  ]);
 };
 
 export default useWebSocket;
