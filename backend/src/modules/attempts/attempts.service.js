@@ -1,5 +1,6 @@
 const { query, pool } = require('../../config/database');
 const { v4: uuidv4 } = require('uuid');
+const questionService = require('../questions/questions.service');
 
 class AttemptService {
   /**
@@ -121,10 +122,21 @@ class AttemptService {
       const existingResponse = existingRows[0];
 
       const responseId = existingResponse ? existingResponse.id : uuidv4();
-      const isCorrect = selectedOption === question.correct_option ? 1 : 0;
+      
+      // Handle shuffled options logic
+      // We need to know what the "correct" letter is for THIS session
+      const shuffledQuestion = questionService.shuffleOptions(question, sessionId);
+      const shuffledCorrectOption = shuffledQuestion.correct_option;
+      
+      const isCorrect = selectedOption === shuffledCorrectOption ? 1 : 0;
+      
+      // Ensure marks are numbers
+      const qMarks = parseFloat(question.marks) || 0;
+      const qNegMarks = parseFloat(question.negative_marks) || 0;
+      
       const marksAwarded = isCorrect
-        ? question.marks
-        : (selectedOption ? -question.negative_marks : 0);
+        ? qMarks
+        : (selectedOption ? -qNegMarks : 0);
 
       if (existingResponse) {
         await client.query(
@@ -161,7 +173,7 @@ class AttemptService {
   async _updateSessionStats(client, sessionId) {
     const { rows } = await client.query(
       `SELECT COUNT(*) as attempted_count,
-              COALESCE(SUM(is_correct), 0) as correct_count,
+              COALESCE(SUM(CASE WHEN is_correct = 1 THEN 1 ELSE 0 END), 0) as correct_count,
               COALESCE(SUM(marks_awarded), 0) as score
        FROM responses
        WHERE session_id = $1`,
@@ -169,11 +181,17 @@ class AttemptService {
     );
     const stats = rows[0];
 
+    // node-pg returns bigint/numeric as strings, so we must parse them to numbers
+    // to avoid type mismatch errors when updating INTEGER columns in CockroachDB/PostgreSQL
+    const attemptedCount = parseInt(stats.attempted_count, 10) || 0;
+    const correctCount = parseInt(stats.correct_count, 10) || 0;
+    const totalScore = parseFloat(stats.score) || 0;
+
     await client.query(
       `UPDATE exam_sessions
        SET attempted_count = $1, correct_count = $2, score = $3, last_activity_at = CURRENT_TIMESTAMP
        WHERE id = $4`,
-      [stats.attempted_count, stats.correct_count, stats.score || 0, sessionId]
+      [attemptedCount, correctCount, totalScore, sessionId]
     );
   }
 
@@ -198,19 +216,73 @@ class AttemptService {
   /**
    * Submit exam
    */
-  async submitExam(sessionId) {
+  async submitExam(sessionId, providedResponses = null) {
     const session = await this.getSessionById(sessionId);
 
     if (session.status !== 'IN_PROGRESS') {
       throw new Error('Exam is not in progress.');
     }
 
-    await query(
-      `UPDATE exam_sessions
-       SET status = 'SUBMITTED', submitted_at = CURRENT_TIMESTAMP, last_activity_at = CURRENT_TIMESTAMP
-       WHERE id = $1`,
-      [sessionId]
-    );
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // If bulk responses are provided, save them first
+      if (providedResponses && typeof providedResponses === 'object') {
+        const questionIds = Object.keys(providedResponses);
+        for (const qId of questionIds) {
+          const selectedOption = providedResponses[qId];
+          if (selectedOption === undefined || selectedOption === null) continue;
+
+          // Get question for this specific response
+          const { rows: qRows } = await client.query('SELECT * FROM questions WHERE id = $1', [qId]);
+          const question = qRows[0];
+          if (!question) continue;
+
+          // Check for existing response
+          const { rows: existingRows } = await client.query(
+            'SELECT id FROM responses WHERE session_id = $1 AND question_id = $2',
+            [sessionId, qId]
+          );
+          
+          // Re-calculate correctness with deterministic shuffle
+          const shuffledQuestion = questionService.shuffleOptions(question, sessionId);
+          const isCorrect = selectedOption === shuffledQuestion.correct_option ? 1 : 0;
+          const qMarks = parseFloat(question.marks) || 0;
+          const qNegMarks = parseFloat(question.negative_marks) || 0;
+          const marksAwarded = isCorrect ? qMarks : (selectedOption ? -qNegMarks : 0);
+
+          if (existingRows[0]) {
+            await client.query(
+              `UPDATE responses SET selected_option = $1, is_correct = $2, marks_awarded = $3, answered_at = CURRENT_TIMESTAMP WHERE id = $4`,
+              [selectedOption, isCorrect, marksAwarded, existingRows[0].id]
+            );
+          } else {
+            await client.query(
+              `INSERT INTO responses (id, session_id, question_id, selected_option, is_correct, marks_awarded) VALUES ($1, $2, $3, $4, $5, $6)`,
+              [uuidv4(), sessionId, qId, selectedOption, isCorrect, marksAwarded]
+            );
+          }
+        }
+        
+        // Update stats before final commit
+        await this._updateSessionStats(client, sessionId);
+      }
+
+      await client.query(
+        `UPDATE exam_sessions
+         SET status = 'SUBMITTED', submitted_at = CURRENT_TIMESTAMP, last_activity_at = CURRENT_TIMESTAMP
+         WHERE id = $1`,
+        [sessionId]
+      );
+
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
 
     const stats = await this.getSessionById(sessionId);
     const { rows: examRows } = await query('SELECT * FROM exams WHERE id = $1', [session.exam_id]);
@@ -252,8 +324,8 @@ class AttemptService {
       totalMarks: exam.total_marks,
       percentage,
       correctCount: stats.correct_count,
-      incorrectCount: stats.attempted_count - stats.correct_count,
-      unattemptedCount: session.total_questions - stats.attempted_count
+      incorrectCount: (stats.attempted_count || 0) - (stats.correct_count || 0),
+      unattemptedCount: session.total_questions - (stats.attempted_count || 0)
     };
   }
 

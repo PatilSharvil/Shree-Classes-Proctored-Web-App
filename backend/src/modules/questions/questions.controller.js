@@ -91,7 +91,12 @@ const uploadQuestions = async (req, res) => {
 const getQuestions = async (req, res) => {
   try {
     const { examId } = req.params;
-    const { includeCorrect = 'false', shuffled = 'false', shuffledOptions = 'false' } = req.query;
+    const { 
+      includeCorrect = 'false', 
+      shuffled = 'false', 
+      shuffledOptions = 'false',
+      sessionId = null 
+    } = req.query;
 
     // Verify exam exists
     await examService.getExamById(examId);
@@ -99,7 +104,8 @@ const getQuestions = async (req, res) => {
     const questions = await questionService.getQuestionsByExam(examId, {
       includeCorrect: includeCorrect === 'true',
       shuffled: shuffled === 'true',
-      shuffledOptions: shuffledOptions === 'true'
+      shuffledOptions: shuffledOptions === 'true',
+      sessionId
     });
 
     return apiResponse(res, 200, questions, 'Questions retrieved successfully');

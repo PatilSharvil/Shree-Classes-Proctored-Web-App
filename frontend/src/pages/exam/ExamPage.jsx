@@ -426,7 +426,8 @@ const ExamPage = () => {
     try {
       proctoring.logExamSubmit();
 
-      const result = await attemptsAPI.submit(session.id);
+      // Fix: Send all responses from the store for bulk saving at end
+      const result = await attemptsAPI.submit(session.id, responses);
 
       if (document.fullscreenElement && document.exitFullscreen) {
         try {

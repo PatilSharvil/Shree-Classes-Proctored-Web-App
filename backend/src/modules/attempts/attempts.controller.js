@@ -111,7 +111,8 @@ const updateCurrentQuestion = async (req, res) => {
 const submitExam = async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const result = await attemptService.submitExam(sessionId);
+    const { responses } = req.body; // Optional bulk responses
+    const result = await attemptService.submitExam(sessionId, responses);
     return apiResponse(res, 200, result, 'Exam submitted successfully');
   } catch (error) {
     if (error.message.includes('not in progress')) {

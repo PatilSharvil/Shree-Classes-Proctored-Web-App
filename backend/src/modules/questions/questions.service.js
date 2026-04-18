@@ -144,7 +144,7 @@ class QuestionService {
    * Get all questions for an exam
    */
   async getQuestionsByExam(examId, options = {}) {
-    const { includeCorrect = false, shuffled = false } = options;
+    const { includeCorrect = false, shuffled = false, sessionId = null } = options;
 
     let sql = `
       SELECT id, exam_id, question_type, question_text, option_a, option_b, option_c, option_d,
@@ -167,14 +167,20 @@ class QuestionService {
     const { rows } = await query(sql, [examId]);
     let questions = rows;
 
-    if (shuffled) {
+    // Deterministic question shuffling if sessionId is provided
+    if (shuffled && sessionId) {
+      questions = this.deterministicShuffle(questions, sessionId);
+    } else if (shuffled) {
+      // Fallback to random if no session ID (e.g. preview)
       for (let i = questions.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [questions[i], questions[j]] = [questions[j], questions[i]];
       }
     }
 
-    if (options.shuffledOptions) {
+    if (options.shuffledOptions && sessionId) {
+      questions = questions.map(q => this.shuffleOptions(q, sessionId));
+    } else if (options.shuffledOptions) {
       questions = questions.map(q => this.shuffleOptions(q));
     }
 
@@ -182,9 +188,35 @@ class QuestionService {
   }
 
   /**
-   * Shuffle options for a question
+   * Simple deterministic shuffle using a string seed (shuffles in-place)
    */
-  shuffleOptions(question) {
+  deterministicShuffle(array, seed) {
+    // Simple hash function for the seed
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+      hash |= 0;
+    }
+
+    // Seeded pseudo-random generator
+    const random = () => {
+      // Use a slightly better LCG or similar for distribution
+      hash = (hash * 1664525 + 1013904223) | 0;
+      const res = (hash >>> 0) / 0xFFFFFFFF;
+      return res;
+    };
+
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  /**
+   * Shuffle options for a question (deterministic if seed provided)
+   */
+  shuffleOptions(question, seed = null) {
     const options = [
       { key: 'A', value: question.option_a },
       { key: 'B', value: question.option_b },
@@ -192,13 +224,22 @@ class QuestionService {
       { key: 'D', value: question.option_d }
     ];
 
-    const correctValue = question[`option_${question.correct_option?.toLowerCase()}`];
+    // Original correct value
+    const origCorrectKey = question.correct_option?.toUpperCase();
+    const correctValue = question[`option_${origCorrectKey?.toLowerCase()}`];
 
-    for (let i = options.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [options[i], options[j]] = [options[j], options[i]];
+    if (seed) {
+      // Use question ID + session ID as seed for deterministic option shuffle
+      // NOTE: array is shuffled in-place now
+      this.deterministicShuffle(options, seed + question.id);
+    } else {
+      for (let i = options.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [options[i], options[j]] = [options[j], options[i]];
+      }
     }
 
+    // Find which letter the original correct value now occupies
     const newCorrectKey = options.find(o => o.value === correctValue)?.key || question.correct_option;
 
     const getImgForOrigKey = (origKey) => {

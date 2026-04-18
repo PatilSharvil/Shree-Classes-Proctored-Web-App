@@ -40,7 +40,8 @@ class ExamService {
    */
   async getExamById(id) {
     const { rows } = await query(
-      `SELECT e.*, u.email as created_by_email
+      `SELECT e.*, u.email as created_by_email,
+              (SELECT COUNT(*) FROM questions WHERE exam_id = e.id) as question_count
        FROM exams e
        LEFT JOIN users u ON e.created_by = u.id
        WHERE e.id = $1`,
