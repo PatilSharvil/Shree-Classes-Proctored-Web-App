@@ -51,7 +51,7 @@ const initializeDatabase = async () => {
         created_by TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (created_by) REFERENCES users(id)
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
       )
     `);
 
@@ -96,8 +96,8 @@ const initializeDatabase = async () => {
         correct_count INTEGER DEFAULT 0,
         violation_count INTEGER DEFAULT 0,
         last_activity_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id),
-        FOREIGN KEY (exam_id) REFERENCES exams(id)
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE
       )
     `);
 
@@ -111,7 +111,7 @@ const initializeDatabase = async () => {
         marks_awarded REAL DEFAULT 0,
         answered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (session_id) REFERENCES exam_sessions(id) ON DELETE CASCADE,
-        FOREIGN KEY (question_id) REFERENCES questions(id)
+        FOREIGN KEY (question_id) REFERENCES questions(id) ON DELETE CASCADE
       )
     `);
 
@@ -125,7 +125,8 @@ const initializeDatabase = async () => {
         confidence_score REAL DEFAULT 0,
         snapshot_id TEXT,
         metadata TEXT,
-        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (session_id) REFERENCES exam_sessions(id) ON DELETE CASCADE
       )
     `);
 
@@ -175,8 +176,8 @@ const initializeDatabase = async () => {
         started_at TEXT,
         submitted_at TEXT,
         status TEXT,
-        FOREIGN KEY (user_id) REFERENCES users(id),
-        FOREIGN KEY (exam_id) REFERENCES exams(id)
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (exam_id) REFERENCES exams(id) ON DELETE CASCADE
       )
     `);
 
