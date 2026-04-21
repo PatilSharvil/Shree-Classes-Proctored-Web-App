@@ -218,15 +218,14 @@ class QuestionService {
    */
   shuffleOptions(question, seed = null) {
     const options = [
-      { key: 'A', value: question.option_a },
-      { key: 'B', value: question.option_b },
-      { key: 'C', value: question.option_c },
-      { key: 'D', value: question.option_d }
+      { origKey: 'A', value: question.option_a },
+      { origKey: 'B', value: question.option_b },
+      { origKey: 'C', value: question.option_c },
+      { origKey: 'D', value: question.option_d }
     ];
 
-    // Original correct value
+    // Original correct key (e.g. 'A', 'B', 'C', or 'D')
     const origCorrectKey = question.correct_option?.toUpperCase();
-    const correctValue = question[`option_${origCorrectKey?.toLowerCase()}`];
 
     if (seed) {
       // Use question ID + session ID as seed for deterministic option shuffle
@@ -239,8 +238,12 @@ class QuestionService {
       }
     }
 
-    // Find which letter the original correct value now occupies
-    const newCorrectKey = options.find(o => o.value === correctValue)?.key || question.correct_option;
+    // Determine the NEW positional key for the correct answer.
+    // After shuffling, options[0] is the new 'A', options[1] is the new 'B', etc.
+    // We find which index the original correct option ended up at.
+    const positionLabels = ['A', 'B', 'C', 'D'];
+    const newCorrectIndex = options.findIndex(o => o.origKey === origCorrectKey);
+    const newCorrectKey = newCorrectIndex >= 0 ? positionLabels[newCorrectIndex] : question.correct_option;
 
     const getImgForOrigKey = (origKey) => {
        return question[`option_${origKey.toLowerCase()}_image_url`];
@@ -252,10 +255,10 @@ class QuestionService {
       option_b: options[1].value,
       option_c: options[2].value,
       option_d: options[3].value,
-      option_a_image_url: getImgForOrigKey(options[0].key),
-      option_b_image_url: getImgForOrigKey(options[1].key),
-      option_c_image_url: getImgForOrigKey(options[2].key),
-      option_d_image_url: getImgForOrigKey(options[3].key),
+      option_a_image_url: getImgForOrigKey(options[0].origKey),
+      option_b_image_url: getImgForOrigKey(options[1].origKey),
+      option_c_image_url: getImgForOrigKey(options[2].origKey),
+      option_d_image_url: getImgForOrigKey(options[3].origKey),
       correct_option: newCorrectKey
     };
   }
