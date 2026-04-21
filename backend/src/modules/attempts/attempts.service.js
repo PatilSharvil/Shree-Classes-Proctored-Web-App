@@ -407,7 +407,8 @@ class AttemptService {
    */
   async getAttemptHistory(userId, examId = null) {
     let sql = `
-      SELECT ah.*, e.title as exam_title
+      SELECT ah.*, e.title as exam_title,
+             (SELECT COALESCE(SUM(marks), 0) FROM questions q WHERE q.exam_id = e.id) as actual_total
       FROM attempt_history ah
       JOIN exams e ON ah.exam_id = e.id
       WHERE ah.user_id = $1
@@ -422,7 +423,19 @@ class AttemptService {
     sql += ' ORDER BY ah.submitted_at DESC';
 
     const { rows } = await query(sql, params);
-    return rows;
+    
+    // Dynamically calculate the accurate percentage based on actual_total instead of stored total_marks
+    const fixedRows = rows.map(r => {
+      const actualTotalMarks = parseFloat(r.actual_total) > 0 ? parseFloat(r.actual_total) : (parseFloat(r.total_marks) || 1);
+      const rawPct = (parseFloat(r.score) || 0) / actualTotalMarks * 100;
+      return {
+        ...r,
+        total_marks: actualTotalMarks,
+        percentage: Math.min(100, Math.max(0, rawPct))
+      };
+    });
+
+    return fixedRows;
   }
 
   /**
@@ -433,6 +446,18 @@ class AttemptService {
    */
   async getAttemptDetails(sessionId) {
     const session = await this.getSessionById(sessionId);
+
+    // Get actual sum of marks to fix old corrupted sessions correctly
+    const { rows: marksRows } = await query(
+      'SELECT COALESCE(SUM(marks), 0) AS actual_total FROM questions WHERE exam_id = $1',
+      [session.exam_id]
+    );
+    const actualTotalMarks = parseFloat(marksRows[0].actual_total) > 0 ? parseFloat(marksRows[0].actual_total) : (parseFloat(session.total_marks) || 1);
+    const rawPct = (parseFloat(session.score) || 0) / actualTotalMarks * 100;
+    
+    // Override the session fields with the accurate calculation before sending to frontend
+    session.total_marks = actualTotalMarks;
+    session.percentage = Math.min(100, Math.max(0, rawPct));
 
     const { rows: responses } = await query(
       `SELECT r.*, q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option,
@@ -491,14 +516,27 @@ class AttemptService {
    */
   async getExamAttempts(examId) {
     const { rows } = await query(
-      `SELECT ah.*, u.email, u.name
+      `SELECT ah.*, u.email, u.name,
+              (SELECT COALESCE(SUM(marks), 0) FROM questions q WHERE q.exam_id = ah.exam_id) as actual_total
        FROM attempt_history ah
        JOIN users u ON ah.user_id = u.id
        WHERE ah.exam_id = $1
        ORDER BY ah.percentage DESC`,
       [examId]
     );
-    return rows;
+    
+    // Dynamically calculate the accurate percentage based on actual_total instead of stored total_marks
+    const fixedRows = rows.map(r => {
+      const actualTotalMarks = parseFloat(r.actual_total) > 0 ? parseFloat(r.actual_total) : (parseFloat(r.total_marks) || 1);
+      const rawPct = (parseFloat(r.score) || 0) / actualTotalMarks * 100;
+      return {
+        ...r,
+        total_marks: actualTotalMarks,
+        percentage: Math.min(100, Math.max(0, rawPct))
+      };
+    });
+
+    return fixedRows;
   }
 
   /**
