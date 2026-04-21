@@ -407,14 +407,18 @@ class AttemptService {
   }
 
   /**
-   * Get attempt details with responses
+   * Get attempt details with responses.
+   * Re-applies the same deterministic shuffle used during the exam so the
+   * review page shows options in the exact order the student saw them.
+   * This ensures selected_option and correct_option align with the displayed options.
    */
   async getAttemptDetails(sessionId) {
     const session = await this.getSessionById(sessionId);
 
     const { rows: responses } = await query(
       `SELECT r.*, q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option,
-              q.image_url, q.option_a_image_url, q.option_b_image_url, q.option_c_image_url, q.option_d_image_url,
+              q.question_type, q.image_url,
+              q.option_a_image_url, q.option_b_image_url, q.option_c_image_url, q.option_d_image_url,
               q.explanation, q.explanation_image_url
        FROM responses r
        JOIN questions q ON r.question_id = q.id
@@ -422,7 +426,45 @@ class AttemptService {
       [sessionId]
     );
 
-    return { session, responses };
+    // Re-shuffle options using the same seed (sessionId) that was used during the exam.
+    // This makes option_a/b/c/d in the response match exactly what the student saw,
+    // so the frontend can correctly highlight selected_option and correct_option.
+    const reshuffled = responses.map((row) => {
+      // Build a synthetic question object that shuffleOptions() can consume
+      const question = {
+        id: row.question_id,
+        option_a: row.option_a,
+        option_b: row.option_b,
+        option_c: row.option_c,
+        option_d: row.option_d,
+        correct_option: row.correct_option,
+        option_a_image_url: row.option_a_image_url,
+        option_b_image_url: row.option_b_image_url,
+        option_c_image_url: row.option_c_image_url,
+        option_d_image_url: row.option_d_image_url,
+      };
+
+      const shuffled = questionService.shuffleOptions(question, sessionId);
+
+      return {
+        ...row,
+        // Overwrite with shuffled option texts (the order the student saw)
+        option_a: shuffled.option_a,
+        option_b: shuffled.option_b,
+        option_c: shuffled.option_c,
+        option_d: shuffled.option_d,
+        option_a_image_url: shuffled.option_a_image_url,
+        option_b_image_url: shuffled.option_b_image_url,
+        option_c_image_url: shuffled.option_c_image_url,
+        option_d_image_url: shuffled.option_d_image_url,
+        // correct_option is already stored in the responses table as the shuffled key,
+        // but the joined q.correct_option is the original DB key — replace it with
+        // the shuffled correct key so the review highlights the right option.
+        correct_option: shuffled.correct_option,
+      };
+    });
+
+    return { session, responses: reshuffled };
   }
 
   /**
