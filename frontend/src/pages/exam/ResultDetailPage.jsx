@@ -56,9 +56,12 @@ const ResultDetailPage = () => {
 
   const { session, responses } = result;
   // Use percentage stored in session (from attempt_history) or calculate from score/total_marks
-  const percentage = session.percentage != null
+  // Cap at 100 — old records may have been stored with percentage > 100 due to
+  // an admin-set total_marks that was lower than the actual sum of question marks.
+  const rawPct = session.percentage != null
     ? parseFloat(session.percentage)
-    : (session.score && session.total_marks ? (session.score / session.total_marks) * 100 : 0);
+    : (session.score && session.total_marks ? (parseFloat(session.score) / parseFloat(session.total_marks)) * 100 : 0);
+  const percentage = Math.min(100, Math.max(0, rawPct || 0));
 
   const getGrade = (pct) => {
     if (pct >= 90) return { grade: 'A+', color: 'text-green-600' };

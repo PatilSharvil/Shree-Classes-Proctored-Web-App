@@ -287,7 +287,18 @@ class AttemptService {
     const stats = await this.getSessionById(sessionId);
     const { rows: examRows } = await query('SELECT * FROM exams WHERE id = $1', [session.exam_id]);
     const exam = examRows[0];
-    const percentage = exam.total_marks > 0 ? (stats.score / exam.total_marks) * 100 : 0;
+
+    // Use the actual sum of question marks rather than the admin-set total_marks,
+    // because the admin-set value may not match (e.g. 5 questions × 2 marks = 10,
+    // but admin typed 5). This prevents percentages > 100%.
+    const { rows: marksRows } = await query(
+      'SELECT COALESCE(SUM(marks), 0) AS actual_total FROM questions WHERE exam_id = $1',
+      [session.exam_id]
+    );
+    const actualTotalMarks = parseFloat(marksRows[0].actual_total) || parseFloat(exam.total_marks) || 1;
+    const rawPercentage = (parseFloat(stats.score) || 0) / actualTotalMarks * 100;
+    // Cap at 100 and floor at 0
+    const percentage = Math.min(100, Math.max(0, rawPercentage));
 
     const submittedDate = new Date(stats.submitted_at);
     const startedDate = new Date(session.started_at);
@@ -306,7 +317,7 @@ class AttemptService {
         session.exam_id,
         sessionId,
         stats.score || 0,
-        exam.total_marks,
+        actualTotalMarks,
         percentage || 0,
         stats.correct_count || 0,
         (stats.attempted_count || 0) - (stats.correct_count || 0),
@@ -321,7 +332,7 @@ class AttemptService {
     return {
       sessionId,
       score: stats.score,
-      totalMarks: exam.total_marks,
+      totalMarks: actualTotalMarks,
       percentage,
       correctCount: stats.correct_count,
       incorrectCount: (stats.attempted_count || 0) - (stats.correct_count || 0),
@@ -349,7 +360,15 @@ class AttemptService {
     const stats = await this.getSessionById(sessionId);
     const { rows: examRows } = await query('SELECT * FROM exams WHERE id = $1', [session.exam_id]);
     const exam = examRows[0];
-    const percentage = exam.total_marks > 0 ? (stats.score / exam.total_marks) * 100 : 0;
+
+    // Use actual question marks sum (same fix as submitExam)
+    const { rows: marksRows } = await query(
+      'SELECT COALESCE(SUM(marks), 0) AS actual_total FROM questions WHERE exam_id = $1',
+      [session.exam_id]
+    );
+    const actualTotalMarks = parseFloat(marksRows[0].actual_total) || parseFloat(exam.total_marks) || 1;
+    const rawPercentage = (parseFloat(stats.score) || 0) / actualTotalMarks * 100;
+    const percentage = Math.min(100, Math.max(0, rawPercentage));
 
     const submittedDate = new Date(stats.submitted_at);
     const startedDate = new Date(session.started_at);
@@ -368,7 +387,7 @@ class AttemptService {
         session.exam_id,
         sessionId,
         stats.score || 0,
-        exam.total_marks,
+        actualTotalMarks,
         percentage || 0,
         stats.correct_count || 0,
         (stats.attempted_count || 0) - (stats.correct_count || 0),
@@ -380,7 +399,7 @@ class AttemptService {
       ]
     );
 
-    return { sessionId, reason, score: stats.score, totalMarks: exam.total_marks };
+    return { sessionId, reason, score: stats.score, totalMarks: actualTotalMarks };
   }
 
   /**

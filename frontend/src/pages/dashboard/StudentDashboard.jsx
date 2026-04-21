@@ -68,7 +68,8 @@ const StudentDashboard = () => {
       h.subject?.toLowerCase() === subject.toLowerCase()
     );
     if (filtered.length === 0) return 0;
-    return Math.round(filtered.reduce((sum, h) => sum + (h.percentage || 0), 0) / filtered.length);
+    const avg = filtered.reduce((sum, h) => sum + Math.min(100, parseFloat(h.percentage) || 0), 0) / filtered.length;
+    return Math.round(avg);
   };
 
   // Calculate active streak
@@ -101,7 +102,7 @@ const StudentDashboard = () => {
   // Calculate Performance Level
   const getPerformanceLevel = (history) => {
     if (!history || history.length === 0) return 'Get Started';
-    const avg = history.reduce((sum, h) => sum + (h.percentage || 0), 0) / history.length;
+    const avg = history.reduce((sum, h) => sum + Math.min(100, parseFloat(h.percentage) || 0), 0) / history.length;
     if (avg >= 90) return 'Excellent';
     if (avg >= 75) return 'Good';
     if (avg >= 50) return 'Average';
@@ -119,7 +120,9 @@ const StudentDashboard = () => {
   const streak = calculateStreak(attemptHistory);
   const performanceLevel = getPerformanceLevel(attemptHistory);
   const improveSubject = getSubjectToImprove(attemptHistory);
-  const avgPercentage = attemptHistory.length > 0 ? (attemptHistory.reduce((sum, h) => sum + (h.percentage || 0), 0) / attemptHistory.length).toFixed(1) : '0';
+  const avgPercentage = attemptHistory.length > 0
+    ? (attemptHistory.reduce((sum, h) => sum + Math.min(100, parseFloat(h.percentage) || 0), 0) / attemptHistory.length).toFixed(1)
+    : '0';
 
   return (
     <div className="space-y-10 pb-20 animate-fade-in">
@@ -306,10 +309,10 @@ const StudentDashboard = () => {
                       <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-2xl border border-gray-100 justify-between sm:justify-end">
                         <div className="text-center px-2">
                           <div className={`text-2xl sm:text-3xl font-bold ${
-                            attempt.percentage >= 70 ? 'text-green-500' :
-                            attempt.percentage >= 40 ? 'text-amber-500' : 'text-red-500'
+                            Math.min(100, attempt.percentage) >= 70 ? 'text-green-500' :
+                            Math.min(100, attempt.percentage) >= 40 ? 'text-amber-500' : 'text-red-500'
                           }`}>
-                            {attempt.percentage?.toFixed(0)}%
+                            {Math.min(100, parseFloat(attempt.percentage) || 0).toFixed(0)}%
                           </div>
                           <div className="text-xs text-gray-400 font-medium mt-1">Score</div>
                         </div>

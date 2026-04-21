@@ -43,10 +43,10 @@ const ProfilePage = () => {
   // Calculate stats
   const totalAttempts = attemptHistory.length;
   const avgPercentage = totalAttempts > 0 
-    ? (attemptHistory.reduce((sum, h) => sum + (h.percentage || 0), 0) / totalAttempts).toFixed(1) 
+    ? (attemptHistory.reduce((sum, h) => sum + Math.min(100, parseFloat(h.percentage) || 0), 0) / totalAttempts).toFixed(1) 
     : '0';
   const bestScore = totalAttempts > 0 
-    ? Math.max(...attemptHistory.map(h => h.percentage || 0)).toFixed(1) 
+    ? Math.min(100, Math.max(...attemptHistory.map(h => parseFloat(h.percentage) || 0))).toFixed(1) 
     : '0';
 
   return (
@@ -135,14 +135,14 @@ const ProfilePage = () => {
                   <div className="text-right">
                     <div
                       className={`text-2xl font-bold ${
-                        attempt.percentage >= 70
+                        Math.min(100, attempt.percentage) >= 70
                           ? 'text-green-600'
-                          : attempt.percentage >= 40
+                          : Math.min(100, attempt.percentage) >= 40
                           ? 'text-amber-600'
                           : 'text-red-600'
                       }`}
                     >
-                      {attempt.percentage?.toFixed(0)}%
+                      {Math.min(100, parseFloat(attempt.percentage) || 0).toFixed(0)}%
                     </div>
                     <div className="text-xs text-gray-400">Score</div>
                   </div>
