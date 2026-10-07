@@ -1,7 +1,8 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { io } from 'socket.io-client';
+import { getSocketBaseUrl } from '../services/backendDiscovery';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+const FALLBACK_SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
 /**
  * WebSocket hook for admin real-time proctoring dashboard
@@ -25,47 +26,55 @@ const useAdminWebSocket = (examId, authToken) => {
       return;
     }
 
-    const socket = io(SOCKET_URL, {
-      auth: { token: authToken },
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: 10,
-      timeout: 10000,
-    });
+    let isMounted = true;
+    let socket = null;
 
-    socketRef.current = socket;
+    getSocketBaseUrl().then((targetSocketUrl) => {
+      if (!isMounted) return;
 
-    // Connection events
-    socket.on('connect', () => {
-      console.log('[Admin WS] Connected:', socket.id);
-      setIsConnected(true);
+      socket = io(targetSocketUrl || FALLBACK_SOCKET_URL, {
+        auth: { token: authToken },
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: 10,
+        timeout: 10000,
+      });
 
-      // Join admin room
-      socket.emit('join_admin_room');
-    });
+      socketRef.current = socket;
 
-    socket.on('disconnect', (reason) => {
-      console.log('[Admin WS] Disconnected:', reason);
-      setIsConnected(false);
-    });
+      // Connection events
+      socket.on('connect', () => {
+        console.log('[Admin WS] Connected:', socket.id);
+        setIsConnected(true);
 
-    socket.on('connect_error', (error) => {
-      console.error('[Admin WS] Connection error:', error.message);
-    });
+        // Join admin room
+        socket.emit('join_admin_room');
+      });
 
-    socket.on('error', (error) => {
-      console.error('[Admin WS] Error:', error.message);
-      addNotification('error', error.message);
+      socket.on('disconnect', (reason) => {
+        console.log('[Admin WS] Disconnected:', reason);
+        setIsConnected(false);
+      });
+
+      socket.on('connect_error', (error) => {
+        console.error('[Admin WS] Connection error:', error.message);
+      });
+
+      socket.on('error', (error) => {
+        console.error('[Admin WS] Error:', error.message);
+        addNotification('error', error.message);
+      });
     });
 
     // Cleanup on unmount
     return () => {
-      if (socket.connected) {
-        socket.disconnect();
+      isMounted = false;
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
       }
-      socketRef.current = null;
     };
   }, [authToken]);
 

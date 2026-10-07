@@ -1,11 +1,13 @@
 const { query } = require('../../config/database');
 const { v4: uuidv4 } = require('uuid');
+const { examQuestionsCache } = require('../../utils/lruCache');
 
 class QuestionService {
   /**
    * Add a single question to an exam
    */
   async addQuestion(examId, questionData) {
+    examQuestionsCache.delete(examId);
     const questionId = uuidv4();
 
     // Validate: TEXT type requires question_text, IMAGE type requires image_url
@@ -123,6 +125,8 @@ class QuestionService {
         ]
       );
     }
+    examQuestionsCache.delete(`${examId}_student`);
+    examQuestionsCache.delete(`${examId}_with_answers`);
     return { count: questions.length, message: 'Questions added successfully' };
   }
 
@@ -146,26 +150,35 @@ class QuestionService {
   async getQuestionsByExam(examId, options = {}) {
     const { includeCorrect = false, shuffled = false, sessionId = null } = options;
 
-    let sql = `
-      SELECT id, exam_id, question_type, question_text, option_a, option_b, option_c, option_d,
-             correct_option, marks, negative_marks, difficulty, explanation,
-             image_url, option_a_image_url, option_b_image_url, option_c_image_url, option_d_image_url, explanation_image_url
-      FROM questions
-      WHERE exam_id = $1
-    `;
+    const cacheKey = `${examId}_${includeCorrect ? 'with_answers' : 'student'}`;
+    let baseQuestions = examQuestionsCache.get(cacheKey);
 
-    if (!includeCorrect) {
-      sql = `
+    if (!baseQuestions) {
+      let sql = `
         SELECT id, exam_id, question_type, question_text, option_a, option_b, option_c, option_d,
-               marks, negative_marks, difficulty,
-               image_url, option_a_image_url, option_b_image_url, option_c_image_url, option_d_image_url
+               correct_option, marks, negative_marks, difficulty, explanation,
+               image_url, option_a_image_url, option_b_image_url, option_c_image_url, option_d_image_url, explanation_image_url
         FROM questions
         WHERE exam_id = $1
       `;
+
+      if (!includeCorrect) {
+        sql = `
+          SELECT id, exam_id, question_type, question_text, option_a, option_b, option_c, option_d,
+                 marks, negative_marks, difficulty,
+                 image_url, option_a_image_url, option_b_image_url, option_c_image_url, option_d_image_url
+          FROM questions
+          WHERE exam_id = $1
+        `;
+      }
+
+      const { rows } = await query(sql, [examId]);
+      baseQuestions = rows;
+      examQuestionsCache.set(cacheKey, baseQuestions);
     }
 
-    const { rows } = await query(sql, [examId]);
-    let questions = rows;
+    // Clone to prevent mutating cached array during shuffle
+    let questions = baseQuestions.map(q => ({ ...q }));
 
     // Deterministic question shuffling if sessionId is provided
     if (shuffled && sessionId) {
@@ -342,6 +355,11 @@ class QuestionService {
       values
     );
 
+    if (question.exam_id) {
+      examQuestionsCache.delete(`${question.exam_id}_student`);
+      examQuestionsCache.delete(`${question.exam_id}_with_answers`);
+    }
+
     return this.getQuestionWithAnswer(id);
   }
 
@@ -349,8 +367,12 @@ class QuestionService {
    * Delete question
    */
   async deleteQuestion(id) {
-    await this.getQuestionById(id);
+    const question = await this.getQuestionById(id);
     await query('DELETE FROM questions WHERE id = $1', [id]);
+    if (question.exam_id) {
+      examQuestionsCache.delete(`${question.exam_id}_student`);
+      examQuestionsCache.delete(`${question.exam_id}_with_answers`);
+    }
     return { message: 'Question deleted successfully.' };
   }
 
@@ -359,6 +381,8 @@ class QuestionService {
    */
   async deleteQuestionsByExam(examId) {
     await query('DELETE FROM questions WHERE exam_id = $1', [examId]);
+    examQuestionsCache.delete(`${examId}_student`);
+    examQuestionsCache.delete(`${examId}_with_answers`);
     return { message: 'All questions deleted for this exam.' };
   }
 

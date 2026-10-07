@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getBackendBaseUrl } from './backendDiscovery';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -27,9 +28,18 @@ const api = axios.create({
   withCredentials: true // Send cookies with requests (required for httpOnly cookies)
 });
 
-// Request interceptor - add CSRF token and Authorization header
+// Request interceptor - add CSRF token, Authorization header, and dynamic baseURL
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
+    // Resolve dynamic active backend URL (Cloudflare tunnel discovered via Supabase)
+    try {
+      const activeBaseUrl = await getBackendBaseUrl();
+      if (activeBaseUrl) {
+        config.baseURL = activeBaseUrl;
+      }
+    } catch {
+      // Fallback remains current config.baseURL
+    }
     // Skip CSRF for login endpoint (backend bypasses it anyway)
     const isLoginRequest = config.url?.includes('/auth/login');
     

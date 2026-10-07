@@ -40,11 +40,14 @@ initializeDatabase()
 ╠══════════════════════════════════════════════════════════╣
 ║  Scheduled Tasks:                                        ║
 ║  ✓ Exam timeout checks (30s)                             ║
-║  ✓ Exam reminders (5m)                                   ║
-║  ✓ GitHub sync (5m)                                      ║
+║  ✓ Storage & Snapshot LRU prune (6h)                     ║
 ║  ✓ Stale session cleanup (1h)                            ║
 ╚══════════════════════════════════════════════════════════╝
       `);
+
+      // Automatically launch Cloudflare Tunnel for client machine
+      const tunnelService = require('./services/tunnelService');
+      tunnelService.startTunnel(PORT);
     });
   })
   .catch((error) => {
@@ -56,6 +59,8 @@ initializeDatabase()
 process.on('SIGTERM', () => {
   logger.info('SIGTERM received. Shutting down gracefully...');
   scheduledTaskService.stop();
+  const tunnelService = require('./services/tunnelService');
+  tunnelService.stopTunnel();
   if (io) {
     io.close();
   }
@@ -67,6 +72,8 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   logger.info('SIGINT received. Shutting down gracefully...');
   scheduledTaskService.stop();
+  const tunnelService = require('./services/tunnelService');
+  tunnelService.stopTunnel();
   if (io) {
     io.close();
   }

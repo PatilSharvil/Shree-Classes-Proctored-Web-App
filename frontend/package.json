@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.34",
+    "@supabase/supabase-js": "^2.117.3",
     "axios": "^1.6.7",
     "dompurify": "^3.3.3",
     "katex": "^0.16.45",

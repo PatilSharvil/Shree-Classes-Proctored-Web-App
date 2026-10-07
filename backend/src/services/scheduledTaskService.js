@@ -26,6 +26,9 @@ class ScheduledTaskService {
     // Cleanup stale sessions (every hour)
     this.intervals.push(setInterval(() => this.cleanupStaleSessions(), 60 * 60 * 1000));
 
+    // LRU & Storage Maintenance: Purge old snapshots & logs (every 6 hours)
+    this.intervals.push(setInterval(() => this.cleanupOldStorageAndLogs(), 6 * 60 * 60 * 1000));
+
     logger.info('All scheduled tasks started');
   }
 
@@ -148,6 +151,43 @@ class ScheduledTaskService {
       }
     } catch (error) {
       logger.error('Error cleaning up stale sessions:', error);
+    }
+  }
+
+  /**
+   * Purge old proctoring logs and snapshots (LRU/TTL storage preservation for Supabase & local disk)
+   */
+  async cleanupOldStorageAndLogs() {
+    try {
+      logger.info('Starting storage maintenance cleanup...');
+
+      // 1. Delete snapshots expired or older than 30 days
+      const { rows: expiredSnapshots } = await query(
+        `DELETE FROM proctoring_snapshots
+         WHERE (expires_at IS NOT NULL AND expires_at < NOW())
+            OR timestamp < NOW() - INTERVAL '30 days'
+         RETURNING file_path`
+      );
+
+      if (expiredSnapshots.length > 0) {
+        const filePaths = expiredSnapshots.map(s => s.file_path);
+        const snapshotFileManager = require('../utils/snapshotFileManager');
+        snapshotFileManager.cleanupExpired(filePaths);
+        logger.info(`Pruned ${expiredSnapshots.length} expired proctoring snapshots`);
+      }
+
+      // 2. Delete non-violation proctoring logs older than 14 days to preserve database rows
+      const { rowCount: deletedLogs } = await query(
+        `DELETE FROM proctoring_logs
+         WHERE is_violation = 0
+           AND timestamp < NOW() - INTERVAL '14 days'`
+      );
+
+      if (deletedLogs > 0) {
+        logger.info(`Pruned ${deletedLogs} obsolete proctoring log entries`);
+      }
+    } catch (error) {
+      logger.error('Error during storage maintenance cleanup:', error);
     }
   }
 

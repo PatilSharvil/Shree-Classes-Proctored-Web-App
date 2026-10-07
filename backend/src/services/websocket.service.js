@@ -20,7 +20,18 @@ const initializeSocket = (server, app) => {
 
   io = new Server(server, {
     cors: {
-      origin: allowedOrigins,
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        const isAllowed = allowedOrigins.includes(origin);
+        const isVercel = origin.includes('.vercel.app');
+        const isNetlify = origin.includes('.netlify.app');
+        const isCustomDomain = origin.includes('shreescienceacademy.com');
+        if (isAllowed || isVercel || isNetlify || isCustomDomain) {
+          callback(null, true);
+        } else {
+          callback(null, false);
+        }
+      },
       credentials: true,
       methods: ['GET', 'POST'],
     },

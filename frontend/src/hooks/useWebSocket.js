@@ -1,7 +1,8 @@
 import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { io } from 'socket.io-client';
+import { getSocketBaseUrl } from '../services/backendDiscovery';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+const FALLBACK_SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
 /**
  * WebSocket hook for students taking exams
@@ -21,73 +22,81 @@ const useWebSocket = ({ sessionId, examId, authToken }) => {
       return;
     }
 
-    const socket = io(SOCKET_URL, {
-      auth: { token: authToken },
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      reconnectionAttempts: maxReconnectAttempts,
-      timeout: 10000,
-    });
+    let isMounted = true;
+    let socket = null;
 
-    socketRef.current = socket;
+    getSocketBaseUrl().then((targetSocketUrl) => {
+      if (!isMounted) return;
 
-    // Connection events
-    socket.on('connect', () => {
-      console.log('[WebSocket] Connected:', socket.id);
-      setIsConnected(true);
-      reconnectAttempts.current = 0;
-
-      // Join session room
-      socket.emit('join_session', { sessionId, examId });
-    });
-
-    socket.on('disconnect', (reason) => {
-      console.log('[WebSocket] Disconnected:', reason);
-      setIsConnected(false);
-    });
-
-    socket.on('connect_error', (error) => {
-      console.error('[WebSocket] Connection error:', error.message);
-      reconnectAttempts.current += 1;
-    });
-
-    socket.on('error', (error) => {
-      console.error('[WebSocket] Error:', error.message);
-    });
-
-    // Admin events
-    socket.on('admin_warning', (data) => {
-      console.log('[WebSocket] Admin warning:', data);
-      setAdminWarning({
-        message: data.message,
-        timestamp: data.timestamp,
+      socket = io(targetSocketUrl || FALLBACK_SOCKET_URL, {
+        auth: { token: authToken },
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        reconnectionAttempts: maxReconnectAttempts,
+        timeout: 10000,
       });
-      // Auto-clear warning after 10 seconds
-      setTimeout(() => setAdminWarning(null), 10000);
-    });
 
-    socket.on('exam_paused', (data) => {
-      console.log('[WebSocket] Exam paused:', data);
-      setExamPaused(true);
-    });
+      socketRef.current = socket;
 
-    socket.on('exam_resumed', (data) => {
-      console.log('[WebSocket] Exam resumed:', data);
-      setExamPaused(false);
-    });
+      // Connection events
+      socket.on('connect', () => {
+        console.log('[WebSocket] Connected:', socket.id);
+        setIsConnected(true);
+        reconnectAttempts.current = 0;
 
-    socket.on('session_joined', (data) => {
-      console.log('[WebSocket] Session joined:', data);
+        // Join session room
+        socket.emit('join_session', { sessionId, examId });
+      });
+
+      socket.on('disconnect', (reason) => {
+        console.log('[WebSocket] Disconnected:', reason);
+        setIsConnected(false);
+      });
+
+      socket.on('connect_error', (error) => {
+        console.error('[WebSocket] Connection error:', error.message);
+        reconnectAttempts.current += 1;
+      });
+
+      socket.on('error', (error) => {
+        console.error('[WebSocket] Error:', error.message);
+      });
+
+      // Admin events
+      socket.on('admin_warning', (data) => {
+        console.log('[WebSocket] Admin warning:', data);
+        setAdminWarning({
+          message: data.message,
+          timestamp: data.timestamp,
+        });
+        // Auto-clear warning after 10 seconds
+        setTimeout(() => setAdminWarning(null), 10000);
+      });
+
+      socket.on('exam_paused', (data) => {
+        console.log('[WebSocket] Exam paused:', data);
+        setExamPaused(true);
+      });
+
+      socket.on('exam_resumed', (data) => {
+        console.log('[WebSocket] Exam resumed:', data);
+        setExamPaused(false);
+      });
+
+      socket.on('session_joined', (data) => {
+        console.log('[WebSocket] Session joined:', data);
+      });
     });
 
     // Cleanup on unmount
     return () => {
-      if (socket.connected) {
-        socket.disconnect();
+      isMounted = false;
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
       }
-      socketRef.current = null;
     };
   }, [authToken, sessionId, examId]);
 

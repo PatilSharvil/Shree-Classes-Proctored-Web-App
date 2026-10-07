@@ -1,5 +1,6 @@
 const { query } = require('../../config/database');
 const { v4: uuidv4 } = require('uuid');
+const { examCache } = require('../../utils/lruCache');
 
 class ExamService {
   /**
@@ -36,9 +37,14 @@ class ExamService {
   }
 
   /**
-   * Get exam by ID
+   * Get exam by ID (LRU-cached)
    */
   async getExamById(id) {
+    const cached = examCache.get(id);
+    if (cached) {
+      return cached;
+    }
+
     const { rows } = await query(
       `SELECT e.*, u.email as created_by_email,
               (SELECT COUNT(*) FROM questions WHERE exam_id = e.id) as question_count
@@ -53,6 +59,7 @@ class ExamService {
       throw new Error('Exam not found.');
     }
 
+    examCache.set(id, exam);
     return exam;
   }
 
@@ -152,6 +159,7 @@ class ExamService {
       values
     );
 
+    examCache.delete(id);
     return this.getExamById(id);
   }
 
@@ -179,6 +187,7 @@ class ExamService {
     // Questions cascade via ON DELETE CASCADE
     await query('DELETE FROM exams WHERE id = $1', [id]);
 
+    examCache.delete(id);
     return { message: 'Exam deleted successfully.' };
   }
 

@@ -181,6 +181,14 @@ const initializeDatabase = async () => {
       )
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     await client.query(`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_exams_active ON exams(is_active)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_questions_exam ON questions(exam_id)`);
