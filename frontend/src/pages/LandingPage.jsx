@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import LanguageToggle from '../components/common/LanguageToggle';
+import ContactSection from '../components/ContactSection';
 import './LandingPage.css';
 
 const LandingPage = () => {
@@ -393,54 +394,8 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Academy Info & Contact Banner (Bhilawadi) */}
-      <div className="container">
-        <div className="academy-info-banner" id="contact">
-          <div className="info-banner-grid">
-            <div>
-              <h2 className="info-banner-title">{t('landing.academyBannerTitle')}</h2>
-              <p className="info-banner-sub">
-                {t('landing.academyBannerSub')}
-              </p>
-              <ul className="info-features-list">
-                <li><i className="fas fa-check-circle"></i> {t('landing.feature1')}</li>
-                <li><i className="fas fa-check-circle"></i> {t('landing.feature2')}</li>
-                <li><i className="fas fa-check-circle"></i> {t('landing.feature3')}</li>
-              </ul>
-            </div>
-
-            <div className="info-box-right">
-              <h4>{t('landing.centerDetailsTitle')}</h4>
-              <div className="location-item">
-                <i className="fas fa-map-marker-alt"></i>
-                <div>
-                  <strong>{t('landing.locationLabel')}</strong>
-                  <p>{t('landing.locationVal')}</p>
-                </div>
-              </div>
-              <div className="location-item">
-                <i className="fas fa-graduation-cap"></i>
-                <div>
-                  <strong>{t('landing.coursesLabel')}</strong>
-                  <p>{t('landing.coursesVal')}</p>
-                </div>
-              </div>
-              <div className="location-item">
-                <i className="fas fa-desktop"></i>
-                <div>
-                  <strong>{t('landing.portalLabel')}</strong>
-                  <p>{t('landing.portalVal')}</p>
-                </div>
-              </div>
-              <Link to="/login" style={{ textDecoration: 'none', display: 'block', marginTop: '16px' }}>
-                <button className="btn btn-primary" style={{ width: '100%' }}>
-                  {t('landing.studentSignInBtn')}
-                </button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Contact Us Section with Direct Spreadsheet Integration */}
+      <ContactSection />
 
       {/* Neo-Brutalist Footer */}
       <footer className="footer-main">
