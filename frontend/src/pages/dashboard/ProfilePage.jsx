@@ -4,8 +4,10 @@ import { attemptsAPI, authAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { formatTime } from '../../hooks/useExamTimer';
+import { useLanguage } from '../../context/LanguageContext';
 
 const ProfilePage = () => {
+  const { t } = useLanguage();
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const [attemptHistory, setAttemptHistory] = useState([]);
@@ -59,9 +61,9 @@ const ProfilePage = () => {
               <i className="fas fa-user"></i>
             </div>
             <div>
-              <h1 className="text-2xl font-bold">{user?.name || 'Student'}</h1>
+              <h1 className="text-2xl font-bold">{user?.name || (t('language') === 'mr' ? 'विद्यार्थी' : 'Student')}</h1>
               <p className="text-white/70 mt-1">{user?.email}</p>
-              <p className="text-white/70 text-sm mt-1">Student Account</p>
+              <p className="text-white/70 text-sm mt-1">{t('common.studentAccount')}</p>
             </div>
           </div>
           <button
@@ -69,7 +71,7 @@ const ProfilePage = () => {
             className="px-6 py-3 bg-white/20 backdrop-blur-md hover:bg-white/30 rounded-xl font-semibold text-sm transition-all flex items-center gap-2"
           >
             <i className="fas fa-sign-out-alt"></i>
-            Logout
+            {t('common.logout')}
           </button>
         </div>
       </div>
@@ -78,15 +80,15 @@ const ProfilePage = () => {
       <div className="grid grid-cols-3 gap-6">
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-50 text-center">
           <div className="text-3xl font-bold text-blue-600">{totalAttempts}</div>
-          <div className="text-sm text-gray-500 mt-1">Total Attempts</div>
+          <div className="text-sm text-gray-500 mt-1">{t('profile.totalAttempts')}</div>
         </div>
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-50 text-center">
           <div className="text-3xl font-bold text-green-600">{avgPercentage}%</div>
-          <div className="text-sm text-gray-500 mt-1">Average Score</div>
+          <div className="text-sm text-gray-500 mt-1">{t('profile.avgScore')}</div>
         </div>
         <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-50 text-center">
           <div className="text-3xl font-bold text-indigo-600">{bestScore}%</div>
-          <div className="text-sm text-gray-500 mt-1">Best Score</div>
+          <div className="text-sm text-gray-500 mt-1">{t('profile.bestScore')}</div>
         </div>
       </div>
 
@@ -94,13 +96,13 @@ const ProfilePage = () => {
       <div className="bg-white rounded-3xl p-8 shadow-lg">
         <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
           <span className="w-2 h-8 bg-blue-600 rounded-full"></span>
-          Complete Attempt History
+          {t('profile.historyTitle')}
         </h2>
 
         {attemptHistory.length === 0 ? (
           <div className="text-center py-12 text-gray-400">
             <i className="fas fa-clipboard-list text-5xl mb-4 opacity-30"></i>
-            <p>No attempts yet. Start taking exams to see your history!</p>
+            <p>{t('profile.noAttemptsDesc')}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -144,13 +146,13 @@ const ProfilePage = () => {
                     >
                       {Math.min(100, parseFloat(attempt.percentage) || 0).toFixed(0)}%
                     </div>
-                    <div className="text-xs text-gray-400">Score</div>
+                    <div className="text-xs text-gray-400">{t('dashboard.score')}</div>
                   </div>
                   <Link
                     to={`/results/${attempt.session_id || attempt.id}`}
                     className="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all"
                   >
-                    View Details
+                    {t('profile.viewReport')}
                   </Link>
                 </div>
               </div>
@@ -166,7 +168,7 @@ const ProfilePage = () => {
           className="px-8 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-all flex items-center gap-2"
         >
           <i className="fas fa-arrow-left"></i>
-          Back to Dashboard
+          {t('common.dashboard')}
         </Link>
       </div>
     </div>

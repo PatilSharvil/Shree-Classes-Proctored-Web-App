@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useLanguage } from '../../context/LanguageContext';
 import './AdminSidebar.css';
 
 const AdminSidebar = () => {
+  const { t } = useLanguage();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
 
   const isActive = (path) => location.pathname === path;
 
   const navItems = [
-    { path: '/admin', icon: 'fa-th-large', label: 'Dashboard', exact: true },
-    { path: '/admin/exams', icon: 'fa-file-alt', label: 'Exams' },
-    { path: '/admin/analytics', icon: 'fa-chart-pie', label: 'Analytics' },
-    { path: '/admin/students', icon: 'fa-users', label: 'Students' },
+    { path: '/admin', icon: 'fa-th-large', label: t('admin.dashboard'), exact: true },
+    { path: '/admin/exams', icon: 'fa-file-alt', label: t('admin.exams') },
+    { path: '/admin/analytics', icon: 'fa-chart-pie', label: t('admin.analytics') },
+    { path: '/admin/students', icon: 'fa-users', label: t('admin.students') },
   ];
 
   const checkActive = (item) => {

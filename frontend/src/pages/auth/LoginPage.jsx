@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
+import { useLanguage } from '../../context/LanguageContext';
+import LanguageToggle from '../../components/common/LanguageToggle';
 import './LoginPage.css';
 import classImg from '../../assets/class_studying.png';
 
 const LoginPage = () => {
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -43,19 +46,19 @@ const LoginPage = () => {
       }, 100);
     } catch (err) {
       console.error('[LoginPage] Login error:', err);
-      const message = err.response?.data?.message || 'Login failed. Please try again.';
+      const message = err.response?.data?.message || t('login.defaultError');
       
       // Provide user-friendly error messages
       if (err.response?.status === 403 && message.includes('CSRF')) {
-        setError('Session expired. Please try logging in again.');
+        setError(t('login.sessionExpired'));
       } else if (err.response?.status === 401) {
-        setError('Invalid email or password. Please check your credentials and try again.');
+        setError(t('login.invalidCredentials'));
       } else if (err.response?.status === 429) {
-        setError('Too many login attempts. Please wait a few minutes and try again.');
+        setError(t('login.tooManyAttempts'));
       } else if (err.response?.status === 404) {
-        setError('No account found with this email address.');
+        setError(t('login.accountNotFound'));
       } else if (err.code === 'ERR_NETWORK') {
-        setError('Unable to connect to the server. Please check your internet connection.');
+        setError(t('login.networkError'));
       } else {
         setError(message);
       }
@@ -70,14 +73,17 @@ const LoginPage = () => {
         <div className="login-card">
           {/* Left Side - Form */}
           <div className="login-form-section">
-            <Link to="/" className="back-to-home">
-              <i className="fas fa-arrow-left"></i>
-              Back to Home
-            </Link>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <Link to="/" className="back-to-home" style={{ marginBottom: 0 }}>
+                <i className="fas fa-arrow-left"></i>
+                {t('login.backHome')}
+              </Link>
+              <LanguageToggle theme="light" variant="segmented" />
+            </div>
 
             <div className="login-header">
-              <h1>Welcome Back!</h1>
-              <p>Please login to access your dashboard.</p>
+              <h1>{t('login.welcomeBack')}</h1>
+              <p>{t('login.loginSub')}</p>
             </div>
 
             {error && (
@@ -89,7 +95,7 @@ const LoginPage = () => {
 
             <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label htmlFor="email">Email Address</label>
+                <label htmlFor="email">{t('login.emailLabel')}</label>
                 <div className="input-wrapper">
                   <i className="fas fa-envelope"></i>
                   <input
@@ -97,14 +103,14 @@ const LoginPage = () => {
                     id="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
+                    placeholder={t('login.emailPlaceholder')}
                     required
                   />
                 </div>
               </div>
 
               <div className="form-group">
-                <label htmlFor="password">Password</label>
+                <label htmlFor="password">{t('login.passwordLabel')}</label>
                 <div className="input-wrapper">
                   <i className="fas fa-lock"></i>
                   <input
@@ -112,7 +118,7 @@ const LoginPage = () => {
                     id="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
+                    placeholder={t('login.passwordPlaceholder')}
                     required
                   />
                 </div>
@@ -123,7 +129,7 @@ const LoginPage = () => {
                 className="login-button"
                 disabled={loading}
               >
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? t('login.signingIn') : t('login.signInBtn')}
               </button>
             </form>
           </div>
@@ -133,7 +139,7 @@ const LoginPage = () => {
             <div className="student-image-container">
               <img
                 src={classImg}
-                alt="Students Studying in Class"
+                alt={t('login.studentsStudyingAlt')}
                 className="student-image"
               />
             </div>

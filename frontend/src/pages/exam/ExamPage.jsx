@@ -12,11 +12,13 @@ import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import RichTextRenderer from '../../components/ui/RichTextRenderer';
 import { getImageUrl } from '../../utils/imageHelper';
+import { useLanguage } from '../../context/LanguageContext';
 
 // Detect mobile device (using the shared utility)
 const isMobile = isMobileDevice;
 
 const ExamPage = () => {
+  const { t } = useLanguage();
   const { examId } = useParams();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
@@ -615,9 +617,9 @@ const ExamPage = () => {
           <div className="min-w-0">
             <h2 className="font-semibold text-gray-900 truncate text-sm sm:text-base">{exam?.title}</h2>
             <p className="text-xs text-gray-500 flex items-center gap-2">
-              Q {currentQuestionIndex + 1}/{questions.length}
+              {t('exam.question')} {currentQuestionIndex + 1}/{questions.length}
               {/* Fix #17 — save indicator */}
-              {saveStatus === 'saving' && <span className="text-blue-500 animate-pulse">● Saving...</span>}
+              {saveStatus === 'saving' && <span className="text-blue-500 animate-pulse">● {t('exam.savingStatus')}</span>}
               {saveStatus === 'failed' && <span className="text-red-500">⚠️ Save failed</span>}
             </p>
           </div>
@@ -673,7 +675,7 @@ const ExamPage = () => {
               disabled={submitting}
               className="text-xs px-2 sm:px-3"
             >
-              Submit
+              {t('common.submit')}
             </Button>
           </div>
         </div>
@@ -849,7 +851,7 @@ const ExamPage = () => {
                   }`}>
                     {isMarked ? '✓' : ''}
                   </span>
-                  <span>Mark for Review</span>
+                  <span>{isMarked ? t('exam.unmarkReview') : t('exam.markForReview')}</span>
                 </button>
               </div>
             </div>
@@ -864,14 +866,14 @@ const ExamPage = () => {
                 disabled={currentQuestionIndex === 0 || submitting}
                 className="flex-1 py-3"
               >
-                ⬅ Previous
+                ⬅ {t('exam.previous')}
               </Button>
               <Button
                 onClick={() => handleNavigate(currentQuestionIndex + 1)}
                 disabled={currentQuestionIndex === questions.length - 1 || submitting}
                 className="flex-1 py-3"
               >
-                Next ➡
+                {t('exam.next')} ➡
               </Button>
             </div>
           )}
@@ -879,29 +881,29 @@ const ExamPage = () => {
 
         {/* Question Palette - Desktop */}
         <div className="hidden lg:block">
-          <Card title="Question Palette">
+          <Card title={t('exam.questionPalette')}>
             <div className="space-y-4">
               {/* Legend */}
               <div className="space-y-2 text-xs">
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-green-500 rounded text-white text-xs flex items-center justify-center">✓</div>
-                  <span>Answered</span>
+                  <span>{t('exam.answered')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-red-200 rounded text-red-800 text-xs flex items-center justify-center"></div>
-                  <span>Not Answered</span>
+                  <span>{t('exam.notAnswered')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-purple-500 rounded text-white text-xs flex items-center justify-center">✓</div>
-                  <span>Answered + Review</span>
+                  <span>{t('exam.answeredReview')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-purple-200 rounded border-2 border-purple-500 text-purple-800 text-xs flex items-center justify-center"></div>
-                  <span>Marked for Review</span>
+                  <span>{t('exam.review')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-6 h-6 bg-primary-600 rounded text-white text-xs flex items-center justify-center ring-2 ring-primary-300"></div>
-                  <span>Current</span>
+                  <span>{t('language') === 'mr' ? 'सध्याचा प्रश्न' : 'Current'}</span>
                 </div>
               </div>
 
@@ -909,15 +911,15 @@ const ExamPage = () => {
               <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t">
                 <div className="text-center bg-green-50 p-2 rounded">
                   <div className="font-bold text-green-600">{answeredCount}</div>
-                  <div className="text-gray-600">Answered</div>
+                  <div className="text-gray-600">{t('exam.answered')}</div>
                 </div>
                 <div className="text-center bg-red-50 p-2 rounded">
                   <div className="font-bold text-red-600">{notAnsweredCount}</div>
-                  <div className="text-gray-600">Not Answered</div>
+                  <div className="text-gray-600">{t('exam.notAnswered')}</div>
                 </div>
                 <div className="text-center bg-purple-50 p-2 rounded col-span-2">
                   <div className="font-bold text-purple-600">{reviewCount}</div>
-                  <div className="text-gray-600">Marked for Review</div>
+                  <div className="text-gray-600">{t('exam.review')}</div>
                 </div>
               </div>
 
@@ -1048,24 +1050,24 @@ const ExamPage = () => {
       {showConfirmSubmit && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <Card className="max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">Submit Exam?</h2>
+            <h2 className="text-xl font-bold mb-4">{t('exam.confirmSubmitTitle')}</h2>
             <div className="space-y-4">
               <div className="bg-yellow-50 border border-yellow-200 p-4 rounded">
                 <p className="text-sm text-yellow-800">
-                  <strong>Answered:</strong> {answeredCount} |{' '}
-                  <strong className="ml-3">Unanswered:</strong> {notAnsweredCount} |{' '}
-                  <strong className="ml-3">Review:</strong> {reviewCount}
+                  <strong>{t('exam.answered')}:</strong> {answeredCount} |{' '}
+                  <strong className="ml-3">{t('exam.notAnswered')}:</strong> {notAnsweredCount} |{' '}
+                  <strong className="ml-3">{t('exam.review')}:</strong> {reviewCount}
                 </p>
               </div>
               <p className="text-gray-700">
-                Are you sure you want to submit? You cannot change your answers after submission.
+                {t('exam.confirmSubmitMsg')}
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
                 <Button onClick={handleSubmit} variant="danger" className="flex-1 py-3">
-                  Yes, Submit
+                  {t('exam.confirmSubmitBtn')}
                 </Button>
                 <Button onClick={() => setShowConfirmSubmit(false)} variant="secondary" className="flex-1 py-3">
-                  Cancel
+                  {t('exam.cancel')}
                 </Button>
               </div>
             </div>

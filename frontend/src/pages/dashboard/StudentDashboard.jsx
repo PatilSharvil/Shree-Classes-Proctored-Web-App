@@ -6,8 +6,10 @@ import Button from '../../components/ui/Button';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { formatTime } from '../../hooks/useExamTimer';
 import useAuthStore from '../../store/authStore';
+import { useLanguage } from '../../context/LanguageContext';
 
 const StudentDashboard = () => {
+  const { t } = useLanguage();
   const user = useAuthStore((state) => state.user);
   const [activeExams, setActiveExams] = useState([]);
   const [attemptHistory, setAttemptHistory] = useState([]);
@@ -63,10 +65,15 @@ const StudentDashboard = () => {
 
   // Helper for subject stats
   const calculateSubjectStat = (history, subject) => {
-    const filtered = history.filter(h =>
-      h.exam_title?.toLowerCase().includes(subject.toLowerCase()) ||
-      h.subject?.toLowerCase() === subject.toLowerCase()
-    );
+    const sLower = subject.toLowerCase();
+    const filtered = history.filter(h => {
+      const eTitle = (h.exam_title || '').toLowerCase();
+      const eSub = (h.subject || '').toLowerCase();
+      const matchesDirect = eTitle.includes(sLower) || eSub === sLower;
+      const matchesMath = (sLower === 'mathematics' || sLower === 'maths') &&
+        (eTitle.includes('math') || eSub.includes('math'));
+      return matchesDirect || matchesMath;
+    });
     if (filtered.length === 0) return 0;
     const avg = filtered.reduce((sum, h) => sum + Math.min(100, parseFloat(h.percentage) || 0), 0) / filtered.length;
     return Math.round(avg);
@@ -101,12 +108,12 @@ const StudentDashboard = () => {
 
   // Calculate Performance Level
   const getPerformanceLevel = (history) => {
-    if (!history || history.length === 0) return 'Get Started';
+    if (!history || history.length === 0) return t('dashboard.perfGetStarted');
     const avg = history.reduce((sum, h) => sum + Math.min(100, parseFloat(h.percentage) || 0), 0) / history.length;
-    if (avg >= 90) return 'Excellent';
-    if (avg >= 75) return 'Good';
-    if (avg >= 50) return 'Average';
-    return 'Keep Practicing';
+    if (avg >= 90) return t('dashboard.perfExcellent');
+    if (avg >= 75) return t('dashboard.perfGood');
+    if (avg >= 50) return t('dashboard.perfAverage');
+    return t('dashboard.perfKeepPracticing');
   };
 
   // Find subject needing improvement
@@ -114,7 +121,10 @@ const StudentDashboard = () => {
     const subjects = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
     const stats = subjects.map(s => ({ name: s, score: calculateSubjectStat(history, s) }));
     const sorted = stats.filter(s => s.score > 0).sort((a, b) => a.score - b.score);
-    return sorted.length > 0 ? sorted[0].name : 'General Prep';
+    if (sorted.length > 0) {
+      return t(`subjects.${sorted[0].name}`, sorted[0].name);
+    }
+    return t('dashboard.generalPrep');
   };
 
   const streak = calculateStreak(attemptHistory);
@@ -137,19 +147,19 @@ const StudentDashboard = () => {
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/20 backdrop-blur-md rounded-xl text-xs font-bold mb-4 tracking-wide text-white border border-white/10">
               <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-              Student Portal Active
+              {t('dashboard.portalActive')}
             </div>
             <h1 className="text-3xl md:text-5xl font-bold text-white mb-3 leading-tight">
-              Welcome Back,<br/>
+              {t('dashboard.welcomeBack')}<br/>
               <span className="font-semibold capitalize">{user?.name || (user?.email ? user.email.split('@')[0] : 'Student')}</span>
             </h1>
             <p className="text-white/80 text-base font-medium max-w-lg leading-relaxed mb-6">
-              MHT-CET Exam Prep — Study smart and achieve your best scores with Shree Science Academy.
+              {t('dashboard.portalSub')}
             </p>
             {attemptHistory.length > 0 && (
               <div className="flex flex-wrap gap-3">
                  <div className="px-5 py-2.5 bg-white/95 text-blue-700 rounded-xl font-bold text-xs tracking-wide shadow-lg hover:bg-white transition-all cursor-default">
-                    Performance: {performanceLevel}
+                    {t('dashboard.performance')} {performanceLevel}
                  </div>
               </div>
             )}
@@ -179,10 +189,10 @@ const StudentDashboard = () => {
       {/* STATS GRID — Fix #6: responsive grid, smaller padding on mobile */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-5">
         {[
-          { icon: 'fa-edit', gradient: 'from-blue-500 to-cyan-500', value: attemptHistory.length, label: 'Tests Taken' },
-          { icon: 'fa-chart-pie', gradient: 'from-green-500 to-emerald-500', value: `${avgPercentage}%`, label: 'Avg Score' },
-          { icon: 'fa-rocket', gradient: 'from-indigo-500 to-purple-500', value: attemptHistory.reduce((sum, h) => sum + (h.score || 0), 0), label: 'Total Points' },
-          { icon: 'fa-stopwatch', gradient: 'from-orange-500 to-amber-500', value: Math.round(attemptHistory.reduce((sum, h) => sum + (h.duration_taken || 0), 0) / 60), label: 'Study Minutes' }
+          { icon: 'fa-edit', gradient: 'from-blue-500 to-cyan-500', value: attemptHistory.length, label: t('dashboard.testsTaken') },
+          { icon: 'fa-chart-pie', gradient: 'from-green-500 to-emerald-500', value: `${avgPercentage}%`, label: t('dashboard.avgScore') },
+          { icon: 'fa-rocket', gradient: 'from-indigo-500 to-purple-500', value: attemptHistory.reduce((sum, h) => sum + (h.score || 0), 0), label: t('dashboard.totalPoints') },
+          { icon: 'fa-stopwatch', gradient: 'from-orange-500 to-amber-500', value: Math.round(attemptHistory.reduce((sum, h) => sum + (h.duration_taken || 0), 0) / 60), label: t('dashboard.studyMinutes') }
         ].map((stat, i) => (
           <div key={i} className="bg-white rounded-3xl p-4 sm:p-6 shadow-lg border border-gray-100 flex flex-col items-center justify-center text-center hover:shadow-xl hover:-translate-y-1 transition-all">
             <div className={`w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-br ${stat.gradient} rounded-2xl flex items-center justify-center mb-3 text-base sm:text-xl text-white shadow-lg`}>
@@ -203,10 +213,10 @@ const StudentDashboard = () => {
             <div className="flex items-center justify-between mb-6 px-2">
                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
                  <span className="w-2.5 h-8 bg-gradient-to-b from-blue-600 to-indigo-600 rounded-full"></span>
-                 Available Exams
+                 {t('dashboard.availableExams')}
                </h2>
                <div className="flex items-center gap-2">
-                  <span className="px-4 py-1.5 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold border border-blue-100">{activeExams.length} Available</span>
+                  <span className="px-4 py-1.5 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold border border-blue-100">{activeExams.length} {t('dashboard.availableBadge')}</span>
                </div>
             </div>
 
@@ -215,8 +225,8 @@ const StudentDashboard = () => {
                  <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6">
                     <i className="fas fa-ghost text-gray-200 text-4xl"></i>
                  </div>
-                 <h3 className="text-lg font-semibold text-gray-400 mb-2">No Exams Available</h3>
-                 <p className="text-gray-400 text-sm max-w-xs">New exams will appear here when your teachers create them</p>
+                 <h3 className="text-lg font-semibold text-gray-400 mb-2">{t('dashboard.noExamsTitle')}</h3>
+                 <p className="text-gray-400 text-sm max-w-xs">{t('dashboard.noExamsDesc')}</p>
               </div>
             ) : (
               <div className="grid gap-6 sm:grid-cols-2">
@@ -230,7 +240,7 @@ const StudentDashboard = () => {
                           <i className="fas fa-atom"></i>
                         </div>
                         <span className="text-xs font-bold text-blue-700 bg-blue-100 group-hover:bg-white/20 group-hover:text-white px-3 py-1.5 rounded-xl transition-colors">
-                          {exam.subject || 'GENERAL'}
+                          {t(`subjects.${exam.subject}`, exam.subject || 'GENERAL')}
                         </span>
                       </div>
 
@@ -243,18 +253,18 @@ const StudentDashboard = () => {
 
                       <div className="grid grid-cols-2 gap-3 pt-5 border-t border-gray-100 group-hover:border-white/10 transition-colors">
                         <div className="flex flex-col gap-1">
-                           <span className="text-xs text-gray-400 group-hover:text-white/60 font-medium">Time Limit</span>
-                           <span className="text-sm font-semibold text-gray-800 group-hover:text-white transition-colors">{exam.duration_minutes} Minutes</span>
+                           <span className="text-xs text-gray-400 group-hover:text-white/60 font-medium">{t('dashboard.duration')}</span>
+                           <span className="text-sm font-semibold text-gray-800 group-hover:text-white transition-colors">{exam.duration_minutes} {t('dashboard.minutes')}</span>
                         </div>
                         <div className="flex flex-col gap-1 border-l pl-3 border-gray-100 group-hover:border-white/10 transition-colors">
-                           <span className="text-xs text-gray-400 group-hover:text-white/60 font-medium">Questions</span>
+                           <span className="text-xs text-gray-400 group-hover:text-white/60 font-medium">{t('dashboard.questions')}</span>
                            <span className="text-sm font-semibold text-gray-800 group-hover:text-white transition-colors">{exam.question_count} MCQs</span>
                         </div>
                       </div>
 
                       <Link to={`/exam/${exam.id}`} className="block transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
                         <button className="w-full py-4 bg-white text-blue-700 font-bold text-xs rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2">
-                           Start Exam <i className="fas fa-chevron-right text-xs"></i>
+                           {t('dashboard.startExam')} <i className="fas fa-chevron-right text-xs"></i>
                         </button>
                       </Link>
                     </div>
@@ -269,15 +279,15 @@ const StudentDashboard = () => {
             <div className="flex items-center justify-between mb-6 px-2">
                 <h2 className="text-xl font-bold text-gray-900 flex items-center gap-3">
                    <span className="w-2.5 h-8 bg-gradient-to-b from-indigo-600 to-sky-600 rounded-full"></span>
-                   Recent Performance
+                   {t('dashboard.recentHistoryTitle')}
                 </h2>
-                <Link to="/profile" className="text-xs text-indigo-500 font-semibold hover:text-indigo-700 transition-colors">View Full History</Link>
+                <Link to="/profile" className="text-xs text-indigo-500 font-semibold hover:text-indigo-700 transition-colors">{t('dashboard.viewAll')}</Link>
             </div>
 
             {attemptHistory.length === 0 ? (
               <div className="bg-white rounded-3xl p-10 text-gray-400 text-center border-2 border-dashed border-gray-200 flex flex-col items-center">
                  <i className="fas fa-chart-line text-4xl mb-4 opacity-20"></i>
-                 <p className="font-medium text-sm">Take your first exam to see your progress</p>
+                 <p className="font-medium text-sm">{t('dashboard.noHistoryDesc')}</p>
               </div>
             ) : (
               <div className="space-y-4 overflow-x-auto">
@@ -314,7 +324,7 @@ const StudentDashboard = () => {
                           }`}>
                             {Math.min(100, parseFloat(attempt.percentage) || 0).toFixed(0)}%
                           </div>
-                          <div className="text-xs text-gray-400 font-medium mt-1">Score</div>
+                          <div className="text-xs text-gray-400 font-medium mt-1">{t('dashboard.score')}</div>
                         </div>
 
                         <Link to={`/results/${attempt.session_id || attempt.id}`}>
@@ -342,7 +352,7 @@ const StudentDashboard = () => {
                       <span className="p-2 bg-indigo-500/20 rounded-xl text-indigo-400">
                          <i className="fas fa-chart-bar"></i>
                       </span>
-                      Subject Performance
+                      {t('language') === 'mr' ? 'विषयनिहाय कामगिरी' : 'Subject Performance'}
                    </h3>
                    <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full animate-pulse"></div>
                 </div>
@@ -351,18 +361,18 @@ const StudentDashboard = () => {
                    {[
                       { name: 'Physics', color: 'bg-blue-400', progress: calculateSubjectStat(attemptHistory, 'Physics') },
                       { name: 'Chemistry', color: 'bg-emerald-400', progress: calculateSubjectStat(attemptHistory, 'Chemistry') },
-                      { name: 'Mathematics', color: 'bg-indigo-400', progress: calculateSubjectStat(attemptHistory, 'Mathematics') },
+                      { name: 'Maths', color: 'bg-indigo-400', progress: calculateSubjectStat(attemptHistory, 'Maths') },
                       { name: 'Biology', color: 'bg-rose-400', progress: calculateSubjectStat(attemptHistory, 'Biology') }
                    ].map(subject => (
                       <div key={subject.name} className="space-y-2">
                          <div className="flex justify-between items-end px-1">
-                            <span className="text-xs font-medium text-white/60">{subject.name}</span>
+                            <span className="text-xs font-medium text-white/60">{t(`subjects.${subject.name}`, subject.name)}</span>
                             <span className="text-lg font-bold text-white">{subject.progress}%</span>
                          </div>
                          <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
                             <div
                                className={`h-full ${subject.color} rounded-full transition-all duration-1000`}
-                               style={{ width: `${subject.progress}%` }}
+                                style={{ width: `${subject.progress}%` }}
                             ></div>
                          </div>
                       </div>
@@ -371,7 +381,11 @@ const StudentDashboard = () => {
 
                 <div className="mt-8 p-5 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-md">
                    <p className="text-xs font-medium text-white/60 leading-relaxed">
-                      Focus on <span className="text-white font-semibold">{improveSubject}</span> to improve your overall score.
+                      {t('language') === 'mr' ? (
+                        <>गुण सुधारण्यासाठी <span className="text-white font-semibold">{improveSubject}</span> विषयावर भर द्या.</>
+                      ) : (
+                        <>Focus on <span className="text-white font-semibold">{improveSubject}</span> to improve your overall score.</>
+                      )}
                    </p>
                 </div>
               </div>
@@ -388,10 +402,14 @@ const StudentDashboard = () => {
                        <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 flex items-center justify-center text-xl">
                           <i className="fas fa-shield-alt"></i>
                        </div>
-                       <div className="font-bold text-sm">Secure Exam Session</div>
+                       <div className="font-bold text-sm">
+                         {t('language') === 'mr' ? 'सुरक्षित परीक्षा सत्र' : 'Secure Exam Session'}
+                       </div>
                     </div>
                     <p className="text-sm text-blue-50/80 leading-relaxed">
-                       Stay in the exam window and avoid switching tabs during the test.
+                       {t('language') === 'mr'
+                         ? 'परीक्षेच्या वेळी विंडोमध्येच रहा आणि इतर टॅबवर स्विच करणे टाळा.'
+                         : 'Stay in the exam window and avoid switching tabs during the test.'}
                     </p>
                  </div>
                  <div className="absolute -bottom-8 -right-8 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>

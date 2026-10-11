@@ -4,6 +4,7 @@ import { examsAPI, usersAPI } from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import AdminSidebar from '../../components/layout/AdminSidebar';
+import { useLanguage } from '../../context/LanguageContext';
 import './AdminDashboard.css';
 
 // Import thumbnails
@@ -12,6 +13,7 @@ import phdThumb from '../../assets/phd_exam.png';
 import intermediateThumb from '../../assets/intermediate_exam.png';
 
 const AdminDashboard = () => {
+  const { t } = useLanguage();
   const [exams, setExams] = useState([]);
   const [stats, setStats] = useState({ totalExams: 0, totalStudents: 0, activeExams: 0, totalMinutes: 0 });
   const [loading, setLoading] = useState(true);
@@ -100,7 +102,7 @@ const AdminDashboard = () => {
       {/* Main Content */}
       <main className="admin-main-content">
         <header className="dashboard-header">
-          <h1>Dashboard</h1>
+          <h1>{t('admin.dashboard')}</h1>
         </header>
 
         {/* Analytics Section */}
@@ -110,16 +112,18 @@ const AdminDashboard = () => {
             <div className="card-header">
               <div className="card-title title-purple">
                 <i><i className="fas fa-bolt"></i></i>
-                Test Minutes
+                {t('admin.totalMinutes')}
               </div>
               <i className="fas fa-info-circle text-gray-400"></i>
             </div>
             <div className="minutes-content">
               <div className="minutes-value">
-                {stats.totalMinutes} <span className="minutes-unit">minutes</span>
+                {stats.totalMinutes} <span className="minutes-unit">{t('dashboard.minutes')}</span>
                 <span className="hours-badge">{(stats.totalMinutes / 60).toFixed(1)} Hr</span>
               </div>
-              <p className="text-gray-400 text-sm">Total Available Test Hours</p>
+              <p className="text-gray-400 text-sm">
+                {t('language') === 'mr' ? 'एकूण उपलब्ध परीक्षा तास' : 'Total Available Test Hours'}
+              </p>
             </div>
           </div>
 
@@ -128,12 +132,12 @@ const AdminDashboard = () => {
             <div className="card-header">
               <div className="card-title title-blue">
                 <i><i className="fas fa-clock"></i></i>
-                Test Duration Analytics
+                {t('language') === 'mr' ? 'कालावधी विश्लेषण' : 'Test Duration Analytics'}
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right">
                    <div className="text-2xl font-bold">{stats.totalStudents}</div>
-                   <div className="text-xs text-gray-400">Registered Students</div>
+                   <div className="text-xs text-gray-400">{t('admin.totalStudents')}</div>
                 </div>
                 <i className="fas fa-info-circle text-gray-400"></i>
               </div>
@@ -155,9 +159,9 @@ const AdminDashboard = () => {
               </div>
               
               <div className="test-labels">
-                {['General', 'PCM', 'PCB'].map((t) => (
-                  <button key={t} className={`test-btn ${t === 'General' ? 'active' : ''}`}>
-                    {t}
+                {['General', 'PCM', 'PCB'].map((sub) => (
+                  <button key={sub} className={`test-btn ${sub === 'General' ? 'active' : ''}`}>
+                    {t(`subjects.${sub}`, sub)}
                   </button>
                 ))}
               </div>
@@ -168,9 +172,9 @@ const AdminDashboard = () => {
         {/* Your Created Tests Section */}
         <section>
           <div className="created-tests-header">
-            <h2>Your Created Tests <span className="text-gray-400 font-normal ml-2">| All Domains {exams.length}</span></h2>
+            <h2>{t('admin.recentExams')} <span className="text-gray-400 font-normal ml-2">({exams.length})</span></h2>
             <Link to="/admin/exams" className="text-blue-500 font-semibold flex items-center gap-2">
-              View All <i className="fas fa-chevron-right text-xs"></i>
+              {t('dashboard.viewAll')} <i className="fas fa-chevron-right text-xs"></i>
             </Link>
           </div>
 

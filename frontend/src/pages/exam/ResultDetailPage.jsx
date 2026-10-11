@@ -7,8 +7,10 @@ import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import { formatTime } from '../../hooks/useExamTimer';
 import RichTextRenderer from '../../components/ui/RichTextRenderer';
 import { getImageUrl } from '../../utils/imageHelper';
+import { useLanguage } from '../../context/LanguageContext';
 
 const ResultDetailPage = () => {
+  const { t, isMarathi } = useLanguage();
   const { attemptId } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -90,11 +92,11 @@ const ResultDetailPage = () => {
           <div className="flex flex-wrap justify-center gap-8">
             <div className="text-center">
               <div className="text-5xl font-bold text-primary-600">{session.score}</div>
-              <div className="text-sm text-gray-600 mt-1">Score</div>
+              <div className="text-sm text-gray-600 mt-1">{isMarathi ? 'प्राप्त गुण' : 'Score'}</div>
             </div>
             <div className="text-center">
               <div className={`text-5xl font-bold ${grade.color}`}>{grade.grade}</div>
-              <div className="text-sm text-gray-600 mt-1">Grade</div>
+              <div className="text-sm text-gray-600 mt-1">{isMarathi ? 'श्रेणी' : 'Grade'}</div>
             </div>
             <div className="text-center">
               <div className={`text-5xl font-bold ${
@@ -103,33 +105,33 @@ const ResultDetailPage = () => {
               }`}>
                 {percentage.toFixed(1)}%
               </div>
-              <div className="text-sm text-gray-600 mt-1">Percentage</div>
+              <div className="text-sm text-gray-600 mt-1">{isMarathi ? 'टक्केवारी' : 'Percentage'}</div>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-4 pt-4 border-t max-w-md mx-auto">
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">{session.correct_count}</div>
-              <div className="text-xs text-gray-600 mt-1">Correct</div>
+              <div className="text-xs text-gray-600 mt-1">{isMarathi ? 'बरोबर' : 'Correct'}</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-red-600">
                 {session.attempted_count - session.correct_count}
               </div>
-              <div className="text-xs text-gray-600 mt-1">Incorrect</div>
+              <div className="text-xs text-gray-600 mt-1">{isMarathi ? 'चूक' : 'Incorrect'}</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-gray-600">
                 {session.total_questions - session.attempted_count}
               </div>
-              <div className="text-xs text-gray-600 mt-1">Unattempted</div>
+              <div className="text-xs text-gray-600 mt-1">{isMarathi ? 'न सोडवलेले' : 'Unattempted'}</div>
             </div>
           </div>
         </div>
       </Card>
 
       {/* Solutions Review */}
-      <Card title="Detailed Solutions">
+      <Card title={isMarathi ? 'सविस्तर उत्तरे आणि स्पष्टीकरण' : 'Detailed Solutions'}>
         <div className="space-y-6">
           {responses.map((response, idx) => (
             <div
