@@ -351,7 +351,7 @@ const LandingPage = () => {
 
             <div className="exam-card">
               <div className="exam-card-badge-row">
-                <span className="exam-type-pill">CHAPTER DRILL</span>
+                <span className="exam-type-pill">{t('landing.chapterDrill', 'CHAPTER DRILL')}</span>
                 <span className="exam-live-indicator">
                   <span className="live-dot"></span> {t('landing.onDemand')}
                 </span>
@@ -426,10 +426,10 @@ const LandingPage = () => {
             <div className="footer-col">
               <h4>{t('landing.footerCurriculumTitle')}</h4>
               <ul>
-                <li><a href="#programs">MHT-CET (PCM/PCB)</a></li>
-                <li><a href="#programs">NEET Foundation</a></li>
-                <li><a href="#programs">JEE Main Prep</a></li>
-                <li><a href="#programs">State Board HSC</a></li>
+                <li><a href="#programs">{t('landing.footerCurriculum1', 'MHT-CET (PCM/PCB)')}</a></li>
+                <li><a href="#programs">{t('landing.footerCurriculum2', 'NEET Foundation')}</a></li>
+                <li><a href="#programs">{t('landing.footerCurriculum3', 'JEE Main Prep')}</a></li>
+                <li><a href="#programs">{t('landing.footerCurriculum4', 'State Board HSC')}</a></li>
               </ul>
             </div>
 

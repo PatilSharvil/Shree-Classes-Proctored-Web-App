@@ -139,12 +139,17 @@ export const translations = {
       footerDesc: '११ वी व १२ वी सायन्स, MHT-CET, NEET आणि JEE च्या उत्कृष्टतेसाठी समर्पित भिलवडी येथील अग्रगण्य संस्था.',
       footerNavTitle: 'नेव्हिगेशन',
       footerCurriculumTitle: 'अभ्यासक्रम',
+      footerCurriculum1: 'MHT-CET (PCM/PCB)',
+      footerCurriculum2: 'NEET फाउंडेशन',
+      footerCurriculum3: 'JEE Main तयारी',
+      footerCurriculum4: 'राज्य बोर्ड HSC',
       footerCenterTitle: 'अकॅडमी केंद्र',
       footerLocation: 'भिलवडी, सांगली, महाराष्ट्र',
       footerBatchTimings: 'बॅचच्या वेळा: सकाळ आणि संध्याकाळ',
       allRightsReserved: 'सर्व हक्क राखीव.',
       aiProctoredSys: 'AI प्रोक्टर्ड परीक्षा प्रणाली',
-      loginPortal: 'लॉगिन पोर्टल'
+      loginPortal: 'लॉगिन पोर्टल',
+      chapterDrill: 'घटकनिहाय सराव'
     },
     login: {
       backHome: 'मुख्यपृष्ठावर परत जा',
@@ -513,12 +518,17 @@ export const translations = {
       footerDesc: 'Premier coaching institute located in Bhilawadi dedicated to academic excellence in 11th & 12th Science, MHT-CET, NEET, and JEE.',
       footerNavTitle: 'Navigation',
       footerCurriculumTitle: 'Curriculum',
+      footerCurriculum1: 'MHT-CET (PCM/PCB)',
+      footerCurriculum2: 'NEET Foundation',
+      footerCurriculum3: 'JEE Main Prep',
+      footerCurriculum4: 'State Board HSC',
       footerCenterTitle: 'Academy Center',
       footerLocation: 'Bhilawadi, Sangli, Maharashtra',
       footerBatchTimings: 'Batch Timings: Morning & Evening',
       allRightsReserved: 'All rights reserved.',
       aiProctoredSys: 'AI Proctored Examination System',
-      loginPortal: 'Login Portal'
+      loginPortal: 'Login Portal',
+      chapterDrill: 'CHAPTER DRILL'
     },
     login: {
       backHome: 'Back to Home',
