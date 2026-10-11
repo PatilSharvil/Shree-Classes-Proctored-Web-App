@@ -59,21 +59,34 @@ function downloadCloudflared() {
 }
 
 /**
- * Updates dynamic tunnel URL in Supabase database so frontend can discover it
+ * Updates dynamic tunnel URL in Supabase database so frontend can discover it.
+ * Retries a few times: if the DB hiccups exactly when the tunnel comes up,
+ * we must not leave a stale URL behind.
  */
-async function updateSupabaseTunnelUrl(publicUrl) {
-  try {
-    await query(
-      `INSERT INTO system_settings (key, value, updated_at)
-       VALUES ('backend_url', $1, CURRENT_TIMESTAMP)
-       ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = CURRENT_TIMESTAMP`,
-      [publicUrl]
-    );
-    console.log(`[Cloudflare Tunnel] Synced active URL into Supabase: ${publicUrl}`);
-    logger.info(`[Cloudflare Tunnel] Synced active URL into Supabase: ${publicUrl}`);
-  } catch (error) {
-    console.error('[Cloudflare Tunnel] Could not sync tunnel URL to Supabase:', error.message);
+async function updateSupabaseTunnelUrl(publicUrl, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      await query(
+        `INSERT INTO system_settings (key, value, updated_at)
+         VALUES ('backend_url', $1, CURRENT_TIMESTAMP)
+         ON CONFLICT (key) DO UPDATE SET value = $1, updated_at = CURRENT_TIMESTAMP`,
+        [publicUrl]
+      );
+      console.log(`[Cloudflare Tunnel] Synced active URL into Supabase: ${publicUrl}`);
+      logger.info(`[Cloudflare Tunnel] Synced active URL into Supabase: ${publicUrl}`);
+      return true;
+    } catch (error) {
+      console.error(
+        `[Cloudflare Tunnel] Could not sync tunnel URL to Supabase (attempt ${attempt}/${retries}):`,
+        error.message
+      );
+      if (attempt < retries) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+    }
   }
+  logger.error('[Cloudflare Tunnel] Giving up syncing tunnel URL to Supabase after retries');
+  return false;
 }
 
 /**
@@ -93,8 +106,8 @@ async function startTunnel(port = 5000) {
     const handleOutput = async (data) => {
       const output = data.toString();
 
-      // Look for trycloudflare.com URL pattern
-      const match = output.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
+      // Look for Cloudflare quick-tunnel URL pattern (stdout or stderr)
+      const match = output.match(/https:\/\/[a-zA-Z0-9-]+\.(trycloudflare\.com|cfargotunnel\.com)/);
       if (match && !detectedUrl) {
         detectedUrl = match[0];
         console.log('\n═══════════════════════════════════════════════════════════════');

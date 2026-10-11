@@ -444,8 +444,14 @@ METRICS_PORT=9090
 ### Frontend Environment Variables
 
 ```env
-# API
+# API (fixed custom domain model)
 VITE_API_URL=https://api.shreescienceacademy.com
+
+# Academy live setup (Cloudflare quick-tunnel + Supabase auto-discovery):
+# leave VITE_API_URL unset and set these two instead — REQUIRED, otherwise
+# the app silently falls back to localhost and nothing connects.
+# VITE_SUPABASE_URL=https://your-project.supabase.co
+# VITE_SUPABASE_ANON_KEY=your-supabase-anon-public-key
 
 # Feature Flags
 VITE_ENABLE_PROCTORING=true

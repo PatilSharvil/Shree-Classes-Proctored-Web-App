@@ -58,12 +58,21 @@ Cloudflare will immediately output a temporary free HTTPS URL such as:
 https://xyz-random-subdomain.trycloudflare.com
 ```
 
-### Step 3: Connect Frontend to Tunnel
-In Vercel (or `frontend/.env`), set:
-```
-VITE_API_URL=https://xyz-random-subdomain.trycloudflare.com/api
-```
-*(Or if you connect a free domain name in Cloudflare Zero Trust dashboard, you get a permanent custom URL like `https://api.shreescienceacademy.com/api` that never changes).*
+### Step 3: Connect Frontend to Tunnel (Automatic — No Per-Restart Setup)
+
+The backend publishes each new tunnel URL into Supabase (`system_settings.backend_url`) on startup, and the Vercel frontend discovers it automatically — you do **not** need to copy URLs after every restart. One-time setup in Vercel (**Settings → Environment Variables**, then **Redeploy**):
+
+| Variable | Value | Required? |
+|---|---|---|
+| `VITE_SUPABASE_URL` | `https://your-project.supabase.co` | Yes — enables tunnel discovery |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon/public key | Yes — enables tunnel discovery |
+| `VITE_API_URL` | Leave **unset** (auto-discovery), or a permanent URL like `https://api.yourdomain.com/api` | No — and never `localhost` on Vercel |
+
+On the academy machine, `backend/.env` must have `NODE_ENV=production` so auth cookies are `SameSite=None; Secure` and work cross-site (Vercel → tunnel). With `NODE_ENV=development`, cookies are `Lax` and only Bearer-token auth works.
+
+*(If you connect a free domain name in Cloudflare Zero Trust dashboard, you get a permanent custom URL like `https://api.shreescienceacademy.com/api` that never changes — set it as `VITE_API_URL` or just keep auto-discovery.)*
+
+**How to tell it's working:** open the Vercel site → DevTools console shows `[Backend Discovery] Connected via live tunnel: https://…`. If you see the missing-key warning instead, the two Supabase variables above are not set. If it reports the stored URL unreachable, the academy `START_ACADEMY_SERVER.bat` is not running.
 
 ---
 

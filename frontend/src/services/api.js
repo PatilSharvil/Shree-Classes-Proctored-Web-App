@@ -74,14 +74,24 @@ api.interceptors.response.use(
       console.log('[API] CSRF token received from response headers:', csrfToken.substring(0, 10) + '...');
       setCSRFToken(csrfToken);
     } else if (response.config.url?.includes('/auth/login')) {
-      // For login responses, try to get CSRF token from cookies
-      console.log('[API] Login response received, checking for CSRF token in cookies...');
-      const match = document.cookie.match(/csrf_token=([a-f0-9]+)/);
-      if (match) {
-        console.log('[API] CSRF token found in cookies after login:', match[1].substring(0, 10) + '...');
-        setCSRFToken(match[1]);
+      // For login responses, prefer the X-CSRF-Token response header.
+      // Cross-site (Vercel -> Cloudflare tunnel) Set-Cookie is rejected by the
+      // browser unless cookies are SameSite=None;Secure, so document.cookie
+      // cannot be trusted here — the header is the reliable channel.
+      const headerToken = response.headers['x-csrf-token'];
+      if (headerToken) {
+        console.log('[API] CSRF token received from login response header:', headerToken.substring(0, 10) + '...');
+        setCSRFToken(headerToken);
       } else {
-        console.warn('[API] No CSRF token found in cookies after login');
+        // Fallback: try to get CSRF token from cookies (same-origin/local dev)
+        console.log('[API] Login response received, checking for CSRF token in cookies...');
+        const match = document.cookie.match(/csrf_token=([a-f0-9]+)/);
+        if (match) {
+          console.log('[API] CSRF token found in cookies after login:', match[1].substring(0, 10) + '...');
+          setCSRFToken(match[1]);
+        } else {
+          console.warn('[API] No CSRF token found in cookies after login');
+        }
       }
     }
     return response;
