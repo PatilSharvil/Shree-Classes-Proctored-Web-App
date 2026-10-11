@@ -9,26 +9,26 @@
   background: #FFFFFF;
   border: 2px solid #0B1528;
   border-radius: 6px;
-  box-shadow: 2.5px 2.5px 0px #0B1528;
-  padding: 3px;
-  gap: 3px;
+  box-shadow: 3px 3px 0px #0B1528;
+  padding: 4px;
+  gap: 4px;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
   flex-shrink: 0;
 }
 
 .lang-toggle-landing:hover {
-  box-shadow: 3.5px 3.5px 0px #0B1528;
+  box-shadow: 4px 4px 0px #0B1528;
   transform: translate(-1px, -1px);
 }
 
 .lang-toggle-landing-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 12px;
+  gap: 6px;
+  padding: 7px 15px;
   font-family: inherit;
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   font-weight: 700;
   border: 1.5px solid transparent;
   border-radius: 4px;
@@ -59,9 +59,9 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
+  padding: 8px 18px;
   font-family: inherit;
-  font-size: 0.86rem;
+  font-size: 0.88rem;
   font-weight: 800;
   border: 2px solid #0B1528;
   border-radius: 6px;

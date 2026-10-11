@@ -96,7 +96,7 @@ const LandingPage = () => {
             <li><a href="#contact" onClick={() => setMobileMenuOpen(false)}>{t('common.navContact')}</a></li>
           </ul>
 
-          <div className="nav-auth" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="nav-auth">
             {/* Language Switch Button */}
             <LanguageToggle theme="landing" variant="segmented" className="lang-header-switch" />
 
