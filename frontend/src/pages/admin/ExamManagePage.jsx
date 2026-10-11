@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { examsAPI, questionsAPI, attemptsAPI } from '../../services/api';
+import { useLanguage } from '../../context/LanguageContext';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -10,6 +11,7 @@ import { getImageUrl } from '../../utils/imageHelper';
 import './AdminDashboard.css';
 
 const ExamManagePage = () => {
+  const { t } = useLanguage();
   const { examId } = useParams();
   const [exam, setExam] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -95,24 +97,24 @@ const ExamManagePage = () => {
             <div>
               <h1 className="!m-0 text-2xl font-black text-gray-900">{exam.title}</h1>
               <p className="!m-0 text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
-                {exam.subject} • {exam.duration_minutes} minutes • {questions.length} questions
+                {t(`subjects.${exam.subject}`, exam.subject)} • {exam.duration_minutes} {t('admin.durationMinutes', 'minutes')} • {questions.length} {t('admin.questionsCount', 'questions')}
               </p>
             </div>
           </div>
           <div className="flex gap-2">
             <Link to={`/admin/exams/${examId}/proctoring`}>
               <button className="px-4 py-2 bg-purple-600 text-white font-bold text-sm rounded-xl hover:bg-purple-700 transition-all shadow-lg shadow-purple-100">
-                📊 Proctoring
+                📊 {t('admin.proctoringStatus', 'Proctoring')}
               </button>
             </Link>
             <Link to={`/admin/exams/${examId}/edit`}>
               <button className="px-4 py-2 bg-white border border-gray-200 text-gray-700 font-bold text-sm rounded-xl hover:bg-gray-50 transition-all shadow-sm">
-                Edit Exam
+                {t('admin.editExamTitle', 'Edit Exam')}
               </button>
             </Link>
             <Link to={`/admin/exams/${examId}/questions/new`}>
               <button className="px-4 py-2 bg-blue-600 text-white font-bold text-sm rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-100">
-                + Add Question
+                + {t('admin.addQuestion', 'Add Question')}
               </button>
             </Link>
           </div>
@@ -124,11 +126,11 @@ const ExamManagePage = () => {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card className="text-center">
           <div className="text-2xl font-bold text-primary-600">{questions.length}</div>
-          <div className="text-sm text-gray-600">Questions</div>
+          <div className="text-sm text-gray-600">{t('admin.questionsCount', 'Questions')}</div>
         </Card>
         <Card className="text-center">
           <div className="text-2xl font-bold text-green-600">{attempts.length}</div>
-          <div className="text-sm text-gray-600">Attempts</div>
+          <div className="text-sm text-gray-600">{t('admin.totalAttemptsCount', 'Attempts')}</div>
         </Card>
         <Card className="text-center">
           <div className="text-2xl font-bold text-purple-600">
@@ -136,13 +138,13 @@ const ExamManagePage = () => {
               ? Math.round(attempts.reduce((sum, a) => sum + (a.percentage || 0), 0) / attempts.length)
               : 0}%
           </div>
-          <div className="text-sm text-gray-600">Avg Score</div>
+          <div className="text-sm text-gray-600">{t('profile.avgScore', 'Avg Score')}</div>
         </Card>
         <Card className="text-center">
           <div className="text-2xl font-bold text-orange-600">
-            {exam.is_active ? 'Active' : 'Inactive'}
+            {exam.is_active ? t('common.active', 'Active') : t('common.inactive', 'Inactive')}
           </div>
-          <div className="text-sm text-gray-600">Status</div>
+          <div className="text-sm text-gray-600">{t('admin.status', 'Status')}</div>
         </Card>
       </div>
 
@@ -157,7 +159,7 @@ const ExamManagePage = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            Questions ({questions.length})
+            {t('admin.questionsCount', 'Questions')} ({questions.length})
           </button>
           <button
             onClick={() => setActiveTab('attempts')}
@@ -167,7 +169,7 @@ const ExamManagePage = () => {
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
             }`}
           >
-            Attempts ({attempts.length})
+            {t('admin.totalAttemptsCount', 'Attempts')} ({attempts.length})
           </button>
         </nav>
       </div>
@@ -178,9 +180,9 @@ const ExamManagePage = () => {
           {questions.length === 0 ? (
             <Card>
               <div className="text-center py-8">
-                <p className="text-gray-600 mb-4">No questions added yet</p>
+                <p className="text-gray-600 mb-4">{t('admin.noQuestionsYet', 'No questions added yet')}</p>
                 <Link to={`/admin/exams/${examId}/questions/new`}>
-                  <Button>Add First Question</Button>
+                  <Button>{t('admin.addQuestion', 'Add Question')}</Button>
                 </Link>
               </div>
             </Card>

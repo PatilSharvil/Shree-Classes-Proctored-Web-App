@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { examsAPI, attemptsAPI } from '../../services/api';
+import { useLanguage } from '../../context/LanguageContext';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
 import AdminSidebar from '../../components/layout/AdminSidebar';
 import './AdminDashboard.css';
 
 const AnalyticsPage = () => {
+  const { t } = useLanguage();
   const [exams, setExams] = useState([]);
   const [selectedExam, setSelectedExam] = useState(null);
   const [attempts, setAttempts] = useState([]);
@@ -75,8 +77,8 @@ const AnalyticsPage = () => {
               <i className="fas fa-arrow-left"></i>
             </Link>
             <div>
-              <h1 className="!m-0 text-2xl font-black">Analytics</h1>
-              <p className="!m-0 text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">Performance Intelligence</p>
+              <h1 className="!m-0 text-2xl font-black">{t('admin.analytics', 'Analytics')}</h1>
+              <p className="!m-0 text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">{t('admin.performanceAnalytics', 'Performance Intelligence')}</p>
             </div>
           </div>
         </header>
@@ -85,17 +87,17 @@ const AnalyticsPage = () => {
           {/* Exam Selector */}
           <Card className="!rounded-3xl border-none shadow-xl shadow-slate-200/50">
             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3">
-              Select Exam Target
+              {t('admin.selectSubject', 'Select Exam Target')}
             </label>
             <select
               value={selectedExam || ''}
               onChange={(e) => setSelectedExam(e.target.value || null)}
               className="w-full px-6 py-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 font-bold text-gray-700 appearance-none cursor-pointer"
             >
-              <option value="">-- Choose an exam to analyze --</option>
+              <option value="">-- {t('admin.selectSubject', 'Choose an exam to analyze')} --</option>
               {exams.map((exam) => (
                 <option key={exam.id} value={exam.id}>
-                  {exam.title} {exam.subject ? `[${exam.subject}]` : ''}
+                  {exam.title} {exam.subject ? `[${t(`subjects.${exam.subject}`, exam.subject)}]` : ''}
                 </option>
               ))}
             </select>
@@ -109,25 +111,25 @@ const AnalyticsPage = () => {
                   <div className="text-4xl font-black text-blue-600 group-hover:scale-110 transition-transform">
                     {stats.attempts?.total_attempts || 0}
                   </div>
-                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">Total Attempts</div>
+                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">{t('admin.totalAttemptsCount', 'Total Attempts')}</div>
                 </Card>
                 <Card className="text-center !rounded-3xl border-none shadow-lg shadow-green-100/20 py-8 group hover:-translate-y-1 transition-all">
                   <div className="text-4xl font-black text-green-600 group-hover:scale-110 transition-transform">
                     {stats.attempts?.avg_percentage?.toFixed(1) || 0}%
                   </div>
-                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">Average Score</div>
+                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">{t('profile.avgScore', 'Average Score')}</div>
                 </Card>
                 <Card className="text-center !rounded-3xl border-none shadow-lg shadow-yellow-100/20 py-8 group hover:-translate-y-1 transition-all">
                   <div className="text-4xl font-black text-yellow-500 group-hover:scale-110 transition-transform">
                     {stats.attempts?.top_percentage?.toFixed(1) || 0}%
                   </div>
-                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">Top Score</div>
+                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">{t('profile.bestScore', 'Top Score')}</div>
                 </Card>
                 <Card className="text-center !rounded-3xl border-none shadow-lg shadow-red-100/20 py-8 group hover:-translate-y-1 transition-all">
                   <div className="text-4xl font-black text-red-500 group-hover:scale-110 transition-transform">
                     {stats.attempts?.lowest_percentage?.toFixed(1) || 0}%
                   </div>
-                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">Lowest Score</div>
+                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-2">{t('admin.lowestScore', 'Lowest Score')}</div>
                 </Card>
               </div>
 

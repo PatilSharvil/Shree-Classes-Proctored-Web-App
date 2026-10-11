@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { examsAPI } from '../../services/api';
+import { useLanguage } from '../../context/LanguageContext';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -8,6 +9,7 @@ import AdminSidebar from '../../components/layout/AdminSidebar';
 import './AdminDashboard.css';
 
 const AdminExamsListPage = () => {
+  const { t } = useLanguage();
   const [exams, setExams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -29,12 +31,12 @@ const AdminExamsListPage = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this exam? This cannot be undone.')) return;
+    if (!confirm(t('admin.confirmDeleteExam', 'Are you sure you want to delete this exam? This cannot be undone.'))) return;
     try {
       await examsAPI.delete(id);
       loadExams();
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to delete exam');
+      alert(error.response?.data?.message || t('admin.failedToDelete', 'Failed to delete exam'));
     }
   };
 
@@ -49,11 +51,11 @@ const AdminExamsListPage = () => {
     const start = exam.scheduled_start ? new Date(exam.scheduled_start) : null;
     const end = exam.scheduled_end ? new Date(exam.scheduled_end) : null;
 
-    if (!start && !end) return { label: 'Anytime', color: 'bg-gray-100 text-gray-500' };
-    if (start && end && now < start) return { label: 'Upcoming', color: 'bg-blue-100 text-blue-600' };
-    if (start && end && now >= start && now <= end) return { label: 'Ongoing', color: 'bg-green-100 text-green-600' };
-    if (start && end && now > end) return { label: 'Ended', color: 'bg-red-100 text-red-600' };
-    return { label: 'Anytime', color: 'bg-gray-100 text-gray-500' };
+    if (!start && !end) return { label: t('admin.anytime', 'Anytime'), color: 'bg-gray-100 text-gray-500' };
+    if (start && end && now < start) return { label: t('admin.upcoming', 'Upcoming'), color: 'bg-blue-100 text-blue-600' };
+    if (start && end && now >= start && now <= end) return { label: t('admin.ongoing', 'Ongoing'), color: 'bg-green-100 text-green-600' };
+    if (start && end && now > end) return { label: t('admin.ended', 'Ended'), color: 'bg-red-100 text-red-600' };
+    return { label: t('admin.anytime', 'Anytime'), color: 'bg-gray-100 text-gray-500' };
   };
 
   if (loading) {
@@ -74,13 +76,13 @@ const AdminExamsListPage = () => {
               <i className="fas fa-arrow-left"></i>
             </Link>
             <div>
-              <h1 className="!m-0 text-2xl font-black text-gray-900">Assessments</h1>
-              <p className="!m-0 text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Examination Hub</p>
+              <h1 className="!m-0 text-2xl font-black text-gray-900">{t('admin.assessments', 'Assessments')}</h1>
+              <p className="!m-0 text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">{t('admin.examinationHub', 'Examination Hub')}</p>
             </div>
           </div>
           <Link to="/admin/exams/new" className="active:scale-95 transition-transform">
              <button className="px-6 py-4 bg-blue-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5 transition-all flex items-center gap-2">
-                <i className="fas fa-plus-circle"></i> Create New Exam
+                <i className="fas fa-plus-circle"></i> {t('admin.createNewExam', 'Create New Exam')}
              </button>
           </Link>
         </header>
@@ -95,7 +97,7 @@ const AdminExamsListPage = () => {
                 : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
             }`}
           >
-            All Tracks <span className="ml-2 opacity-50">({exams.length})</span>
+            {t('admin.allTracks', 'All Tracks')} <span className="ml-2 opacity-50">({exams.length})</span>
           </button>
           <button
             onClick={() => setFilter('active')}
@@ -105,7 +107,7 @@ const AdminExamsListPage = () => {
                 : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
             }`}
           >
-            Live Exams <span className="ml-2 opacity-50">({exams.filter(e => e.is_active).length})</span>
+            {t('admin.liveExams', 'Live Exams')} <span className="ml-2 opacity-50">({exams.filter(e => e.is_active).length})</span>
           </button>
           <button
             onClick={() => setFilter('inactive')}
@@ -115,7 +117,7 @@ const AdminExamsListPage = () => {
                 : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
             }`}
           >
-            Drafts / Hidden <span className="ml-2 opacity-50">({exams.filter(e => !e.is_active).length})</span>
+            {t('admin.draftsHidden', 'Drafts / Hidden')} <span className="ml-2 opacity-50">({exams.filter(e => !e.is_active).length})</span>
           </button>
         </div>
 
@@ -126,11 +128,11 @@ const AdminExamsListPage = () => {
                <i className="fas fa-layer-group"></i>
             </div>
             <p className="text-gray-400 font-bold uppercase tracking-[0.2em] text-xs">
-              {filter === 'all' ? 'The assessment laboratory is empty' : `No ${filter} exams discovered`}
+              {filter === 'all' ? t('admin.noExamsTitle', 'The assessment laboratory is empty') : `${t('admin.noExamsTitle', 'No exams discovered')}`}
             </p>
             {filter === 'all' && (
               <Link to="/admin/exams/new" className="mt-6 inline-block text-blue-600 font-black text-xs uppercase tracking-widest hover:underline decoration-2 underline-offset-8">
-                Initialize first assessment
+                {t('admin.initializeFirst', 'Initialize first assessment')}
               </Link>
             )}
           </Card>
@@ -139,12 +141,12 @@ const AdminExamsListPage = () => {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-gray-50/50 border-b border-gray-100">
-                  <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Exam Blueprint</th>
-                  <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Domain</th>
-                  <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Metrics</th>
-                  <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Timeline</th>
-                  <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Status</th>
-                  <th className="px-8 py-6 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Control</th>
+                  <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{t('admin.examBlueprint', 'Exam Blueprint')}</th>
+                  <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{t('admin.domain', 'Domain')}</th>
+                  <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{t('admin.metrics', 'Metrics')}</th>
+                  <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{t('admin.timeline', 'Timeline')}</th>
+                  <th className="px-8 py-6 text-left text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{t('admin.status', 'Status')}</th>
+                  <th className="px-8 py-6 text-right text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">{t('admin.control', 'Control')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -165,16 +167,16 @@ const AdminExamsListPage = () => {
                     </td>
                     <td className="px-8 py-6">
                        <span className="px-3 py-1 bg-slate-50 text-slate-500 rounded-lg text-[10px] font-black uppercase tracking-widest border border-slate-100">
-                          {exam.subject || 'General'}
+                          {t(`subjects.${exam.subject}`, exam.subject || 'General')}
                        </span>
                     </td>
                     <td className="px-8 py-6">
                        <div className="flex flex-col gap-1">
                           <div className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                             <i className="far fa-clock text-blue-400 w-3"></i> {exam.duration_minutes}m Duration
+                             <i className="far fa-clock text-blue-400 w-3"></i> {exam.duration_minutes}m {t('admin.durationLabel', 'Duration')}
                           </div>
                           <div className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                             <i className="far fa-list-alt text-blue-400 w-3"></i> {exam.question_count || 0} Questions
+                             <i className="far fa-list-alt text-blue-400 w-3"></i> {exam.question_count || 0} {t('admin.questionsCount', 'Questions')}
                           </div>
                        </div>
                     </td>
@@ -187,20 +189,21 @@ const AdminExamsListPage = () => {
                         <div className="flex items-center gap-2">
                            <div className={`w-2 h-2 rounded-full ${exam.is_active ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`}></div>
                            <span className={`text-[10px] font-black uppercase tracking-widest ${exam.is_active ? 'text-green-600' : 'text-gray-400'}`}>
-                             {exam.is_active ? 'Public' : 'Hidden'}
+                             {exam.is_active ? t('admin.publicStatus', 'Public') : t('admin.hiddenStatus', 'Hidden')}
                            </span>
                         </div>
                     </td>
                     <td className="px-8 py-6 text-right">
                       <div className="flex justify-end gap-2 transition-all">
                         <Link to={`/admin/exams/${exam.id}`}>
-                          <button className="w-10 h-10 bg-white border border-gray-100 rounded-xl text-blue-500 hover:text-white hover:bg-blue-600 hover:border-blue-600 transition-all flex items-center justify-center shadow-sm">
+                          <button className="w-10 h-10 bg-white border border-gray-100 rounded-xl text-blue-500 hover:text-white hover:bg-blue-600 hover:border-blue-600 transition-all flex items-center justify-center shadow-sm" title={t('admin.manage', 'Manage')}>
                              <i className="fas fa-cog"></i>
                           </button>
                         </Link>
                         <button
                           onClick={() => handleDelete(exam.id)}
                           className="w-10 h-10 bg-white border border-gray-100 rounded-xl text-red-400 hover:text-white hover:bg-red-500 hover:border-red-500 transition-all flex items-center justify-center shadow-sm"
+                          title={t('common.delete', 'Delete')}
                         >
                           <i className="fas fa-trash-alt"></i>
                         </button>

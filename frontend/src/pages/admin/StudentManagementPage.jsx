@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { usersAPI } from '../../services/api';
+import { useLanguage } from '../../context/LanguageContext';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -8,6 +9,7 @@ import AdminSidebar from '../../components/layout/AdminSidebar';
 import './AdminDashboard.css';
 
 const StudentManagementPage = () => {
+  const { t } = useLanguage();
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -141,8 +143,8 @@ const StudentManagementPage = () => {
               <i className="fas fa-arrow-left"></i>
             </Link>
             <div>
-              <h1 className="!m-0 text-2xl font-black text-gray-900">Students</h1>
-              <p className="!m-0 text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Directory Management</p>
+              <h1 className="!m-0 text-2xl font-black text-gray-900">{t('admin.students', 'Students')}</h1>
+              <p className="!m-0 text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">{t('admin.studentDirectory', 'Directory Management')}</p>
             </div>
           </div>
           <div className="flex gap-3">
@@ -150,13 +152,13 @@ const StudentManagementPage = () => {
               onClick={() => setShowImportModal(true)}
               className="px-6 py-3 bg-green-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-green-200 hover:bg-green-700 hover:-translate-y-0.5 transition-all active:scale-95 flex items-center gap-2"
             >
-              <i className="fas fa-file-import"></i> Bulk Import
+              <i className="fas fa-file-import"></i> {t('admin.importStudents', 'Bulk Import')}
             </button>
             <button
               onClick={() => setShowModal(true)}
               className="px-6 py-3 bg-blue-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-lg shadow-blue-200 hover:bg-blue-700 hover:-translate-y-0.5 transition-all active:scale-95 flex items-center gap-2"
             >
-              <i className="fas fa-plus"></i> Add New Student
+              <i className="fas fa-plus"></i> {t('admin.addNewStudent', 'Add New Student')}
             </button>
           </div>
         </header>
@@ -171,14 +173,14 @@ const StudentManagementPage = () => {
         {students.length === 0 ? (
           <Card className="!rounded-[32px] border-none shadow-xl shadow-slate-200/50 flex flex-col items-center justify-center py-20 text-center">
             <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-3xl text-gray-300 mb-4">
-              <i className="fas fa-user-slash"></i>
+               <i className="fas fa-user-slash"></i>
             </div>
-            <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">No students discovered yet</p>
+            <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">{t('admin.noStudentsFound', 'No students discovered yet')}</p>
             <div className="flex gap-4 mt-4">
               <button onClick={() => setShowImportModal(true)} className="text-green-600 font-black text-xs uppercase tracking-widest hover:underline">
-                <i className="fas fa-file-import"></i> Bulk Import
+                <i className="fas fa-file-import"></i> {t('admin.importStudents', 'Bulk Import')}
               </button>
-              <button onClick={() => setShowModal(true)} className="text-blue-600 font-black text-xs uppercase tracking-widest hover:underline">Register first student</button>
+              <button onClick={() => setShowModal(true)} className="text-blue-600 font-black text-xs uppercase tracking-widest hover:underline">{t('admin.addNewStudent', 'Register first student')}</button>
             </div>
           </Card>
         ) : (
@@ -186,10 +188,10 @@ const StudentManagementPage = () => {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-gray-50/50 border-b border-gray-100">
-                  <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Candidate Name</th>
-                  <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Email Identity</th>
-                  <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Registration Date</th>
-                  <th className="px-8 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">Administrative Actions</th>
+                  <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('admin.studentName', 'Candidate Name')}</th>
+                  <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('admin.studentEmail', 'Email Identity')}</th>
+                  <th className="px-8 py-5 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('profile.dateColumn', 'Registration Date')}</th>
+                  <th className="px-8 py-5 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('common.actions', 'Administrative Actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -213,7 +215,7 @@ const StudentManagementPage = () => {
                       <button
                         onClick={() => handleDelete(student.id)}
                         className="w-10 h-10 bg-white border border-gray-100 rounded-xl text-red-400 hover:text-red-600 hover:bg-red-50 hover:border-red-100 transition-all flex items-center justify-center shadow-sm group-hover:scale-110 active:scale-95"
-                        title="Delete Student"
+                        title={t('common.delete', 'Delete Student')}
                       >
                         <i className="fas fa-trash-alt"></i>
                       </button>

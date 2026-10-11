@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { examsAPI } from '../../services/api';
+import { useLanguage } from '../../context/LanguageContext';
 import Button from '../../components/ui/Button';
 import Card from '../../components/ui/Card';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
@@ -8,6 +9,7 @@ import AdminSidebar from '../../components/layout/AdminSidebar';
 import './AdminDashboard.css';
 
 const EditExamPage = () => {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { examId } = useParams();
   const [loading, setLoading] = useState(true);
@@ -177,8 +179,8 @@ const EditExamPage = () => {
             <i className="fas fa-arrow-left"></i>
           </Link>
           <div>
-            <h1 className="!m-0 text-2xl font-black text-gray-900">Edit Exam</h1>
-            <p className="!m-0 text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">Blueprint Refinement</p>
+            <h1 className="!m-0 text-2xl font-black text-gray-900">{t('admin.editExamTitle', 'Edit Exam')}</h1>
+            <p className="!m-0 text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">{t('admin.examinationHub', 'Examination Hub')}</p>
           </div>
         </header>
 
@@ -194,11 +196,11 @@ const EditExamPage = () => {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Info */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Basic Information</h3>
+            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">{t('admin.examBasicInfo', 'Basic Information')}</h3>
 
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                Exam Title *
+                {t('admin.examTitle', 'Exam Title')} *
               </label>
               <input
                 type="text"
@@ -208,13 +210,13 @@ const EditExamPage = () => {
                 onChange={handleChange}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent touch-target"
-                placeholder="e.g., Mathematics Final Exam"
+                placeholder={t('admin.examTitlePlaceholder', 'e.g. MHT-CET Mock Test 2026')}
               />
             </div>
 
             <div>
               <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                Description
+                {t('admin.description', 'Description')}
               </label>
               <textarea
                 id="description"
@@ -223,13 +225,13 @@ const EditExamPage = () => {
                 onChange={handleChange}
                 rows={3}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent touch-target"
-                placeholder="Brief description of the exam"
+                placeholder={t('admin.descriptionPlaceholder', 'Brief instructions or syllabus covered...')}
               />
             </div>
 
             <div>
               <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-1">
-                Subject
+                {t('admin.domain', 'Subject')}
               </label>
               <input
                 type="text"
@@ -245,12 +247,12 @@ const EditExamPage = () => {
 
           {/* Exam Settings */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Exam Settings</h3>
+            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">{t('admin.metrics', 'Exam Settings')}</h3>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="duration_minutes" className="block text-sm font-medium text-gray-700 mb-1">
-                  Duration (minutes) *
+                  {t('admin.durationMinutes', 'Duration (minutes)')} *
                 </label>
                 <input
                   type="number"
@@ -303,7 +305,7 @@ const EditExamPage = () => {
 
               <div>
                 <label htmlFor="total_marks" className="block text-sm font-medium text-gray-700 mb-1">
-                  Total Marks *
+                  {t('admin.totalMarks', 'Total Marks')} *
                 </label>
                 <input
                   type="number"
@@ -321,7 +323,7 @@ const EditExamPage = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="negative_marks" className="block text-sm font-medium text-gray-700 mb-1">
-                  Negative Marks
+                  {t('admin.negativeMarks', 'Negative Marks')}
                 </label>
                 <input
                   type="number"
@@ -337,7 +339,7 @@ const EditExamPage = () => {
 
               <div>
                 <label htmlFor="passing_percentage" className="block text-sm font-medium text-gray-700 mb-1">
-                  Passing Percentage (%)
+                  {t('admin.passingPercentage', 'Passing Percentage (%)')}
                 </label>
                 <input
                   type="number"
@@ -355,7 +357,7 @@ const EditExamPage = () => {
 
           {/* Scheduling */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">Scheduling</h3>
+            <h3 className="text-lg font-semibold text-gray-900 border-b pb-2">{t('admin.timeline', 'Scheduling')}</h3>
 
             <div className="bg-blue-50 border border-blue-200 p-3 rounded text-sm text-blue-800">
               <strong>💡 Tip:</strong> Set the start time and duration first. The end time will be calculated automatically.
@@ -364,7 +366,7 @@ const EditExamPage = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="scheduled_start" className="block text-sm font-medium text-gray-700 mb-1">
-                  Start Date & Time
+                  {t('admin.scheduledStart', 'Start Date & Time')}
                 </label>
                 <input
                   type="datetime-local"
@@ -378,7 +380,7 @@ const EditExamPage = () => {
 
               <div>
                 <label htmlFor="scheduled_end" className="block text-sm font-medium text-gray-700 mb-1">
-                  End Date & Time <span className="text-gray-500">(Auto-calculated)</span>
+                  {t('admin.scheduledEnd', 'End Date & Time')} <span className="text-gray-500">(Auto-calculated)</span>
                 </label>
                 <input
                   type="datetime-local"
@@ -401,7 +403,7 @@ const EditExamPage = () => {
                 className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500 touch-target"
               />
               <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
-                Make exam immediately available
+                {t('admin.examActiveToggle', 'Make exam immediately available')}
               </label>
             </div>
           </div>
@@ -409,10 +411,10 @@ const EditExamPage = () => {
           {/* Actions */}
           <div className="flex gap-4 pt-4 border-t">
             <Button type="submit" disabled={submitting} className="flex-1">
-              {submitting ? 'Updating...' : 'Update Exam'}
+              {submitting ? t('common.loading', 'Updating...') : t('admin.updateExamBtn', 'Update Exam')}
             </Button>
             <Button type="button" variant="secondary" onClick={() => navigate(`/admin/exams/${examId}`)}>
-              Cancel
+              {t('common.cancel', 'Cancel')}
             </Button>
           </div>
         </form>
